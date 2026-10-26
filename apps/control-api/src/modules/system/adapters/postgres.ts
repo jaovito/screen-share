@@ -16,7 +16,7 @@ export function createDatabase(connectionString: string) {
     query_timeout: 2000,
     statement_timeout: 1500,
   });
-  // O evento não deve expor DSN, query, parâmetros ou erro do driver.
+  // This event must not expose DSN, query, parameters, or driver errors.
   pool.on('error', () => console.error(JSON.stringify({ event: 'database_connection_error' })));
 
   const db = drizzle(pool);

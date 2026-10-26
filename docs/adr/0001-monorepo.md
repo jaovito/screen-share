@@ -1,28 +1,28 @@
-# Monorepo e versões
+# Monorepo and versions
 
-Status: aceito para M0 · 26/10/2026.
+Status: accepted for M0 · 2026-10-26.
 
-## Contexto
+## Context
 
-UI, API e shell precisam evoluir com contratos compatíveis.
+UI, API, and shell must evolve with compatible contracts.
 
-## Decisão
+## Decision
 
-pnpm workspaces e Cargo workspace único; versões diretas exatas, Node LTS 24.22.1, pnpm 10.20.0 e Rust 1.99.1. Sem framework adicional de monorepo.
+pnpm workspaces and one Cargo workspace; exact direct versions, Node LTS 24.22.1, pnpm 10.20.0, and Rust 1.99.1. No additional monorepo framework.
 
-## Consequências
+## Consequences
 
-Build de contratos precede consumidores. pnpm-lock.yaml e Cargo.lock são gerados pelas ferramentas; atualizações exigem revalidar os checks.
+Contracts build before consumers. pnpm-lock.yaml/Cargo.lock are tool-generated; updates require revalidation. Later development-tool decisions are recorded in ADRs 0007/0008.
 
-## Fontes verificadas
+## Verified sources
 
-- [Node: releases oficiais](https://nodejs.org/dist/index.json)
-- [Rust stable: manifesto oficial](https://static.rust-lang.org/dist/channel-rust-stable.toml)
-- [npm registry](https://registry.npmjs.org/): versões exatas conferidas pelo endpoint de cada pacote.
-- [crates.io: Tauri](https://crates.io/crates/tauri), [tauri-build](https://crates.io/crates/tauri-build).
-- [LiveKit v1.13.11](https://github.com/livekit/livekit/releases/tag/v1.13.11), [schema da release](https://github.com/livekit/livekit/blob/v1.13.11/config-sample.yaml).
-- [PostgreSQL: release notes](https://www.postgresql.org/docs/release/), imagem `postgres:17.11-bookworm` verificada pelo Docker pull.
+- [Official Node releases](https://nodejs.org/dist/index.json)
+- [Official Rust stable manifest](https://static.rust-lang.org/dist/channel-rust-stable.toml)
+- [npm registry](https://registry.npmjs.org/): exact versions checked through each package endpoint.
+- [crates.io Tauri](https://crates.io/crates/tauri), [tauri-build](https://crates.io/crates/tauri-build).
+- [LiveKit v1.13.11](https://github.com/livekit/livekit/releases/tag/v1.13.11), [release schema](https://github.com/livekit/livekit/blob/v1.13.11/config-sample.yaml).
+- [PostgreSQL release notes](https://www.postgresql.org/docs/release/); postgres:17.11-bookworm verified by Docker pull.
 - [Hono Node adapter](https://hono.dev/docs/getting-started/nodejs), [Tauri Vite](https://v2.tauri.app/start/frontend/vite/).
-- [Docker Compose startup](https://docs.docker.com/compose/how-tos/startup-order/), [publicação de portas](https://docs.docker.com/engine/network/port-publishing/).
+- [Compose startup](https://docs.docker.com/compose/how-tos/startup-order/), [port publication](https://docs.docker.com/engine/network/port-publishing/).
 
-As tags OCI possuem versões concretas. Lock por digest pode ser adotado no pipeline de atualização de imagens; os digests observados estão no relatório de validação.
+OCI tags are concrete versions. Digest pinning may be adopted in image-update workflows; observed digests are in the validation report.

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Implement a feature"
+  short_description: "Feature changes with contracts and regression tests"
+  default_prompt: "Use $ss-feature to implement the requested change within its milestone and contracts."

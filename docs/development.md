@@ -1,24 +1,24 @@
-# Desenvolvimento
+# Development
 
 ## Windows 11 x64
 
-1. Instale Git, Node 24.22.1 e Bun 1.4.3. Não é necessário Corepack.
-2. Instale Rust via rustup e Visual Studio Build Tools (Desktop development with C++, MSVC, Windows SDK). Use o target `x86_64-pc-windows-msvc`, sem MinGW para o shell.
-3. Confirme Microsoft Edge WebView2 Runtime. Consulte [pré-requisitos oficiais Tauri](https://v2.tauri.app/start/prerequisites/).
-4. Inicie Docker Desktop com backend WSL2 para o Compose Linux. O desktop Windows roda nativamente, fora do WSL e do container.
-5. Execute a sequência do README em PowerShell ou terminal nativo. Os comandos principais não dependem de Bash.
-6. Execute `bun run dev:desktop`. O Tauri usa seu próprio `beforeDevCommand`, porta 1420 e `frontendDist` relativo a `src-tauri`; não precisa iniciar Vite manualmente.
-7. Execute `bun run build:desktop` para NSIS. O executável/instalador de desenvolvimento não é assinado; assinatura/updates pertencem a M5.
+1. Install Git, Node 24.22.1, and Bun 1.4.3. Corepack is unnecessary.
+2. Install Rust through rustup and Visual Studio Build Tools (Desktop development with C++, MSVC, Windows SDK). Use x86_64-pc-windows-msvc, not MinGW for the shell.
+3. Confirm Microsoft Edge WebView2 Runtime. See [official Tauri prerequisites](https://v2.tauri.app/start/prerequisites/).
+4. Start Docker Desktop with WSL2 backend for Linux Compose. Windows desktop runs natively, outside WSL/container.
+5. Follow README setup in PowerShell/native terminal; main commands do not require Bash.
+6. Run bun run dev:desktop. Tauri owns beforeDevCommand, port 1420, and frontendDist relative to src-tauri; do not start Vite manually.
+7. Run bun run build:desktop for NSIS. Development executable/installer is unsigned; signing/updates belong to M5.
 
-O job Windows verifica crates/adapters, compila/testa o DTO IPC do shell e constrói o bundle de desenvolvimento. CI configurada não é evidência de execução até o workflow realmente rodar.
+The Windows job checks crates/adapters, builds/tests the shell IPC DTO, and builds a development bundle. Configured CI is not execution evidence until the workflow runs.
 
-## macOS e Linux
+## macOS and Linux
 
-`bun run dev`, `bun run check:ts`, `bun run check:rust`, integração SQL e Compose são o fluxo parcial suportado. `bun run --filter @screen-share/desktop dev` abre apenas uma prévia da UI: mostra a ausência de IPC, não inicia motor. `dev:desktop`/`build:desktop` falham explicitamente fora do Windows neste marco. Compilação manual do shell em outros sistemas não significa suporte a captura.
+bun run dev, check:ts, check:rust, SQL integration, and Compose are the supported partial workflow. `bun run --filter @screen-share/desktop dev` opens only a UI preview that shows missing IPC and starts no engine. dev:desktop/build:desktop fail explicitly outside Windows at this milestone. Manual compilation elsewhere does not establish capture support.
 
 ## Migrations
 
-Depois de alterar `src/modules/rooms/adapters/schema.ts`:
+After changing src/modules/rooms/adapters/schema.ts:
 
 ```sh
 bun run --filter @screen-share/control-api db:generate
@@ -27,30 +27,30 @@ bun run test:integration
 bun run test:persistence
 ```
 
-Revise o SQL, journal e snapshot antes de versionar; nunca edite uma migration já aplicada. Não há `db push`, resets implícitos ou migrations acionadas por HTTP. A integração cria seu banco vazio; o teste de persistência tem seu volume próprio e reinicia somente seu container.
+Review SQL, journal, and snapshot before committing; never edit an applied migration. There is no db push, implicit reset, or HTTP-triggered migration. Integration owns an empty database; persistence uses its own volume and restarts only its own container.
 
-## Desenvolvimento e validação
+## Development and validation
 
-`bun run check:ts` constrói contratos antes dos consumidores, faz typecheck dos testes da API e builds separados. `bun run dev` constrói contratos uma vez; após editar contratos, reinicie o comando ou rode o build desse pacote. Os scripts Bun repassam códigos de falha. A configuração local é carregada de `.env`; variáveis já definidas pelo ambiente têm precedência. Vite recebe apenas variáveis prefixadas por `VITE_`.
+check:ts builds contracts before consumers, typechecks API tests, and builds apps separately. dev builds contracts once; restart it or rebuild that package after contract edits. Bun scripts propagate failures. Local configuration comes from .env; existing environment variables take precedence. Vite receives only VITE-prefixed variables.
 
-`bun run check:rust` usa `default-members` portáveis; não exige GTK, Tauri, Win32 ou libwebrtc. O lockfile inclui o shell, mas compilar o domínio não compila o shell. Para checks manuais use `cargo clippy --locked --all-targets -- -D warnings` e `cargo test --locked` na raiz. Não acrescente `--workspace` indiscriminadamente em Linux.
+check:rust uses portable default-members without GTK, Tauri, Win32, or libwebrtc. Cargo.lock includes the shell, but domain compilation does not compile it. Manual root checks: `cargo clippy --locked --all-targets -- -D warnings` and `cargo test --locked`. Do not indiscriminately add --workspace on Linux.
 
-O Compose valida sem imprimir segredos com `docker compose --env-file .env -f infra/compose.yaml --profile app config --quiet`. Não publique saída de configuração expandida. As rotinas de smoke não reiniciam bancos nem emitem grants de sala.
+Validate Compose without printing secrets using `docker compose --env-file .env -f infra/compose.yaml --profile app config --quiet`. Never publish expanded configuration. Smoke does not restart databases or issue room grants.
 
-## Limites de RTC
+## RTC limits
 
-O SFU escuta em `0.0.0.0` dentro do container; o host publica somente loopback. `rtc.node_ip` é o candidato anunciado ao cliente, não o endereço de bind. A configuração usa `use_external_ip: false`, mux UDP 7882 e ICE/TCP 7881, sem range UDP concorrente. A escolha impede presumir acesso remoto e precisa ser revista explicitamente para o laboratório M1. Docker Desktop/WSL e NAT podem impedir uma rota que parece correta na sinalização. TURN autenticado, domínio, TLS, LAN e firewall serão tratados com evidência de rede em etapa posterior.
+SFU listens on 0.0.0.0 inside its container; host publication is loopback only. rtc.node_ip is the advertised candidate, not a bind address. Configuration uses use_external_ip: false, UDP mux 7882, ICE/TCP 7881, and no concurrent UDP range. This prevents assuming remote access and must be explicitly revisited for M1. Docker Desktop/WSL/NAT may block a route that looks correct in signaling. Authenticated TURN, domain, TLS, LAN, and firewall require later network evidence.
 
-## Estilização compartilhada
+## Shared styling
 
-Viewer e desktop usam Tailwind CSS 4.3.3 com o plugin oficial `@tailwindcss/vite` nos dois Vites. A configuração é CSS-first: cada `src/app/styles/index.css` importa `tailwindcss` e `@screen-share/ui/styles.css`, com `@source` explícito para futuros componentes compartilhados. Não há PostCSS nem `tailwind.config.js` necessários para esse setup.
+Viewer/desktop use Tailwind CSS 4.3.3 and official @tailwindcss/vite in both Vites. CSS-first configuration imports tailwindcss and @screen-share/ui/styles.css from each src/app/styles/index.css, with explicit @source for future shared components. No PostCSS/tailwind.config.js is needed here.
 
-`packages/ui/src/theme.css` define as variáveis semânticas e as expõe por `@theme inline`: `bg-background`, `text-foreground`, `bg-card`, `border-border`, `bg-primary`, `text-primary-foreground` etc. Edite os tokens nesse arquivo para refletir o tema em ambas as interfaces. `packages/ui/src/styles.css` preserva o layout atual na camada `components`, permitindo que utilities ajustem propriedades nos consumidores. O Biome aceita diretivas Tailwind por `css.parser.tailwindDirectives`.
+packages/ui/src/theme.css defines semantic variables and exposes them through @theme inline: bg-background, text-foreground, bg-card, border-border, bg-primary, text-primary-foreground, etc. Edit tokens there to update both interfaces. packages/ui/src/styles.css preserves layout in the components layer so utilities can override consumers. Biome enables css.parser.tailwindDirectives.
 
-Exemplo de uso já presente no viewer: `className="panel mt-6"`. Prefira classes completas no JSX; não construa nomes de utilities com interpolação parcial, para que o detector encontre os estilos. O pacote UI exporta CSS diretamente, sem etapa própria de build.
+Existing viewer example: className="panel mt-6". Prefer complete utility strings in JSX rather than partial interpolation so detection works. UI exports CSS directly without its own build.
 
-A biblioteca shadcn/ui ainda não foi instalada nesta configuração do Tailwind; seus componentes podem ser adicionados ao pacote compartilhado quando necessários. Referência: [integração oficial com Vite](https://tailwindcss.com/docs/installation/using-vite).
+shadcn/ui is not installed; shared components can be added when needed. See [official Vite integration](https://tailwindcss.com/docs/installation/using-vite).
 
-Scripts operacionais autorais agora ficam em `scripts/*.ts`, com imports `.ts` e execução nativa no Bun 1.4.3. A execução TypeScript não faz typecheck: `bun run typecheck` inclui scripts, tooling, configs e E2E. `bun run check` passou a incluir cobertura com PostgreSQL descartável e exige Docker; E2E continua separado. Veja [frontend.md](frontend.md) e [testing.md](testing.md).
+Authored operational scripts are scripts/*.ts with .ts imports, running natively on Bun 1.4.3. Execution does not typecheck; bun run typecheck includes scripts, tooling, configs, and E2E. bun run check includes disposable PostgreSQL coverage and requires Docker; E2E stays separate. See [frontend.md](frontend.md) and [testing.md](testing.md).
 
-O runner unitário/DOM agora é Bun Test nativo, com preloads/isolamento definidos em `scripts/test-suites.ts`. Use `bun run test` para o fluxo completo; integração e cobertura continuam em banco descartável. Relatórios LCOV/HTML/JSON são produzidos sem Vitest. Ver ADR 0008.
+Native Bun Test is the unit/DOM runner, with preloads/isolation in scripts/test-suites.ts. Use bun run test for both suites; integration/coverage retain disposable databases. Native reports are LCOV/HTML/JSON without Vitest. See ADR 0008. Documentation, code, comments, and developer-facing test descriptions use English; this does not change product UI language.

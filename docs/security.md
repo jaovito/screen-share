@@ -1,15 +1,19 @@
-# Segurança e privacidade
+# Security and privacy
 
-M0 é local, sem autorização de produto ou mídia. API e banco ficam restritos ao host; o CORS permite somente os dois endereços locais do viewer. CORS não substitui autenticação. Não exponha esta configuração à internet ou à LAN.
+M0 is local, without product authorization or media. The API/database are restricted to the host; CORS permits only the two configured local viewer addresses. CORS does not replace authentication. Do not expose this setup to the internet or LAN.
 
-O bootstrap gera senha de banco (32 bytes), chave LiveKit (18 bytes) e segredo LiveKit (48 bytes) com `node:crypto`. Cria arquivos com exclusividade e modo 0600 onde suportado, preservando arquivos existentes. No Windows, controle acesso pela ACL do diretório. `.env` e configuração LiveKit efetiva são ignorados pelo Git e pelo contexto Docker; nunca fazem parte da imagem. O template é preenchido com strings YAML escapadas; LiveKit não precisa expandir variáveis.
+Bootstrap generates a database password (32 bytes), LiveKit key (18 bytes), and LiveKit secret (48 bytes) with node:crypto. It exclusively creates files with mode 0600 where supported and preserves existing files. On Windows, control access through the directory ACL. .env and effective LiveKit configuration are ignored by Git/Docker context and never enter the image. The template uses escaped YAML strings; LiveKit need not expand variables.
 
-Segredos ficam apenas no backend e configuração local. Não introduza segredos em `VITE_*`, DTOs IPC, URLs públicas, logs ou bundles. `DATABASE_URL` é configuração interna do driver e contém credenciais; não imprima seu valor. A imagem recebe variáveis somente na execução, sem build args secretos. O runtime usa usuário `node` sem privilégios. O smoke usa o SDK administrativo somente no backend para `listRooms`, com timeout e sem mostrar conteúdo.
+Secrets stay in backend/local configuration, never VITE variables, IPC DTOs, public URLs, logs, or bundles. DATABASE_URL is internal driver configuration containing credentials; never print it. The image receives variables at runtime without secret build args. Runtime uses unprivileged node. Smoke uses the administrative SDK only in backend for listRooms, with timeout and no content output.
 
-O shell possui uma única permissão de aplicativo para `get_app_info`, sem plugins de shell, filesystem ou HTTP e sem comandos de captura disponíveis. CSP restringe scripts ao conteúdo local, IPC e Vite/HMR em desenvolvimento. Não há navegação remota, auto-captura ou leitura de microfone/câmera.
+The shell has one application permission for get_app_info, no shell/filesystem/HTTP plugins, and no available capture commands. CSP restricts scripts to local content, IPC, and development Vite/HMR. There is no remote navigation, auto-capture, or microphone/camera access.
 
-Readiness falha fechada em banco/schema indisponíveis e retorna somente status. A API não expõe mutations de salas, login falso, token arbitrário ou confiança em uma identidade fornecida pelo cliente. Preservar esses limites ao evoluir o bootstrap.
+Readiness fails closed when database/schema is unavailable and returns status only. The API exposes no room mutations, fake login, arbitrary token issuance, or authorization based on client-supplied identity. Preserve these boundaries when evolving the bootstrap.
 
-Antes da beta: autenticação, autorização por membership, convites limitados, grants mínimos e escopados, TLS, gestão de chaves fora do banco, identidade verificável dos participantes, epochs e revogação de sessão, E2EE validada em dois PCs e política de auditoria/retencão. O plano de ameaça e a prova de encoder/transporte constam em PLAN.md; nenhum selo de E2EE deve aparecer sem evidência.
+Before beta: authentication, membership authorization, bounded invites, minimal scoped grants, TLS, keys outside the database, verifiable participant identity, epochs/session revocation, two-PC E2EE validation, and auditing/retention policy. The threat/key model and encoder/transport proof are in PLAN.md; never display an E2EE badge without evidence.
 
-Não trocar uma janela por monitor inteiro como recuperação de falha. Não captar áudio do sistema como fallback implícito. Métricas precisam vir dos estágios reais; presets e hipóteses não são medições.
+Never replace a window with a whole monitor during recovery or implicitly fall back to system-wide audio. Metrics must come from actual stages; presets/hypotheses are not observations. Detailed metrics remain local; support reports must be voluntary and sanitized.
+
+## Adversarial assessments
+
+Use ss-security-review for a scoped assessment. That skill dispatches a private independent attacker-minded reviewer, permits bounded local proofs using synthetic data and assessment-owned resources, then verifies and consolidates findings. The private prompt is not registered as a general-purpose agent. Reviewers do not edit source or attack external/shared instances; they report confirmed findings separately from unverified hypotheses and future milestone requirements. This workflow does not replace platform permissions or certify E2EE/security. See [agents.md](agents.md) for activation and limitations.

@@ -16,7 +16,7 @@ export function createApp(database: ReadinessPort, origins: string[]) {
 
     c.header('X-Request-ID', requestId);
     await next();
-    // Não registrar URL/query/body/headers: podem conter credenciais futuras.
+    // Do not log URL/query/body/headers: they may contain future credentials.
     log('request', {
       requestId,
       method: c.req.method,

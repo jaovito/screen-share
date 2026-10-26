@@ -31,6 +31,32 @@
     border-bottom: 1px solid var(--border);
     padding-bottom: 24px;
   }
+  .header-controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
+  }
+  .locale-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+  }
+  .locale-selector select {
+    max-width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px;
+    background: var(--card);
+    color: var(--foreground);
+    font: inherit;
+  }
+  .locale-selector select:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 4px;
+  }
   .brand {
     display: flex;
     align-items: center;

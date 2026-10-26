@@ -1,4 +1,4 @@
 [[permission]]
 identifier = "allow-get-app-info"
-description = "Permite somente ler versão, plataforma e disponibilidade do motor."
+description = "Allow reading version, platform, and engine availability only."
 commands.allow = ["get_app_info"]

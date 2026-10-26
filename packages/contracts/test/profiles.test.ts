@@ -2,8 +2,8 @@ import { describe, expect, it } from 'bun:test';
 import { videoProfiles } from '../../../apps/control-api/src/modules/profiles/domain/profiles.js';
 import { profilesResponseSchema, videoProfileSchema } from '../src/index.js';
 
-describe('catálogo de produto', () => {
-  it('rejeita dimensões incoerentes e catálogo duplicado', () => {
+describe('product catalog', () => {
+  it('rejects inconsistent dimensions and duplicate catalog entries', () => {
     expect(
       videoProfileSchema.safeParse({
         id: '1080p60',
@@ -23,7 +23,7 @@ describe('catálogo de produto', () => {
       }).success,
     ).toBe(false);
   });
-  it('tem oito combinações únicas, dimensões corretas e FPS discretos', () => {
+  it('has eight unique combinations, correct dimensions, and discrete FPS', () => {
     const profiles = profilesResponseSchema.parse({
       profiles: videoProfiles,
     }).profiles;

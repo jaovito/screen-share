@@ -6,7 +6,7 @@ import { createDatabase, retryDatabase } from '../modules/system/adapters/postgr
 
 export function startServer(config: Config, terminate: (code: number) => void = process.exit) {
   const database = createDatabase(config.DATABASE_URL);
-  // Liveness permanece disponível enquanto o banco se recupera; readiness consulta o estado atual.
+  // Liveness stays available during database recovery; readiness checks current state.
   void retryDatabase(async () => {
     await database.pool.query('SELECT 1');
   })

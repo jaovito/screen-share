@@ -7,7 +7,7 @@ import { rooms } from '../src/modules/rooms/adapters/schema.js';
 import { createDatabase } from '../src/modules/system/adapters/postgres.js';
 import { migrateDatabase } from '../src/runtime/migrate.js';
 
-// Contrato: banco DESCARTÁVEL e vazio fornecido pelo runner/CI; nunca o .env de desenvolvimento.
+// Contract: an empty DISPOSABLE database from the runner/CI, never development .env.
 if (process.env.INTEGRATION_DATABASE !== 'disposable')
   throw new Error('Exige banco descartável explícito');
 
@@ -19,7 +19,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await database.close();
 });
-it('nega readiness sem migration, aplica SQL, valida constraints e recupera após reconectar', async () => {
+it('denies readiness without migrations, applies SQL, checks constraints, and recovers after reconnect', async () => {
   const declared = getTableConfig(rooms);
 
   expect(declared.checks.map((check) => check.name)).toEqual([
@@ -54,7 +54,7 @@ it('nega readiness sem migration, aplica SQL, valida constraints e recupera apó
   } finally {
     await reconnected.close();
   }
-  // A migration adicional é detectada como pendente, e não migra por HTTP.
+  // Missing migration history is detected as pending; HTTP must not migrate it.
   await database.pool.query('DELETE FROM drizzle.__drizzle_migrations');
   expect((await app.request('/readyz')).status).toBe(503);
 });

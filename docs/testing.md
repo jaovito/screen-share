@@ -1,53 +1,62 @@
-# Testes, cobertura e desenvolvimento
+# Tests, coverage, and development
 
-A política adapta as práticas de `~/www/truco` à stack do projeto. Bun Test nativo (`bun:test`) é o único runner unitário/DOM/integração; Playwright cobre navegador; Rust usa cargo test. Vitest e seu provedor de cobertura foram removidos após a avaliação da ADR 0008. Use `bun run test` para coordenar backend/DOM isolados. Uma chamada `bun test <arquivo>` é útil para seleção direta; testes DOM precisam de `--preload ./tooling/tests/setup-dom.ts`, e testes SQL exigem banco descartável pelo runner.
+The policy adapts ~/www/truco practices to this stack. Native Bun Test (bun:test) is the only unit/DOM/integration runner; Playwright covers browser behavior and Rust uses cargo test. Vitest/its provider were removed after ADR 0008. Use bun run test to coordinate isolated backend/DOM suites. Direct bun test selection needs the DOM preload where applicable; SQL tests need the runner's disposable database.
 
-| Comando                           | Escopo                                                              |
-| --------------------------------- | ------------------------------------------------------------------- |
-| `bun run lint`                    | Biome lint + fronteiras de arquitetura                              |
-| `bun run format` / `format:check` | Formata / verifica sem alterar                                      |
-| `bun run typecheck`               | Contratos, apps, testes DOM/API, scripts TS, tooling, configs e E2E |
-| `bun run test` / `test:unit`      | Unitários e DOM, sem Docker                                         |
-| `bun run test:integration`        | Migrations/constraints/readiness com PostgreSQL descartável         |
-| `bun run test:persistence`        | Dados e histórico de migrations após reinício do banco descartável  |
-| `bun run test:coverage`           | Unitários, DOM e integração SQL com metas por arquivo e inventário  |
-| `bun run test:e2e:install`        | Instala Chromium gerenciado pelo Playwright                         |
-| `bun run test:e2e`                | API/DB reais e previews de produção isolados, desktop e mobile      |
-| `bun run check:ts`                | Lint, tipos, arquitetura, unitários/DOM e builds; sem Docker        |
-| `bun run check`                   | Check TS, Rust portável e cobertura completa; requer Docker         |
+| Command                           | Scope                                                           |
+| --------------------------------- | --------------------------------------------------------------- |
+| `bun run lint`                    | Biome lint and architecture boundaries                          |
+| `bun run format` / `format:check` | Format / check without changing files                           |
+| `bun run typecheck`               | Contracts, apps, DOM/API tests, scripts, tooling, configs, E2E  |
+| `bun run test` / `test:unit`      | Unit/DOM tests without Docker                                   |
+| `bun run test:integration`        | Migrations/constraints/readiness with disposable PostgreSQL     |
+| `bun run test:persistence`        | Data/migration history after disposable database restart        |
+| `bun run test:coverage`           | Unit/DOM/SQL tests with per-file thresholds and inventory       |
+| `bun run test:e2e:install`        | Install Playwright-managed Chromium                             |
+| `bun run test:e2e`                | Real API/database, isolated production previews, desktop/mobile |
+| `bun run check:ts`                | Lint/types/architecture/unit/DOM/builds, without Docker         |
+| `bun run check`                   | TS, portable Rust, complete coverage; requires Docker           |
 
-## Organização e comportamento
+## Organization and behavior
 
-Testes de frontend ficam ao lado das páginas/hooks/serviços que exercitam. Não exigir teste isolado para componente decorativo já coberto pela composição. Regressões da API ficam em `apps/control-api/test`; `.integration.test.ts` seleciona casos de banco. Testes de regras de tooling ficam em `tooling`. E2E ficam em `tests/e2e/<feature>/*.e2e.ts`; suporte compartilhado só é criado com necessidade real.
+Frontend tests live near the page/hook/service behavior they exercise. Decorative components already covered by composition need no redundant isolated test. API regressions live in apps/control-api/test; .integration.test.ts selects database cases. Tooling policy tests live in tooling. E2E tests use tests/e2e/<feature>/*.e2e.ts; introduce shared support only with actual reuse.
 
-Casos atuais incluem catálogo/validação, liveness versus readiness, configuração saneada, banco indisponível, SQL repetido, constraints, reconexão, retries limitados, encerramento do servidor, smoke de controle, loading/retry/erro/cleanup do viewer e IPC indisponível/inválido no desktop. Relógios falsos evitam esperas reais em testes de timeout. Rede/banco reais têm prazos limitados.
+Current cases cover catalog validation, liveness/readiness separation, sanitized configuration errors, unavailable database, repeated SQL, constraints, reconnection, bounded retries, shutdown, smoke, viewer loading/retry/error/cleanup, and unavailable/invalid desktop IPC. Fake clocks avoid real timeout waits. Real network/database calls have deadlines. Write test descriptions/comments in English; assertions may retain Portuguese UI/runtime strings.
 
-E2E usa banco descartável, portas livres e processos exclusivos, sem reutilizar servidores existentes ou tocar no banco de desenvolvimento. O fluxo principal consulta a API real, aplica migrations reais e exibe os oito perfis. Cenários de erro interceptam somente as requisições do teste para provocar 503/contrato inválido; não são anunciados como testes de rede de mídia. A prévia web do desktop não comprova shell Windows ou captura.
+E2E uses a disposable database, free ports, and owned processes without reusing existing servers or touching development data. The main flow queries the real API, applies migrations, and displays eight profiles. Error cases intercept only the test's requests to cause 503/invalid contracts; they do not prove media networking. Desktop browser preview does not prove the Windows shell/capture.
 
-O runner E2E constrói as interfaces com URL pública de API própria. `reuseExistingServer: false` evita usar outro aplicativo por engano. Traces ficam retidos em falha; HTML em `playwright-report`, screenshots em `test-results`. `bun run test:e2e -- --project=chromium` seleciona o projeto desktop. As capturas de sucesso permitem revisão visual além das asserções geométricas.
+The E2E runner builds interfaces with its own public API URL. reuseExistingServer: false avoids using another app accidentally. Traces are retained on failure; HTML lives in playwright-report and screenshots in test-results. `bun run test:e2e -- --project=chromium` selects desktop. Success screenshots allow visual review alongside geometry assertions.
 
-## Cobertura obrigatória
+## Required coverage
 
-Mínimo: **80% de linhas e 80% de funções por arquivo executável**, configurado em `bunfig.toml` e conferido explicitamente pelo parser LCOV em `tooling/coverage/lcov.ts`. A conferência usa contadores exatos antes de arredondar e verifica cada ocorrência de arquivo em cada suíte. Uma média alta não compensa um arquivo abaixo da meta. Statements e branches não são anunciados como medidos por este runner; casos de decisão continuam exigidos pelos testes/revisão. Casos críticos continuam obrigatórios independentemente da porcentagem.
+Minimum: **80% lines and 80% functions per executable file**, configured in bunfig.toml and explicitly checked by tooling/coverage/lcov.ts. The parser compares exact counters before rounding and checks every file occurrence in every suite. High averages cannot compensate for low-coverage files. This runner does not claim statement/branch coverage; decision cases still require tests/review. Critical behavior remains mandatory regardless of percentages.
 
-O runner limpa `/coverage`, cria PostgreSQL exclusivo e mede backend/SQL em um processo e DOM em outro, ambos com `--isolate` por arquivo. O inventário abrange todas as fontes `apps/*/src` e contratos; o analisador de arquitetura também é medido; o inventário rejeita módulos executáveis ausentes do relatório, incluindo fontes sem imports em testes. Relatórios: texto e LCOV nativos por suíte, LCOV agregado, JSON summary e HTML de sumário (`coverage/index.html`) com linhas não cobertas. Arquivos sem funções próprias aparecem como — no HTML, sem inventar funções para contar. Não se compara esse percentual diretamente ao V8/Vitest, pois os contadores são diferentes. Playwright e Rust não são somados a esse percentual.
+The runner clears root coverage, creates dedicated PostgreSQL, and measures backend/SQL and DOM in separate processes with per-file --isolate. Inventory covers all apps/*/src and contracts; the architecture analyzer is also measured. Missing executable modules fail inventory, including sources never imported by tests. Reports include native text/LCOV per suite, aggregate LCOV, JSON summary, and coverage/index.html per-file summary with uncovered line numbers. Files with no own functions display an em dash, without invented counters. Native percentages are not directly comparable to V8/Vitest. Playwright/Rust are not added to them.
 
-Exclusões explícitas: testes/fixtures de testes, declarações TypeScript, configs/tooling de execução, e os três entrypoints mínimos `src/index.ts`, `src/migrate.ts`, `src/smoke.ts` da API. Eles somente compõem configuração, chamam serviços e atribuem código de saída. **Todo comportamento** de servidor, migração e smoke foi separado em `src/runtime` e permanece medido; os entrypoints de frontend também são medidos. Não mover comportamento para wrappers ou qualquer pasta excluída para elevar cobertura. Scripts de operação não são denominador de produto; são typechecked e seus fluxos são verificados por bootstrap/doctor/integração/E2E.
+Explicit exclusions: tests/fixtures, TypeScript declarations, configuration/execution infrastructure, and three minimal API CLI entries: src/index.ts, src/migrate.ts, src/smoke.ts. These compose configuration, call services, and assign exit codes. **All server/migration/smoke behavior** was extracted to measured src/runtime services; frontend entrypoints remain measured. Never move behavior into exclusions to raise coverage. Operational scripts are not product coverage denominators; they are typechecked and their flows are verified through bootstrap/doctor/integration/E2E.
 
-`tooling/coverage` permanece versionável: somente relatórios de cobertura da raiz/apps/packages são ignorados. O inventário possui regressão que reprova fonte ausente e aceita arquivos só de tipos. Nunca usar testes que apenas importam módulos para aumentar percentual, baixar metas ou adicionar exclusões silenciosas.
+Tooling coverage source remains versioned: only root/app/package coverage reports are ignored. Inventory has a regression rejecting absent executable source and accepting type-only files. Never import modules solely to inflate coverage, lower thresholds, or add silent exclusions.
 
-## CI e limites
+## Documentation-only changes
 
-Linux executa checks TS, cobertura com banco descartável, persistência e E2E Chromium desktop/mobile. Relatórios são anexados como artifacts, inclusive falhas. Jobs separados mantêm Rust portável, shell Windows e imagem/Compose. Requisitos Docker/Chromium ausentes falham com mensagem; não geram testes ignorados para obter verde.
+For docs, AGENTS.md, agents, and skills without executable changes, validate links, cited commands, plan/code consistency, and affected configuration schemas. Product coverage/E2E need not rerun merely for instruction edits. Scripts/tooling/behavior changes require the appropriate checks. See [agents.md](agents.md).
 
-O CI está configurado, mas só sua execução remota pode confirmar resultados no provedor. O gate Windows e a prova de mídia continuam pendentes. Cobertura TypeScript não afirma cobertura numérica Rust, validação WebView2, encoder, WebRTC ou E2EE.
+## CI and limits
 
-A migração para Bun Test preserva o gate por arquivo e os relatórios. Regressões verificam reprovação de módulo abaixo de 80% mesmo com média global alta, contadores inválidos e o limite antes de arredondamento. Também foi verificado o caminho negativo do runner nativo com meta temporária de 100%, que deve sair com código não zero. Vite e Playwright usam execução explícita `bun --bun`; a API dos E2E permanece em Node para validar o runtime publicado. Ver ADRs 0007 e 0008.
+Linux runs TS checks, disposable-database coverage, persistence, and desktop/mobile Chromium E2E. Reports are uploaded as artifacts including failures. Separate jobs preserve portable Rust, Windows shell, and image/Compose checks. Missing Docker/Chromium fails explicitly rather than producing silently skipped green tests.
 
-## Equivalência e isolamento no Bun Test
+CI configuration alone cannot confirm provider execution. Windows and media gates remain pending. TS coverage does not establish numeric Rust coverage, WebView2 behavior, encoding, WebRTC, or E2EE.
 
-As suites Node e DOM são descobertas em `scripts/test-suites.ts`; arquivos `.integration.test.ts` são incluídos somente com banco descartável. `bun run test` constrói contratos e executa 35 testes unitários/DOM; `test:coverage` inclui a integração SQL, totalizando 36. Preloads/ambientes não são misturados; cada arquivo usa `--isolate` para impedir que mocks de módulo ou globais atravessem fronteiras.
+Native migration preserves per-file gates/reports. Regressions reject below-80% modules despite high aggregate coverage, invalid counters, and values rounded up to 80%. A temporary 100% native threshold was also confirmed to exit nonzero. Vite/Playwright explicitly use bun --bun; E2E API remains Node to validate published runtime. See ADRs 0007/0008.
 
-Mocks usam `mock`, `mock.module` e `spyOn`. Mocks de módulo são registrados antes do import dinâmico do módulo exercitado. Timers usam APIs síncronas `jest` do próprio Bun e drenagem explícita de microtasks; não há shim de Vitest. Testes de montagem usam um identificador de módulo distinto para o caso de raiz ausente, sem depender de `vi.resetModules`. O preload DOM registra Happy DOM antes de importar React Testing Library e faz cleanup/restauração de spies após cada teste.
+## Native Bun Test equivalence and isolation
 
-A migração não foi apresentada como ganho adicional de velocidade: os tempos locais ficaram equivalentes, e o fluxo nativo inclui build de contratos/três testes adicionais. A vantagem é remover Vitest e seu provedor, mantendo comportamento e política de qualidade. Typecheck é obrigatório porque execução de TypeScript não valida tipos.
+scripts/test-suites.ts discovers backend/DOM suites; .integration.test.ts is included only with a disposable database. bun run test builds contracts and runs 40 unit/DOM tests; coverage adds SQL integration, totaling 41. Environments/preloads are separated and each file uses --isolate so module mocks/globals do not leak across files.
+
+Mocks use mock, mock.module, and spyOn, registering module mocks before dynamic import of the exercised module. Timers use Bun's synchronous jest APIs and explicit microtask draining; no Vitest shim is installed. Mounting tests use a distinct module identifier for the missing-root case rather than vi.resetModules. DOM preload registers Happy DOM before React Testing Library and cleans up/restores spies after each test.
+
+Local timings were equivalent, with the native workflow including a contracts build and three extra tests. Removing Vitest/provider simplifies the stack without claiming extra speed. Typechecking remains mandatory because executing TypeScript does not validate types.
+
+
+## Localization regressions
+
+UI tests use the real localization provider/resources rather than mocking translation calls. DOM cleanup clears localStorage to isolate locale preferences between tests. Tests exercise canonical/invalid preferences, blocked browser storage, language changes during a pending response, metadata, persistence across remount, and unchanged HTTP/IPC counts. E2E covers selector/reload behavior in the three viewer locales and English/Spanish desktop preview on desktop/mobile Chromium. Unit/DOM descriptions remain English; assertions use the selected target language.

@@ -16,13 +16,13 @@ export function writeCoverageReport(root: string, suites: string[]) {
     readFileSync(resolve(root, `coverage/${suite}/lcov.info`), 'utf8'),
   );
   const files = sources.flatMap((source) => parseLcov(source, root));
-  // Verifica cada ocorrência, inclusive quando um módulo aparece em mais de uma suíte.
+  // Check every occurrence, including modules measured in multiple suites.
   enforceCoverage(files);
   const unique = new Map<string, FileCoverage>();
 
   for (const file of files) {
     const previous = unique.get(file.file);
-    // Se houver duplicação, o sumário conserva a ocorrência de menor cobertura, nunca a média.
+    // For duplicates, retain the occurrence with lower coverage rather than averaging.
     if (
       !previous ||
       Math.min(file.lines.pct, file.functions.pct) <

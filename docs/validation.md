@@ -1,124 +1,166 @@
-# Evidências de validação — M0
+# Validation evidence — M0
 
-Data: 26/10/2026. Máquina: macOS arm64; Docker Engine 29.8.2 via OrbStack, Compose v2. O relatório registra execução local; nenhum workflow remoto foi executado e nenhum código foi publicado.
+Date: 2026-10-26. Host: macOS arm64; Docker Engine 29.8.2 through OrbStack, Compose v2. This records local execution; no remote workflow ran and no code was published. Sections retain historical tools/results rather than substituting current commands into past evidence.
 
-## Resultados
+## Results
 
-| Verificação executada                                        | Resultado                                                                                                                                                           |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm install --frozen-lockfile`                             | Passou, cinco pacotes workspace; lockfile gerado pelo pnpm 10.20.0                                                                                                  |
-| `cargo generate-lockfile`                                    | Passou, Cargo.lock real incluindo o shell                                                                                                                           |
-| `pnpm bootstrap` repetido                                    | Passou; comparação byte a byte confirmou preservação dos dois arquivos locais                                                                                       |
-| `pnpm run doctor` com Node 24.22.1                           | Passou; Node/pnpm/Rust, configuração e Compose disponíveis; portas ocupadas reportadas como informação                                                              |
-| `pnpm check` com Node 24.22.1 / Rust 1.99.1                  | Passou: Biome, tipos, sete testes TS/HTTP/contrato, builds API/viewer/UI desktop, rustfmt/clippy e três testes Rust portáveis                                       |
-| `pnpm test:integration`                                      | Passou em PostgreSQL 17.11 descartável: readiness 503 antes da migration, migration real/reexecução, constraints, conexão nova e 503 quando histórico fica pendente |
-| `pnpm test:persistence`                                      | Passou: migration e registro real de rooms preservados após reinício de PostgreSQL com volume descartável                                                           |
-| `pnpm infra:up` + `pnpm db:migrate`                          | Passou: banco e SFU iniciados, migration aplicada no banco local                                                                                                    |
-| Compose `config --quiet`                                     | Passou sem imprimir configuração resolvida                                                                                                                          |
-| `pnpm stack:up` repetido                                     | Passou: imagem multi-stage, runtime sem privilégios, migrador novo em cada execução, API pronta após sucesso                                                        |
-| `pnpm smoke` do host e smoke compilado dentro da imagem      | Passaram: HTTP, catálogo, readiness/migrations e listRooms autenticado no LiveKit, com timeout; sem conteúdo de salas/credenciais na saída                          |
-| `pnpm dev` no host                                           | Passou com portas temporárias livres para API/viewer; readiness real 200 e HTML disponível; processos temporários encerrados                                        |
-| `cargo check --locked -p screen-share-desktop --all-targets` | Passou no macOS, incluindo configuração Tauri e permissions                                                                                                         |
-| `cargo test --locked -p screen-share-desktop --lib`          | Passou no macOS: fixture serializada IPC compatível com contrato TS                                                                                                 |
-| Viewer no navegador                                          | Passou: oito perfis, retry, indisponibilidade com request abortado, erro com resposta inválida e recuperação com API real                                           |
-| Viewer em 1280px e 390px                                     | Sem overflow horizontal; screenshots inspecionadas em `docs/evidence`                                                                                               |
-| Prévia web do desktop                                        | Passou: ausência de IPC explicitada e transmissão desabilitada                                                                                                      |
-| Git/contexto Docker                                          | `.env`, LiveKit efetivo, dependências, target e artefatos temporários ignorados; sem remote/push/deploy                                                             |
+| Executed check                                             | Result                                                                                                                                                    |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| pnpm install --frozen-lockfile                             | Passed, five workspace packages; genuine pnpm 10.20.0 lockfile                                                                                            |
+| cargo generate-lockfile                                    | Passed, genuine Cargo.lock including shell                                                                                                                |
+| Repeated pnpm bootstrap                                    | Passed; byte-for-byte comparison confirmed both local files preserved                                                                                     |
+| pnpm run doctor on Node 24.22.1                            | Passed; Node/pnpm/Rust, configuration, Compose available; occupied ports informational                                                                    |
+| pnpm check on Node 24.22.1 / Rust 1.99.1                   | Passed: Biome, types, seven TS/HTTP/contract tests, API/viewer/desktop UI builds, fmt/clippy, three portable Rust tests                                   |
+| pnpm test:integration                                      | Passed on disposable PostgreSQL 17.11: readiness 503 before migration, real migration/reexecution, constraints, fresh connection, 503 for pending history |
+| pnpm test:persistence                                      | Passed: migration and real room record survived PostgreSQL restart on disposable volume                                                                   |
+| pnpm infra:up + pnpm db:migrate                            | Passed: database/SFU started, local migration applied                                                                                                     |
+| Compose config --quiet                                     | Passed without resolved configuration output                                                                                                              |
+| Repeated pnpm stack:up                                     | Passed: multi-stage image, unprivileged runtime, fresh migrator each run, API ready only after success                                                    |
+| Host pnpm smoke / compiled in-image smoke                  | Passed: HTTP/catalog/migrations/readiness/authenticated LiveKit listRooms with timeout, no room content/credentials output                                |
+| Host pnpm dev                                              | Passed on free temporary API/viewer ports; real readiness 200/HTML; temporary processes stopped                                                           |
+| cargo check --locked -p screen-share-desktop --all-targets | Passed on macOS, including Tauri configuration/permissions                                                                                                |
+| cargo test --locked -p screen-share-desktop --lib          | Passed on macOS: serialized IPC fixture compatible with TS                                                                                                |
+| Browser viewer                                             | Passed: eight profiles, retry, aborted-request unavailable state, invalid-response error, real-API recovery                                               |
+| Viewer at 1280px/390px                                     | No horizontal overflow; inspected screenshots in docs/evidence                                                                                            |
+| Desktop browser preview                                    | Passed: missing IPC explicit, transmission disabled                                                                                                       |
+| Git/Docker context                                         | Effective .env/LiveKit, dependencies, target, temporary artifacts ignored; no remote/push/deploy                                                          |
 
-O Node original do host era 24.11.0. Os primeiros checks rodaram nele; a verificação agregada final foi repetida em Node 24.22.1 obtido temporariamente em `/tmp` e conferido pelo SHASUMS256 oficial, sem alterar a instalação global. A imagem usa Node 24.22.1.
+Host originally had Node 24.11.0. Initial checks ran there; final aggregate checks repeated on temporarily downloaded Node 24.22.1 under /tmp, verified against official SHASUMS256, without changing global installation. Image uses Node 24.22.1.
 
-## Ajustes encontrados e corrigidos
+## Issues found and corrected
 
-- Hono retorna um tipo que também admite HTTP/2: encerramento usa narrowing para métodos específicos HTTP/1.
-- Refinamentos de URL inválida precisam retornar falso, sem deixar exceções de URL escaparem da validação saneada.
-- O shell Tauri precisa de PNG além do ICO para a checagem no macOS; os dois assets originais foram adicionados.
-- Verificação de perfis rejeita dimensões incoerentes e itens duplicados.
-- Artefatos gerados pelo browser/Tauri ficam fora do lint de fontes e ignorados no Git; checks das fontes permanecem ativos.
-- `pnpm doctor` é reservado pelo próprio pnpm 10.20.0. O diagnóstico do projeto é `pnpm run doctor`; não foi instalado wrapper global.
-- Portas 5173, 5174 e 3001 já eram usadas por outros projetos. Nenhum desses processos foi encerrado. O `.env` local usa `VIEWER_PORT=5175` e CORS correspondente; os testes do modo host alocaram portas temporárias livres.
+- Hono's return type includes HTTP/2; shutdown narrows before HTTP/1-specific methods.
+- Invalid URL refinements must return false rather than leak URL exceptions outside sanitized validation.
+- Tauri macOS checks require PNG alongside ICO; both original assets were added.
+- Profile validation rejects inconsistent dimensions and duplicates.
+- Generated browser/Tauri artifacts stay outside source lint and Git; source checks remain active.
+- pnpm 10.20.0 reserves pnpm doctor; project diagnostics use pnpm run doctor without global wrappers.
+- Ports 5173/5174/3001 belonged to other projects; none were stopped. Local .env uses VIEWER_PORT=5175/matching CORS; host-mode tests allocated free temporary ports.
 
-## Limites e gates pendentes
+## Limits and pending gates
 
-- **Windows 11 x64 não disponível neste host:** build/check/execução do shell, permissões em runtime, teste de IPC no Windows e bundle NSIS ainda precisam executar nesse sistema. O workflow Windows está configurado, mas não foi rodado aqui.
-- **GitHub Actions não executado:** jobs Linux, Rust, Windows e Compose estão versionados; seus resultados remotos continuam pendentes.
-- **Mídia fora de M0:** não houve captura WGC, D3D11, encoder, transporte WebRTC de mídia, áudio, prova ICE entre PCs, autenticação de produto ou E2EE. LiveKit listRooms comprova somente conectividade/autenticação do controle.
-- Nenhum instalador assinado, domínio, TLS público, TURN ou deployment LAN/cloud entregue.
+- **Windows 11 x64 unavailable:** shell build/check/execution, runtime permissions, Windows IPC tests, NSIS bundle remain unexecuted on Windows. Its workflow is configured but did not run here.
+- **GitHub Actions not executed:** Linux/Rust/Windows/Compose jobs are versioned; provider results remain pending.
+- **Media outside M0:** no WGC, D3D11, encoder, WebRTC media, audio, two-PC ICE proof, product authentication, or E2EE. LiveKit listRooms proves control connectivity/authentication only.
+- No signed installer, domain, public TLS, TURN, LAN/cloud deployment delivered.
 
-## Imagens OCI observadas
+## Observed OCI images
 
-- `postgres:17.11-bookworm`: `sha256:858bb5e98eed02eb8cafbcdc007f9a65d1b613972028944a8ec2133ccaf80d27`.
-- `livekit/livekit-server:v1.13.11`: `sha256:25cd902de7cacbd5f1f779f6a6ac1eae20ba8f56b0935934ce6b0ab80d1e3d20`.
-- `node:24.22.1-bookworm-slim`: `sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205`.
+- postgres:17.11-bookworm: sha256:858bb5e98eed02eb8cafbcdc007f9a65d1b613972028944a8ec2133ccaf80d27.
+- livekit/livekit-server:v1.13.11: sha256:25cd902de7cacbd5f1f779f6a6ac1eae20ba8f56b0935934ce6b0ab80d1e3d20.
+- node:24.22.1-bookworm-slim: sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205.
 
-As tags usadas são concretas; os digests registram o pull desta execução. Não armazenar credenciais junto a essas evidências.
+Concrete tags were used; digests record these pulls. Never retain credentials with evidence.
 
-## Próximo passo
+## Next step
 
-Validar o gate Windows do M0. Depois, iniciar M1: WGC → D3D11 → H.264 por hardware → LiveKit/WebRTC, com dois PCs, métricas reais, preservação da fonte ao Alt+Tab e prova explícita de E2EE conforme PLAN.md.
+Validate M0 Windows gate, then start M1: WGC → D3D11 → hardware H.264 → LiveKit/WebRTC, with two PCs, real metrics, same-source Alt+Tab recovery, and explicit E2EE proof per PLAN.md.
 
-## Atualização: Tailwind compartilhado
+## Update: shared Tailwind
 
-Tailwind CSS e `@tailwindcss/vite` 4.3.3 configurados no viewer e desktop, com tokens/estilos centralizados em `packages/ui` e lockfile atualizado. `pnpm check:ts` passou (tipos, sete testes e builds); após organizar os seletores CSS, `pnpm exec biome check .` passou sem avisos e os dois builds de frontend foram repetidos com sucesso.
+Tailwind CSS/@tailwindcss/vite 4.3.3 configured in viewer/desktop, tokens/styles centralized in packages/ui, lockfile updated. pnpm check:ts passed types/seven tests/builds. After CSS selector organization, pnpm exec biome check . passed without warnings; both frontend builds repeated successfully.
 
-As prévias Vite foram reiniciadas para carregar o plugin novo. No navegador, utilities `min-h-screen`, `bg-background`, `text-foreground` e `mt-6` geraram as propriedades esperadas; em 1280px e 390px não houve overflow horizontal. O tema escuro foi preservado. A prévia desktop mantém a transmissão desabilitada. Esta alteração não modifica Rust ou recursos de mídia.
+Vite previews restarted for the plugin. Browser inspection confirmed min-h-screen, bg-background, text-foreground, mt-6 generated expected properties, with no horizontal overflow at 1280px/390px. Dark theme preserved, desktop transmission disabled. No Rust/media behavior changed.
 
-## Atualização: convenções do Truco e ferramentas de desenvolvimento
+## Update: Truco conventions and development tooling
 
-Regras de organização/legibilidade adaptadas de `~/www/truco` para `AGENTS.md`, `docs/frontend.md` e `docs/testing.md`, com decisão registrada na ADR 0006. Frontends reorganizados em app/features, APIs públicas por feature, hooks/services próximos e estilos exclusivos dentro da feature. Tokens/estilos realmente compartilhados permanecem em packages/ui. Biome passou a usar largura 100, aspas simples, 2 espaços e trailing commas, preservando separação entre blocos lógicos.
+Organization/readability adapted from ~/www/truco into AGENTS.md, frontend/testing docs, ADR 0006. Frontends moved to app/features, public feature APIs, nearby hooks/services, exclusive feature styles. Actual shared tokens/styles stay in packages/ui. Biome uses width 100, single quotes, 2 spaces, trailing commas, preserving logical-block separation.
 
-Todos os scripts autorais MJS foram substituídos por TypeScript executado no Node 24; não há JS/MJS/CJS autoral restante. Tipagem estrita inclui scripts, tooling, configs, testes DOM/API e E2E. pnpm e Vitest foram preservados; não foi necessário adicionar Bun.
+All authored MJS scripts became TypeScript running on Node 24; no authored JS/MJS/CJS remained. Strict types cover scripts/tooling/configs/DOM/API/E2E. pnpm/Vitest were retained at this stage; Bun was unnecessary for that requirement.
 
-Resultados locais finais desta atualização:
+Local results:
 
-- Typecheck completo passou, incluindo execução com Node 24.22.1; Biome e check de arquitetura passaram.
-- Suíte completa de cobertura: **33 testes**, todos aprovados, com **98,70% de linhas** e **96% de funções** no agregado. Todos os arquivos medidos cumprem o gate de **80% por arquivo**. O inventário confirmou **23 arquivos executáveis de produto** presentes no relatório; o analisador de arquitetura também é medido.
-- Regressões de tooling confirmam rejeição de imports privados/ciclos, ausência de fontes em cobertura e regras reais de Biome para globais/hooks. A fixture de Biome usa arquivo exclusivo temporário, sem sobrescrever arquivos existentes e com limpeza garantida.
-- Os **6 E2E** passaram em Chromium desktop/mobile, com API e PostgreSQL reais descartáveis, migrations e previews de produção isolados. Cenários de falha usam interceptação explícita; o caso principal usa HTTP/DB reais. Capturas desktop/mobile do viewer e desktop preview foram inspecionadas visualmente, sem distorções/overflow.
-- Bootstrap/doctor TypeScript passaram com configuração local preservada. `check:rust` passou: fmt, clippy e três testes portáveis.
-- Script TypeScript de persistência passou; migrations e registro de rooms sobreviveram ao reinício do container descartável. Instalação com lockfile congelado passou.
-- Build multi-stage da imagem da API passou após a reorganização dos serviços e atualização das dependências de testes.
-- CI Linux agora exige cobertura e E2E, e publica relatórios/traces como artifacts. Execução remota de CI permanece não verificada; shell Windows continua pendente.
+- Full typecheck, including Node 24.22.1, Biome, architecture checks passed.
+- Complete coverage: **33 passing tests**, **98.70% lines**, **96% functions** aggregate; every measured file met **80% per file**. Inventory confirmed **23 executable product files**; architecture analyzer also measured.
+- Tooling regressions reject private imports/cycles, missing sources, and actual Biome global/hook violations. Biome fixture uses an exclusive temporary file without overwrites and guaranteed cleanup.
+- **6 E2E passed** in desktop/mobile Chromium, real disposable API/PostgreSQL, migrations, isolated production previews. Failure cases use explicit interception; main case real HTTP/database. Viewer/desktop-preview screenshots inspected without distortion/overflow.
+- TypeScript bootstrap/doctor passed preserving local config. check:rust passed fmt/clippy/three portable tests.
+- TypeScript persistence passed; room data/migration history survived disposable container restart. Frozen installation passed.
+- Multi-stage API image built after service reorganization/test dependency updates.
+- Linux CI now requires coverage/E2E and uploads reports/traces; remote execution remains unverified, Windows shell pending.
 
-Relatórios locais: `coverage/index.html`, `coverage/lcov.info`, `coverage/coverage-summary.json`, `playwright-report/index.html` e screenshots de sucesso em `test-results`. Nenhum relatório é código versionado. O helper `tooling/coverage/inventory.ts` permanece incluído no Git/lint.
+Local reports: coverage/index.html, coverage/lcov.info, coverage/coverage-summary.json, playwright-report/index.html, success screenshots under test-results. Reports are unversioned; tooling/coverage/inventory.ts remains in Git/lint.
 
-As exclusões de cobertura são documentadas em `docs/testing.md`: wrappers CLI mínimos e infraestrutura de execução não entram no denominador de produto; servidor, migration e smoke executáveis foram separados em runtime e continuam medidos. Cobertura TS não é cobertura Rust nem evidência de mídia/E2EE.
+Justified exclusions are documented in testing.md: minimal CLI wrappers/execution infrastructure are outside product denominator; executable server/migration/smoke behavior was extracted to measured runtime. TS coverage is neither Rust coverage nor media/E2EE proof.
 
-## Atualização: adoção de Bun no desenvolvimento
+## Update: Bun development adoption
 
-Bun **1.4.3** adotado como gerenciador/workspaces e runtime das ferramentas após avaliação solicitada pelo usuário. A ADR 0007 e `docs/benchmarks/bun-2026-10-26.json` registram os dados.
+Bun **1.4.3** adopted for workspaces/tool runtime after user-requested evaluation. ADR 0007/docs/benchmarks/bun-2026-10-26.json record data.
 
-Benchmark local macOS arm64, mesmos 32 testes Vitest 5.0.5, três execuções alternadas, tempo total incluindo startup e sem limpar caches:
+Local macOS arm64 benchmark, same 32 Vitest 5.0.5 tests, three alternating runs including startup, caches retained:
 
-- Node 24.22.1: 3,344s / 1,800s / 1,977s; mediana **1,977s**.
-- Bun 1.4.3: 1,718s / 0,802s / 0,916s; mediana **0,916s**.
-- Cerca de **54% menos tempo**, aproximadamente **2,16x** neste cenário. Os workers foram confirmados como Bun por `process.execPath` e `process.versions.bun`; o ganho não foi inferido só pelo comando pai. Amostra local, sem promessa universal.
+- Node 24.22.1: 3.344s / 1.800s / 1.977s; median **1.977s**.
+- Bun 1.4.3: 1.718s / 0.802s / 0.916s; median **0.916s**.
+- Approximately **54% less time**, **2.16x** in this sample. Bun workers verified by process.execPath/process.versions.bun, not inferred from parent alone. No universal guarantee.
 
-Validações após a adoção:
+Post-adoption validation:
 
-- `bun install --frozen-lockfile` e `bun run check:ts` passaram também em cópia limpa sem node_modules, `.env`, caches/links pnpm ou artefatos de build anteriores. O lockfile foi gerado pelo Bun migrando o lockfile real anterior; manifests/lockfile pnpm foram removidos.
-- `bun run test:coverage` passou: **33 testes**, **98,70% linhas**, **96% funções**, todos os arquivos acima do gate de 80%; inventário de 23 fontes executáveis de produto confirmado. A rejeição também foi comprovada: meta temporária de 100% causou erro e saída não zero, sem mudar a política permanente ou os relatórios oficiais.
-- `bun run test:e2e` passou: **6 cenários**, Chromium desktop/mobile, previews Vite e runner Playwright sob Bun, API compilada sob **Node 24.22.1** e PostgreSQL descartável.
-- `bun run dev` passou com API de desenvolvimento e viewer em portas temporárias isoladas. Bootstrap/doctor passaram; diagnóstico distingue Bun de sua versão de compatibilidade Node e consulta o Node real separadamente.
-- Checks Rust passaram (fmt/clippy/três testes). Persistência após reinício do banco descartável passou pelo runner Bun.
-- Docker multi-stage com `oven/bun:1.4.3` em instalação/build passou. Runtime final permanece `node:24.22.1-bookworm-slim`, sem Bun, usuário não privilegiado, dependências de produção filtradas.
-- `bun run stack:up` e smoke autenticado do LiveKit passaram, com migrations novas e API Node pronta. O CLI Tauri 2.12.4 executou sob Bun no macOS; build/execução Windows continuam pendentes.
+- bun install --frozen-lockfile/check:ts also passed in a clean copy without node_modules, .env, pnpm caches/links, prior artifacts. Bun generated lockfile by migrating actual prior lock; pnpm workspace/lock files removed.
+- Coverage passed **33 tests**, **98.70% lines**, **96% functions**, per-file 80%/23-source inventory preserved. Temporary 100% threshold failed nonzero without changing permanent policy/reports.
+- E2E passed **6 scenarios**, desktop/mobile Chromium, Vite previews/Playwright on Bun, compiled API on **Node 24.22.1**, disposable PostgreSQL.
+- dev passed with isolated temporary API/viewer ports. Bootstrap/doctor passed; diagnostics distinguish Bun from Node-compatibility version and query real Node separately.
+- Rust fmt/clippy/three tests passed. Disposable-database restart persistence passed through Bun runner.
+- Multi-stage Docker with oven/bun:1.4.3 install/build passed. Final node:24.22.1-bookworm-slim remains Bun-free, unprivileged, with filtered production dependencies.
+- stack:up/authenticated LiveKit smoke passed, fresh migrations/API Node ready. Tauri CLI 2.12.4 ran on Bun/macOS; Windows build/execution pending.
 
-Bun não foi colocado no código browser/domínio, e Vitest continua como runner: `bun run test`, não `bun test`. Typecheck, ferramentas de segurança e metas de cobertura foram preservados. CI foi atualizado para instalar Bun fixado e manter Node para API/E2E; execução remota continua não confirmada. Não houve push/deploy nem alteração de escopo de mídia.
+At that historical stage Bun remained outside browser/domain and Vitest was retained: bun run test, not bun test. Types/security tools/thresholds remained. CI installs pinned Bun and retains Node for API/E2E; remote execution unconfirmed. No push/deploy/media scope change.
+
+## Update: native Bun Test
+
+Native Bun Test replaced Vitest/provider per ADR 0008. Mocks/timers/React mounting use native APIs; backend/DOM are separate processes with per-file isolation. Playwright remains E2E.
+
+- Frozen installation/check:ts passed in clean copy without dependencies/local config/prior builds: types, Biome, architecture, 35 unit/DOM tests, builds. Main workspace passed too.
+- Coverage passed **36 tests** including real disposable PostgreSQL: **99.14% lines**, **96.70% functions**, **80% per file**, **23 executable product sources** in inventory. Native counters are not comparable directly to historical V8. Docker execution completed with required daemon access.
+- LCOV regressions reject low individual coverage despite high averages, invalid counters, and sub-80% rounded to 80%. A passing-test fixture with only 50% function coverage confirmed Bun exit 1 under temporary 100% target, without changing permanent policy.
+- **6 E2E passed** after Vitest removal, compiled Node 24.22.1 API/disposable PostgreSQL.
+- Multi-stage Docker built with new lockfile; Bun installs/builds, Node 24.22.1 runs final API.
+- No active Vitest imports/config/dependencies remain. Native workflow produces HTML per-file/uncovered-line summary, JSON, LCOV.
+
+Three alternating runs without coverage/database/E2E: Vitest on Bun (32 tests) median **0.696s**; native Bun (35 tests/contracts build) **0.727s**. Costs differ, results effectively tied, no extra speedup claimed. Raw data: docs/benchmarks/bun-native-2026-10-26.json. This supersedes the historical decision above to retain Vitest. Remote CI, Windows shell, media implementation/proofs remain pending.
+
+## Update: repository instructions, agents, skills
+
+AGENTS.md gained scoped reading, engineering workflow, integration rules, six .codex/agents roles/five .agents/skills workflows. Neon preferences, architecture, privacy, frontend organization, production Node runtime, gates preserved. docs/agents.md covers usage/maintenance; configuration neither implements media nor starts M1.
+
+Checks executed on 2026-10-26:
+
+- Six TOML files parsed with Bun.TOML.parse; required fields/unique names/file-name matching verified. No model/permission/MCP/sandbox overrides.
+- Five skills passed skill-creator quick_validate.py. YAML metadata parsed, short descriptions valid, prompts reference their skill names.
+- 36 local links verified in root instructions/guide/skills. Consistency review preserved 80% per-file gate and M0/Windows/CI/media evidence distinctions.
+- Biome/git diff --check passed. No executable/dependency/runtime changes; product suites were not repeated for that documentation-only update.
+
+Formats/discovery locations were checked against official OpenAI docs linked in agents.md. Syntax/document checks do not confirm client discovery or execution of custom roles. No global configuration changed.
 
 
-## Atualização: Bun Test nativo
+## Update: private adversarial reviewer and English documentation
 
-Bun Test substituiu Vitest e seu provedor de cobertura, conforme ADR 0008. Mocks, timers e montagem React foram adaptados às APIs nativas; backend e DOM usam processos separados e isolamento por arquivo. Playwright permanece para E2E.
+At the user's request, ss-security-review now dispatches a private independent attacker-minded reviewer for actual security assessments. Its complete prompt is a skill-local reference, not a globally registered custom agent. It supports bounded local executable proofs on synthetic, assessment-owned resources; the coordinator verifies findings and separates confirmed issues, hypotheses, and future gates. Editing/translating the skill does not trigger an assessment. Workflow routing is not a separate sandbox or an unbypassable access-control mechanism.
 
-Resultados locais desta atualização:
+Repository documentation, root instructions, all skill/agent prompts and metadata, authored comments, developer-facing test descriptions, and example/permission descriptions were translated into English. Historical decisions, commands, metrics, image digests, source URLs, and pending gates were preserved. Three ADR filenames were changed to English with their sequence numbers preserved. Existing UI/runtime strings and protocol values were preserved; this change does not localize the product.
 
-- `bun install --frozen-lockfile` e `bun run check:ts` passaram em cópia limpa sem node_modules, configuração local ou builds prévios: tipos, Biome, arquitetura, 35 testes unitários/DOM e builds. A mesma verificação passou no workspace principal.
-- `bun run test:coverage` passou com **36 testes**, incluindo PostgreSQL real descartável: **99,14% de linhas** e **96,70% de funções**, com **80% por arquivo** e inventário de **23 fontes executáveis de produto**. Os contadores nativos não são diretamente comparáveis aos percentuais históricos V8/Vitest. A execução Docker exige acesso ao daemon; foi concluída com esse acesso.
-- Regressões LCOV rejeitam arquivo abaixo da meta apesar de média alta, contadores inválidos e percentual inferior a 80% que arredondaria para 80%. Uma fixture temporária com teste aprovado e somente 50% das funções cobertas confirmou saída 1 do Bun Test com meta de 100%, sem alterar a política permanente.
-- Os **6 E2E** passaram após remover Vitest, com API compilada sob Node 24.22.1 e PostgreSQL descartável.
-- Build multi-stage Docker passou com o novo lockfile. Bun instala/constrói; Node 24.22.1 continua no runtime final da API.
-- Não há imports, configs ou dependências Vitest restantes nos manifests/lockfile/código ativo. Relatórios HTML de sumário com linhas não cobertas, JSON e LCOV são produzidos pelo fluxo nativo.
+Validation executed on 2026-10-26:
 
-Benchmark alternado, três execuções locais sem cobertura/DB/E2E: Vitest no Bun (32 testes) teve mediana **0,696s**; Bun Test (35 testes e build de contratos) **0,727s**. Os custos diferem e o resultado ficou praticamente empatado; não há alegação de ganho adicional de velocidade. A adoção simplifica as ferramentas. Dados brutos em `docs/benchmarks/bun-native-2026-10-26.json`.
+- Five skills passed skill-creator quick_validate.py; YAML metadata parsed with valid short descriptions and skill-name prompts. Six standalone agent TOML files parsed with required fields and unique file/name correspondence. The private reviewer is absent from the discoverable agent directory.
+- All 25 maintained Markdown documents passed an English-prose scan and all 58 local references resolved. Original source URLs in PLAN.md, setup prompt, and README were preserved. Authored code comments were inspected after translation.
+- bun run check:ts passed: Biome, strict types, architecture, 35 unit/DOM tests, and builds.
+- bun run test:coverage passed **36 tests**, including disposable PostgreSQL, with **99.14% lines**, **96.70% functions**, the **80% per-file gate**, and **23 product runtime files** confirmed by inventory.
+- bun run check:rust passed fmt, clippy, and **three portable tests**. Windows shell/permissions execution remains unverified on Windows.
+- E2E was not repeated: UI behavior, runtime contracts, and build configuration did not change. No adversarial security assessment or exploit proof was run merely to configure this workflow; syntax/consistency checks are not evidence of agent execution or system security.
 
-Esta seção substitui a decisão histórica acima de manter Vitest. CI remoto, shell Windows e implementação/provas de mídia continuam pendentes.
+No dependency, global configuration, remote service, development data, or deployment was changed.
+
+
+## Update: UI internationalization
+
+i18next 26.5.11/react-i18next 17.1.9 were added with exact versions and a tool-generated Bun lockfile. packages/i18n provides isolated providers, a shared accessible selector, canonical supported locales, and per-origin localStorage preference. Viewer/desktop feature catalogs contain pt-BR/es/en, with English key schemas and typed hooks. pt-BR is default/fallback. Metadata, errors/status, and profile interpolation translate without repeating control requests. See ADR 0009/frontend.md.
+
+Executed on 2026-10-26:
+
+- bun run check:ts passed Biome, strict app/script/test types, architecture boundaries, **40 unit/DOM tests**, and production builds. Final type/architecture checks also include the added E2E cases.
+- bun run test:coverage passed **41 tests** including real disposable PostgreSQL; **99.29% lines**, **97.35% functions**, **80% per-file gate** preserved; inventory confirmed **33 product runtime files**, including all catalogs/shared locale code. No coverage exclusions were added.
+- bun run test:e2e passed **10 scenarios** in desktop/mobile Chromium, including three viewer languages, desktop English/Spanish, local persistence after reload, document lang/title, eight real profiles, unavailable IPC, disabled media, and overflow checks. Compiled API ran on pinned Node 24.22.1 against disposable PostgreSQL.
+- Actual E2E screenshots of English desktop viewer, Spanish mobile viewer, and Spanish desktop preview at desktop/mobile sizes were inspected. Copy remains readable with responsive wrapping and no horizontal overflow. Screenshots/reports remain ignored local artifacts under test-results/playwright-report.
+- Docker app-profile API image built successfully with the extra workspace manifest and frozen lockfile; production dependencies remain filtered to control-api/contracts and final runtime remains Node.
+- DOM regressions cover invalid saved locale, storage read/write failures, in-flight translated state, native errors, persistence across remount, and unchanged HTTP/IPC counts. No SDK/platform identifiers, API schema, or capture permissions changed.
+
+Preferences are origin-local, with explicit selection and no browser-language detection. Resources are bundled; there is no external translation request/service. Native Windows shell execution and remote CI remain unverified; this UI change does not establish media/E2EE support. Rust behavior was not changed and its checks were not repeated for this UI task.

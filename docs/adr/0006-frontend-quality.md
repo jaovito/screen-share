@@ -1,21 +1,21 @@
-# Organização por feature, scripts TypeScript e política de testes
+# Feature organization, TypeScript scripts, and test policy
 
-Status: aceito por solicitação do usuário · 26/10/2026.
+Status: accepted at the user's request · 2026-10-26.
 
-## Contexto
+## Context
 
-O usuário pediu adotar as convenções de organização/legibilidade e testes do projeto local `~/www/truco`, e substituir scripts MJS por TypeScript. O projeto já possui Node LTS, pnpm, Vitest e Rust/Tauri.
+The user requested local ~/www/truco organization/readability/testing conventions and replacing MJS scripts with TypeScript. At that stage the project used Node LTS, pnpm, Vitest, and Rust/Tauri.
 
-## Decisão
+## Decision
 
-Adotar `app/features/shared`, APIs públicas por feature, testes/estilos próximos, manifesto CSS por app, limites de tamanho e verificação de imports com Oxc. Configurar Biome com 2 espaços, largura 100, aspas simples e trailing commas, e documentar a separação de blocos lógicos por linhas em branco. Manter API hexagonal e Rust puros.
+Adopt app/features/shared, public feature APIs, nearby tests/styles, app CSS manifests, size limits, and Oxc import checks. Configure Biome with 2 spaces, width 100, single quotes, trailing commas, and logical-block blank lines. Keep API hexagonal and Rust domains pure.
 
-Executar scripts autorais `.ts` com o Node 24 já fixado, restringindo-os a sintaxe apagável e mantendo typecheck próprio. Preservar pnpm e Vitest para evitar um segundo gerenciador/runtime/runner sem necessidade; não é necessário Bun para esse requisito.
+Execute authored .ts scripts using pinned Node 24, restricting syntax to erasable types with separate typechecking. Preserve pnpm/Vitest to avoid another manager/runtime/runner without need; Bun was unnecessary for that requirement. Later decisions supersede this tooling choice in ADRs 0007/0008.
 
-Configurar Vitest/Happy DOM/React Testing Library e cobertura V8 de pelo menos 80% de linhas e funções por arquivo, com inventário de fontes. PostgreSQL é descartável nos testes. Playwright usa builds de produção, API real e Chromium desktop/mobile em portas isoladas. O check completo inclui cobertura e passa a exigir Docker; E2E continua separado.
+Configure Vitest/Happy DOM/React Testing Library with V8 coverage of at least 80% lines/functions per file and source inventory. Tests use disposable PostgreSQL. Playwright uses production builds, real API, Chromium desktop/mobile, and isolated ports. Full checks include coverage and require Docker; E2E remains separate.
 
-## Consequências
+## Consequences
 
-Documentos e regras centrais: `AGENTS.md`, `docs/frontend.md`, `docs/testing.md`. Estilos de profile/status e diagnóstico IPC pertencem às features; tema e componentes visuais comuns permanecem em packages/ui. Não são copiadas regras de gameplay, PixiJS, autenticação ou stack exclusiva do Truco.
+Central rules live in AGENTS.md, docs/frontend.md, and docs/testing.md. Profile/status styles and IPC diagnostics belong to features; shared visual tokens/components remain in packages/ui. No gameplay, PixiJS, authentication, or Truco-specific stack rules are copied.
 
-Os três entrypoints CLI mínimos da API ficam fora do denominador; todo seu comportamento foi extraído para serviços medidos em `src/runtime`. Relatórios e traces são locais/artefatos de CI, com código de tooling preservado no Git. Coverage TS, E2E web e check Rust não comprovam captura, E2EE ou shell Windows.
+The three minimal API CLI entrypoints are excluded from product coverage; all their behavior was extracted into measured src/runtime services. Reports/traces remain local/CI artifacts, while tooling source stays in Git. TS coverage, web E2E, and Rust checks do not establish capture, E2EE, or Windows-shell behavior.

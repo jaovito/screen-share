@@ -1,12 +1,15 @@
+import { LanguageSelector } from '@screen-share/i18n';
 import { useControlConnection } from '../../hooks/use-control-connection';
+import { useViewerMessages } from '../../locales';
 
 export function ViewerPage() {
   const { connection, retry } = useControlConnection();
+  const t = useViewerMessages();
   const status = {
-    loading: 'Conectando à API…',
-    ready: 'API conectada · banco pronto',
-    unavailable: 'API ou banco indisponível',
-    error: 'Resposta da API incompatível',
+    loading: t('apiLoading'),
+    ready: t('apiReady'),
+    unavailable: t('apiUnavailable'),
+    error: t('apiError'),
   }[connection.state];
 
   return (
@@ -18,27 +21,25 @@ export function ViewerPage() {
           </span>{' '}
           screen share
         </div>
-        <span className="badge">M0 · Fundação do projeto</span>
+        <div className="header-controls">
+          <span className="badge">{t('badge')}</span>
+          <LanguageSelector />
+        </div>
       </header>
-      <div className="eyebrow">Um lugar para assistir juntos</div>
-      <h1>Sua tela. Seus amigos.</h1>
-      <p>
-        A base de uma experiência privada de compartilhamento. O player, as salas e o acesso por
-        convite serão implementados nos próximos marcos.
-      </p>
+      <div className="eyebrow">{t('eyebrow')}</div>
+      <h1>{t('heading')}</h1>
+      <p>{t('intro')}</p>
       <div className="layout">
-        <section className="panel player" aria-label="Futuro player">
+        <section className="panel player" aria-label={t('playerLabel')}>
           <span className="screen" aria-hidden="true">
             ▣
           </span>
-          <h2>O próximo momento começa aqui</h2>
-          <p>
-            Player ainda não implementado. Nenhuma conexão de mídia, câmera ou microfone é iniciada.
-          </p>
-          <span className="badge">Aguardando a prova de mídia · M1</span>
+          <h2>{t('playerHeading')}</h2>
+          <p>{t('playerUnavailable')}</p>
+          <span className="badge">{t('mediaPending')}</span>
         </section>
         <aside className="panel">
-          <h2>Conexão de controle</h2>
+          <h2>{t('connectionHeading')}</h2>
           <p
             role="status"
             aria-live="polite"
@@ -47,21 +48,19 @@ export function ViewerPage() {
             {status}
           </p>
           <button type="button" className="secondary" onClick={retry}>
-            Verificar novamente
+            {t('retry')}
           </button>
-          <p className="notice">A conexão da API não comprova transporte de áudio e vídeo.</p>
+          <p className="notice">{t('controlNotice')}</p>
         </aside>
       </div>
       <section className="panel mt-6">
-        <h2>Oito opções para o futuro</h2>
-        <p>Catálogo do produto. A capacidade deste computador ainda não foi detectada.</p>
+        <h2>{t('catalogHeading')}</h2>
+        <p>{t('catalogNotice')}</p>
         {connection.state === 'ready' ? (
           <div className="profile-grid">
             {connection.profiles.map((profile) => (
               <div className="profile" key={profile.id}>
-                <strong>
-                  {profile.height}p · {profile.fps} FPS
-                </strong>
+                <strong>{t('profileLabel', { height: profile.height, fps: profile.fps })}</strong>
                 <span>
                   {profile.width} × {profile.height}
                   {profile.height === 1440 ? ' · QHD' : ''}
@@ -70,16 +69,10 @@ export function ViewerPage() {
             ))}
           </div>
         ) : (
-          <p>
-            {connection.state === 'loading'
-              ? 'Carregando catálogo…'
-              : 'O catálogo ficará disponível quando a API estiver pronta.'}
-          </p>
+          <p>{connection.state === 'loading' ? t('catalogLoading') : t('catalogUnavailable')}</p>
         )}
       </section>
-      <footer>
-        Ambiente local de desenvolvimento · Captura, autenticação e E2EE ainda não implementadas.
-      </footer>
+      <footer>{t('footer')}</footer>
     </main>
   );
 }

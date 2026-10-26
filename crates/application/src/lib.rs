@@ -13,7 +13,7 @@ impl<C: CapturePort, R: RtcPort> Client<C, R> {
     pub fn new(capture: C, rtc: R) -> Self {
         Self { capture, rtc }
     }
-    /// Apenas verifica as fronteiras. Não abre fonte nem simula sessão.
+    /// Only inspect boundaries. Do not open a source or simulate a session.
     pub fn implementation_state(&self) -> MediaState {
         let result = VideoProfile::new(1080, 60)
             .and_then(|profile| self.capture.prepare(profile))

@@ -1,28 +1,28 @@
-# Bun Test nativo
+# Native Bun Test
 
-Status: aceito após avaliação adicional solicitada pelo usuário · 26/10/2026. Substitui a escolha de Vitest nas ADRs 0006 e 0007; preserva organização, segurança e runtime Node de produção.
+Status: accepted after further user-requested evaluation · 2026-10-26. Supersedes Vitest in ADRs 0006/0007, preserving organization, security, and production Node runtime.
 
-## Avaliação
+## Evaluation
 
-Os 32 cenários unitários/DOM existentes passaram após adaptação às APIs nativas. Foram adicionados três testes da política LCOV. A comparação alternou três execuções em macOS arm64 com Bun 1.4.3, sem cobertura/DB/E2E nem limpeza de caches. Dados em `docs/benchmarks/bun-native-2026-10-26.json`.
+The existing 32 unit/DOM scenarios passed after native API adaptation. Three LCOV-policy tests were added. Three alternating runs on macOS arm64/Bun 1.4.3 excluded coverage/database/E2E and did not clear caches. Data: docs/benchmarks/bun-native-2026-10-26.json.
 
-| Fluxo                                           | Execuções (s)         | Mediana |
-| ----------------------------------------------- | --------------------- | ------- |
-| Vitest no Bun, 32 testes                        | 1,052 / 0,696 / 0,690 | 0,696s  |
-| Bun Test nativo, 35 testes + build de contratos | 0,783 / 0,727 / 0,696 | 0,727s  |
+| Workflow                                    | Runs (s)              | Median |
+| ------------------------------------------- | --------------------- | ------ |
+| Vitest on Bun, 32 tests                     | 1.052 / 0.696 / 0.690 | 0.696s |
+| Native Bun Test, 35 tests + contracts build | 0.783 / 0.727 / 0.696 | 0.727s |
 
-O resultado ficou praticamente empatado; os fluxos não têm custo idêntico. Não se anuncia aceleração adicional. A vantagem considerada é unificar as ferramentas no runtime escolhido e remover Vitest/provedor, mantendo qualidade e cobertura.
+Results were effectively tied and workflow costs differ. No additional acceleration is claimed. The benefit is unifying tools on the chosen runtime and removing Vitest/provider while retaining quality/coverage.
 
-## Decisão
+## Decision
 
-Usar `bun:test` com mocks nativos, timers falsos e imports de módulos após registro dos mocks. Backend e DOM executam em processos separados; cada arquivo usa `--isolate`. Happy DOM é registrado por preload antes de React Testing Library. `bun run test` é o fluxo principal; testes DOM diretos exigem o preload.
+Use bun:test native mocks, fake clocks, and imports after mock registration. Backend/DOM run in separate processes, each file with --isolate. Happy DOM preload precedes React Testing Library. bun run test is the main workflow; direct DOM selection needs the preload.
 
-Cobertura usa LCOV/text nativos, limiar 80% de linhas/funções, mais conferência explícita por arquivo com contadores exatos e inventário de fontes. São preservados sumário HTML com linhas não cobertas, JSON e LCOV agregado. Não se usam médias para compensar módulos abaixo do limite; contadores e relatórios inválidos falham. Os percentuais não são diretamente comparáveis ao V8/Vitest.
+Coverage uses native text/LCOV, 80% lines/functions thresholds, explicit per-file exact-counter checks, and inventory. Preserve HTML summary with uncovered lines, JSON, and aggregate LCOV. Averages cannot compensate for low-coverage modules; invalid counters/reports fail. Percentages are not directly comparable to V8/Vitest.
 
-A suíte completa inclui PostgreSQL descartável e mede todo comportamento de runtime, mantendo as mesmas exclusões justificadas de wrappers/infraestrutura. Playwright permanece o runner E2E. Tipo não é validado por executar `.ts`, portanto os checks TypeScript continuam separados e incluem tipos Bun apenas em scripts/testes.
+The complete suite includes disposable PostgreSQL and measured runtime behavior with the same justified wrapper/infrastructure exclusions. Playwright remains E2E runner. Executing .ts does not validate types; separate checks include Bun types only in scripts/tests.
 
-## Limites e validação
+## Limits and validation
 
-O runner nativo não fornece todas as APIs Vitest; os testes foram adaptados sem uma camada de compatibilidade. O limite por arquivo e o caminho negativo são verificados por regressões. CI remoto e shell Windows continuam pendentes; não há novas alegações de mídia, E2EE ou runtime Bun em produção.
+Native runner lacks some Vitest APIs; tests were adapted without a compatibility layer. Regressions verify per-file thresholds/negative paths. Remote CI and Windows shell remain pending; no new media, E2EE, or production Bun claims.
 
-Referências: [mocks](https://bun.sh/docs/test/mocks), [DOM](https://bun.sh/docs/test/dom), [isolamento](https://bun.sh/docs/test/parallel), [cobertura](https://bun.sh/docs/test/code-coverage).
+References: [mocks](https://bun.sh/docs/test/mocks), [DOM](https://bun.sh/docs/test/dom), [isolation](https://bun.sh/docs/test/parallel), [coverage](https://bun.sh/docs/test/code-coverage).

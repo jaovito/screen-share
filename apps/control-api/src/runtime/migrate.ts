@@ -9,7 +9,7 @@ export async function migrateDatabase(config: Config) {
     await retryDatabase(async () => {
       await database.pool.query('SELECT 1');
     });
-    // Um único migrador por vez; conexão dedicada mantém o advisory lock.
+    // Run one migrator at a time; a dedicated connection holds the advisory lock.
     const client = await database.pool.connect();
 
     try {

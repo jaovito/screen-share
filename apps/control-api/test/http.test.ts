@@ -4,8 +4,8 @@ import { createApp } from '../src/app.js';
 import { readConfig } from '../src/config.js';
 import { createDatabase } from '../src/modules/system/adapters/postgres.js';
 
-describe('HTTP de controle', () => {
-  it('separa liveness de readiness e saneia falhas', async () => {
+describe('control HTTP', () => {
+  it('separates liveness from readiness and sanitizes failures', async () => {
     const app = createApp(
       {
         check: async () => {
@@ -23,7 +23,7 @@ describe('HTTP de controle', () => {
     expect(await ready.json()).toEqual({ status: 'unavailable' });
     expect(ready.headers.get('X-Request-ID')).toMatch(/^[a-f0-9-]{36}$/);
   });
-  it('entrega contrato e somente CORS autorizado; não emite tokens', async () => {
+  it('serves the contract with authorized CORS only and issues no tokens', async () => {
     const app = createApp({ check: async () => {} }, ['http://localhost:5173']);
 
     expect((await app.request('/readyz')).status).toBe(200);
@@ -36,7 +36,7 @@ describe('HTTP de controle', () => {
     expect(result.headers.has('Access-Control-Allow-Origin')).toBe(false);
     expect((await app.request('/token', { method: 'POST' })).status).toBe(404);
   });
-  it('banco indisponível responde dentro do limite', async () => {
+  it('responds within the deadline when the database is unavailable', async () => {
     const database = createDatabase('postgres://invalid:invalid@127.0.0.1:1/invalid');
 
     try {
@@ -45,7 +45,7 @@ describe('HTTP de controle', () => {
       await database.close();
     }
   });
-  it('configuração inválida nunca expõe valores secretos', () => {
+  it('invalid configuration never exposes secret values', () => {
     expect(() => readConfig({ DATABASE_URL: 'private-secret' })).toThrow('Configuração inválida:');
 
     try {

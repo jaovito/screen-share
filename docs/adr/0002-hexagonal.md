@@ -1,15 +1,15 @@
-# Arquitetura hexagonal
+# Hexagonal architecture
 
-Status: aceito para M0 · 26/10/2026.
+Status: accepted for M0 · 2026-10-26.
 
-## Contexto
+## Context
 
-Captura nativa, transporte e persistência têm requisitos distintos.
+Native capture, transport, and persistence have distinct requirements.
 
-## Decisão
+## Decision
 
-Domínio puro, aplicação com portas pequenas e adapters nas bordas; API como monólito modular. Composição no index da API e no shell Tauri.
+Pure domain, application with small ports, edge adapters; API as a modular monolith. Composition lives in the API index and Tauri shell.
 
-## Consequências
+## Consequences
 
-Adapters indisponíveis retornam erros tipados. Não adicionar dependências de mídia sem a prova M1.
+Unavailable adapters return typed errors. Do not add media dependencies without the M1 proof.

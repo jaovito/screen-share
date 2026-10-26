@@ -2,5 +2,5 @@
 @import "@screen-share/ui/styles.css";
 @import "../../features/stream-viewer/styles/index.css";
 
-/* Inclui futuros componentes compartilhados no detector de classes. */
+/* Include future shared components in class detection. */
 @source "../../../../../packages/ui/src";

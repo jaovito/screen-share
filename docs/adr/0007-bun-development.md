@@ -1,37 +1,37 @@
-# Bun para desenvolvimento, workspaces e testes
+# Bun for development, workspaces, and tests
 
-Status: aceito após avaliação solicitada pelo usuário · 26/10/2026. Substitui as decisões de ferramenta pnpm/Node para desenvolvimento nas ADRs 0001 e 0006; preserva Node no runtime publicado da API.
+Status: accepted after user-requested evaluation · 2026-10-26. Supersedes development pnpm/Node choices in ADRs 0001/0006; preserves Node for the published API.
 
-**Atualização posterior:** a decisão de manter Vitest foi substituída pela ADR 0008 após nova solicitação e avaliação do usuário. Os dados abaixo registram a etapa anterior.
+**Later update:** ADR 0008 superseded retaining Vitest after another user request/evaluation. The evidence below records the preceding stage.
 
-## Evidência local
+## Local evidence
 
-Mesma suíte Vitest 5.0.5, 32 testes, três execuções alternadas no macOS arm64. Tempo total inclui startup; caches não foram limpos. Dados em `docs/benchmarks/bun-2026-10-26.json`.
+Same Vitest 5.0.5 suite, 32 tests, three alternating runs on macOS arm64. Total time includes startup; caches were not cleared. Data: docs/benchmarks/bun-2026-10-26.json.
 
-| Executor     | Execuções (s)         | Mediana (s) |
-| ------------ | --------------------- | ----------- |
-| Node 24.22.1 | 3,344 / 1,800 / 1,977 | 1,977       |
-| Bun 1.4.3    | 1,718 / 0,802 / 0,916 | 0,916       |
+| Executor     | Runs (s)              | Median (s) |
+| ------------ | --------------------- | ---------- |
+| Node 24.22.1 | 3.344 / 1.800 / 1.977 | 1.977      |
+| Bun 1.4.3    | 1.718 / 0.802 / 0.916 | 0.916      |
 
-A amostra indica cerca de 54% menos tempo total, aproximadamente 2,16x neste cenário. Não comprova aceleração equivalente de Docker, Rust, Chromium, banco ou produção. Foi confirmado que os workers executam Bun, não apenas o comando pai.
+The sample shows about 54% less total time, approximately 2.16x in this scenario. It does not prove equivalent Docker/Rust/Chromium/database/production speedups. Workers were confirmed to run Bun, not just the parent command.
 
-## Decisão
+## Decision
 
-Adotar Bun 1.4.3, já disponível e também usado no Truco, como gerenciador dos workspaces e runtime dos scripts/Vite/Vitest/Playwright. Gerar `bun.lock` pela ferramenta e usar instalação congelada. Desabilitar auto-install de imports; lifecycle scripts somente para dependências explicitamente confiáveis. Instalação não equivale a typecheck, que continua separado.
+Adopt Bun 1.4.3, already available and used in Truco, for workspace management and scripts/Vite/Vitest/Playwright. Generate bun.lock with the tool and install frozen. Disable import auto-install; lifecycle scripts only for explicitly trusted dependencies. Installation is not typechecking, which remains separate.
 
-Manter Vitest, suas fixtures/isolamento e cobertura existente. A suíte completa com banco passou sob Bun (33 testes, 98,70% linhas e 96% funções); o inventário e os mínimos de 80% por arquivo permanecem. Uma meta temporária de 100% foi reprovada com código não zero, verificando o caminho negativo. Métricas de branches diferem entre executores e não são usadas para comparar performance ou relaxar política.
+Retain Vitest, fixtures/isolation, and existing coverage. The complete database suite passed under Bun (33 tests, 98.70% lines, 96% functions); inventory/per-file 80% thresholds remain. A temporary 100% threshold failed with nonzero exit, testing the negative path. Branch metrics differ between executors and are not used for performance comparison or weaker policy.
 
-A API publicada continua Node LTS, Hono/adapter Node e pg. Desenvolvimento usa Bun por compatibilidade Node; E2E continua inicializando a API compilada com Node. A imagem usa Bun somente em instalação/build e Node sem privilégios no estágio final. Troca do servidor de produção exige decisão e validação próprias.
+Published API remains Node LTS with Hono's Node adapter and pg. Development uses Bun's Node compatibility; E2E starts compiled API with Node. Images use Bun only for installation/build and unprivileged Node in the final stage. A production server change requires its own decision/validation.
 
-## Limites
+## Limits
 
-Bun Native Test não é o runner escolhido: use `bun run test`; `bun test` não lê a configuração Vitest. Ferramentas são iniciadas explicitamente com `bun --bun` para não depender de shebang Node. O código do browser/domínio segue sem APIs Bun. A versão fixada é 1.4.3, a versão efetivamente medida; não se anuncia teste em versões posteriores.
+At this stage native Bun Test was not selected: use bun run test, because bun test does not read Vitest configuration. Tools explicitly use bun --bun rather than relying on Node shebangs. Browser/domain code stays free of Bun APIs. Only measured Bun 1.4.3 is claimed, not later versions.
 
-Sucesso local não confirma CI remoto, shell Windows ou mídia. O gate Windows continua necessário. Node permanece instalado para o servidor de produção, E2E e ferramentas que o exigem.
+Local success does not confirm remote CI, Windows shell, or media. Windows remains a required gate. Node stays installed for production API, E2E, and tools requiring it.
 
-## Referências
+## References
 
-- [Workspaces Bun](https://bun.sh/docs/pm/workspaces)
-- [Instalação Bun e trustedDependencies](https://bun.sh/docs/pm/cli/install)
-- [Compatibilidade Node](https://bun.sh/docs/runtime/nodejs-compat)
-- [Vitest e ambientes de teste](https://vitest.dev/guide/)
+- [Bun workspaces](https://bun.sh/docs/pm/workspaces)
+- [Bun install/trustedDependencies](https://bun.sh/docs/pm/cli/install)
+- [Node compatibility](https://bun.sh/docs/runtime/nodejs-compat)
+- [Vitest test environments](https://vitest.dev/guide/)

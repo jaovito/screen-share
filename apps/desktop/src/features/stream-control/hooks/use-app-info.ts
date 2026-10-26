@@ -4,7 +4,7 @@ import { readAppInfo } from '../services/app-info';
 
 export function useAppInfo() {
   const [info, setInfo] = useState<AppInfoDto | null>(null);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -14,10 +14,7 @@ export function useAppInfo() {
         if (active) setInfo(value);
       })
       .catch(() => {
-        if (active)
-          setError(
-            'Não foi possível consultar o shell nativo. Abra o cliente Tauri no Windows; a prévia web não possui IPC.',
-          );
+        if (active) setError(true);
       });
 
     return () => {

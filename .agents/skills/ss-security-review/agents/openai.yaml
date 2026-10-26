@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review security"
+  short_description: "Independent adversarial review with local proofs"
+  default_prompt: "Use $ss-security-review to assess the changed security boundaries and dispatch the private adversarial reviewer."

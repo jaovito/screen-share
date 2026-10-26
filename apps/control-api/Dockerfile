@@ -3,6 +3,7 @@ WORKDIR /app
 COPY package.json bun.lock bunfig.toml tsconfig.base.json ./
 COPY packages/contracts/package.json packages/contracts/package.json
 COPY packages/ui/package.json packages/ui/package.json
+COPY packages/i18n/package.json packages/i18n/package.json
 COPY apps/control-api/package.json apps/control-api/package.json
 COPY apps/viewer-web/package.json apps/viewer-web/package.json
 COPY apps/desktop/package.json apps/desktop/package.json
@@ -16,12 +17,13 @@ WORKDIR /app
 COPY package.json bun.lock bunfig.toml ./
 COPY packages/contracts/package.json packages/contracts/package.json
 COPY packages/ui/package.json packages/ui/package.json
+COPY packages/i18n/package.json packages/i18n/package.json
 COPY apps/control-api/package.json apps/control-api/package.json
 COPY apps/viewer-web/package.json apps/viewer-web/package.json
 COPY apps/desktop/package.json apps/desktop/package.json
 RUN bun install --production --frozen-lockfile --filter @screen-share/control-api --filter @screen-share/contracts --ignore-scripts
 
-# A API publicada permanece em Node LTS; Bun é usado nas ferramentas e no build.
+# Published API stays on Node LTS; Bun handles tools and build stages.
 FROM node:24.22.1-bookworm-slim AS runtime
 ENV NODE_ENV=production
 WORKDIR /app

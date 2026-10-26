@@ -1,39 +1,39 @@
-# Arquitetura
+# Architecture
 
-M0 separa controle HTTP, UI e fronteiras de mídia. A API é um monólito modular: `profiles` mantém regras puras; `system` fornece a porta de readiness e o adapter PostgreSQL; `rooms` possui somente o schema inicial de persistência. `src/index.ts` compõe configuração e delega a `src/runtime/server.ts`, que conecta pool, aplicação e servidor. Migrations e smoke possuem serviços medidos em `src/runtime`, com wrappers CLI mínimos. Não existem rotas de mutação de salas ou identidade.
+M0 separates HTTP control, UI, and media boundaries. The API is a modular monolith: `profiles` owns pure rules; `system` provides a readiness port and PostgreSQL adapter; `rooms` contains only the initial persistence schema. `src/index.ts` composes configuration and delegates to `src/runtime/server.ts`, which connects the pool, application, and server. Migrations/smoke use measured services in `src/runtime` with minimal CLI wrappers. There are no room mutation or identity routes.
 
 ```mermaid
 flowchart LR
-  WEB[Viewer React] --> HTTP[Hono HTTP]
-  HTTP --> PROFILE[Domínio de perfis]
-  HTTP --> READY[Aplicação readiness]
-  PG[Adapter PostgreSQL/Drizzle] -. implementa .-> READY
+  WEB[React viewer] --> HTTP[Hono HTTP]
+  HTTP --> PROFILE[Profile domain]
+  HTTP --> READY[Readiness application]
+  PG[PostgreSQL/Drizzle adapter] -. implements .-> READY
   PG --> DB[(PostgreSQL)]
-  UI[Desktop React] --> IPC[IPC Tauri]
-  IPC --> APP[Aplicação Rust]
-  APP --> DOMAIN[Domínio Rust]
-  WGC[Adapter Windows indisponível] -. implementa .-> APP
-  RTC[Adapter LiveKit indisponível] -. implementa .-> APP
+  UI[Desktop React] --> IPC[Tauri IPC]
+  IPC --> APP[Rust application]
+  APP --> DOMAIN[Rust domain]
+  WGC[Unavailable Windows adapter] -. implements .-> APP
+  RTC[Unavailable LiveKit adapter] -. implements .-> APP
 ```
 
-Linhas de dependência do código apontam para contratos interiores: o domínio Rust não tem dependências externas e o domínio da API não importa Zod, Hono, Drizzle ou RTC. Tauri instancia os adapters e o caso de uso; nenhum frame é transferido por IPC/JSON. O SDK LiveKit de servidor aparece somente no smoke backend. SDK RTC nativo e dependências Win32 entram apenas em M1, com `cfg(target_os = "windows")` quando necessárias.
+Code dependencies point toward inner contracts. The Rust domain has no external dependencies; the API domain imports neither Zod, Hono, Drizzle, nor RTC. Tauri instantiates adapters and the use case; no frame travels through IPC/JSON. The server LiveKit SDK appears only in backend smoke. Native RTC SDK/Win32 dependencies enter in M1, using `cfg(target_os = "windows")` where required.
 
-## Contratos
+## Contracts
 
-`packages/contracts/src/index.ts` é a fonte de verdade dos DTOs e validações HTTP e da representação TypeScript do IPC. O catálogo puro da API é convertido/validado na fronteira HTTP. As entidades Drizzle não saem do adapter. Para IPC, `AppInfo` Rust serializa `version`, `platform` e `mediaStatus`; o teste Rust compara nomes/valores com uma fixture versionada e o teste TS valida a mesma fixture. O teste Rust de IPC roda no job Windows. Não há geração ampla de bindings em M0; mudanças precisam atualizar ambos os contratos e a fixture.
+`packages/contracts/src/index.ts` is the source of truth for HTTP DTOs/validation and the TypeScript IPC representation. The API's pure catalog is converted/validated at the HTTP boundary. Drizzle entities never leave the adapter. Rust `AppInfo` serializes `version`, `platform`, and `mediaStatus`; its test compares names/values against a versioned fixture also validated by TS. The Rust IPC test runs in the Windows job. M0 has no broad binding-generation pipeline; changes must update both contracts and the fixture.
 
-## Dados e disponibilidade
+## Data and availability
 
-`rooms` possui UUID opaco fornecido pela aplicação futura, proprietário obrigatório não vazio, estado `idle|closed` e timestamps. O proprietário ainda não possui FK de identidade; não há endpoint que aceite esse identificador como autorização. Atualizações futuras devem manter `updated_at` explicitamente. Migrações geradas por `drizzle-kit generate` ficam em `apps/control-api/drizzle`, incluindo journal/snapshot.
+`rooms` has an opaque UUID supplied by the future application, a required nonempty owner, `idle|closed` state, and timestamps. Owner has no identity FK yet; no endpoint treats this ID as authorization. Future updates must explicitly maintain `updated_at`. Generated Drizzle migrations live in `apps/control-api/drizzle`, including journal/snapshot.
 
-Readiness compara hashes do histórico esperado com `drizzle.__drizzle_migrations` e consulta as colunas necessárias de `rooms`, usando usuário/senha reais do banco. Migrations ausentes/divergentes, schema ausente e conexão indisponível causam 503. O pool tem no máximo cinco conexões, timeout de conexão 1,5s, query 2s e statement 1,5s. O startup tenta conectar cinco vezes; o pool e a readiness continuam capazes de recuperar após o banco voltar. Migrations têm advisory lock para coordenar o runner do projeto. Não execute migradores externos concorrentes.
+Readiness compares expected history hashes with `drizzle.__drizzle_migrations` and queries required `rooms` columns using real database credentials. Missing/divergent migrations, absent schema, and unavailable connection produce 503. The pool has at most five connections, 1.5s connection timeout, 2s query timeout, and 1.5s statement timeout. Startup retries connection five times; the pool/readiness can recover after database return. Migrations use an advisory lock to coordinate this project's runner. Do not run concurrent external migrators.
 
-A API gera request IDs próprios; logs incluem evento, duração, método e status, sem parâmetros, headers, corpo ou erros brutos do driver. SIGINT/SIGTERM param o servidor, drenam conexões e fecham o pool; há prazo de oito segundos.
+The API generates request IDs; logs contain event, duration, method, and status, without parameters, headers, bodies, or raw driver errors. SIGINT/SIGTERM stop the server, drain connections, and close the pool within an eight-second deadline.
 
-## Limites
+## Limits
 
-A lista de perfis é estática; não anuncia suporte de GPU. Os adapters falham com `NotImplemented` no Windows e `UnsupportedPlatform` em outros sistemas. A verificação do motor não abre captura nem simula uma sessão. Toda mídia, autenticação, convites e E2EE permanecem nos próximos marcos.
+The profile list is static and does not advertise GPU support. Adapters fail with `NotImplemented` on Windows and `UnsupportedPlatform` elsewhere. Engine inspection does not open capture or simulate a session. Media, authentication, invitations, and E2EE remain future milestones.
 
-## Frontend por funcionalidade
+## Feature-based frontend
 
-As duas interfaces seguem [docs/frontend.md](frontend.md): montagem/composição em `app`, responsabilidades exclusivas em `features`, API pública por feature e compartilhamento somente com uso real. Testes unitários e DOM ficam próximos ao comportamento; testes E2E são organizados por feature em `tests/e2e`. A política e os limites medidos estão em [testing.md](testing.md).
+Both interfaces follow [frontend.md](frontend.md): mounting/composition in app, exclusive responsibilities in features, public feature APIs, and sharing only with actual reuse. Unit/DOM tests stay near behavior; E2E tests are grouped by feature in tests/e2e. Coverage policy and measured limits are in [testing.md](testing.md).

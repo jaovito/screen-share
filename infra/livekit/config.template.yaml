@@ -1,4 +1,4 @@
-# Schema validado contra livekit/livekit v1.13.11/config-sample.yaml.
+# Schema validated against livekit/livekit v1.13.11/config-sample.yaml.
 port: 7880
 bind_addresses:
   - "0.0.0.0"

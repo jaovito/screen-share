@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, mock } from 'bun:test';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 
 const invoke = mock();
 const isTauri = mock(() => true);
@@ -47,4 +47,29 @@ describe('desktop control', () => {
       expect(document.body.textContent).not.toContain('secret');
     },
   );
+});
+
+it('switches native status and sanitized errors without repeating IPC', async () => {
+  invoke.mockResolvedValue({
+    version: '0.1.0',
+    platform: 'windows',
+    mediaStatus: 'not_implemented',
+  });
+  const view = render(<App />);
+  await screen.findByText('0.1.0');
+  fireEvent.change(screen.getByRole('combobox'), { target: { value: 'en' } });
+  await screen.findByText('Not implemented yet');
+  expect(screen.getByRole('button', { name: 'Start streaming' }).hasAttribute('disabled')).toBe(
+    true,
+  );
+  expect(invoke).toHaveBeenCalledTimes(1);
+  expect(document.documentElement.lang).toBe('en');
+  view.unmount();
+  invoke.mockRejectedValue(new Error('private details'));
+  render(<App />);
+  await screen.findByText(/Unable to query the native shell/);
+  fireEvent.change(screen.getByRole('combobox'), { target: { value: 'es' } });
+  await screen.findByText(/No se pudo consultar el cliente nativo/);
+  expect(document.body.textContent).not.toContain('private details');
+  expect(document.title).toBe('Screen Share — Escritorio');
 });

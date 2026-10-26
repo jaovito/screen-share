@@ -45,3 +45,37 @@ test('retry handles unavailable control and incompatible data, then recovers', a
   await page.getByRole('button', { name: 'Verificar novamente' }).click();
   await expect(page.getByRole('status')).toHaveText('API conectada · banco pronto');
 });
+
+test('viewer switches and remembers all supported languages', async ({ page }, info) => {
+  await page.goto('/');
+  for (const [locale, heading, status, title] of [
+    ['en', 'Your screen. Your friends.', 'API connected · database ready', 'Screen Share — Viewer'],
+    [
+      'es',
+      'Tu pantalla. Tus amigos.',
+      'API conectada · base de datos lista',
+      'Screen Share — Espectador',
+    ],
+    [
+      'pt-BR',
+      'Sua tela. Seus amigos.',
+      'API conectada · banco pronto',
+      'Screen Share — Espectador',
+    ],
+  ]) {
+    if (!locale || !heading || !status || !title) throw new Error('Invalid locale test case');
+    await page.getByRole('combobox').selectOption(locale);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(heading);
+    await expect(page.getByRole('status')).toHaveText(status);
+    await expect(page.locator('html')).toHaveAttribute('lang', locale);
+    await expect(page).toHaveTitle(title);
+    await expect(page.locator('.profile')).toHaveCount(8);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(
+      false,
+    );
+    await page.screenshot({ path: info.outputPath(`viewer-${locale}.png`), fullPage: true });
+    await page.reload();
+    await expect(page.getByRole('combobox')).toHaveValue(locale);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(heading);
+  }
+});

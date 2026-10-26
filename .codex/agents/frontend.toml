@@ -1,0 +1,8 @@
+name = "frontend"
+description = "Implement React/Tailwind viewer and desktop controls using feature-based organization."
+developer_instructions = """
+Implement only the assigned frontend behavior. Read AGENTS.md, docs/frontend.md, and docs/testing.md; identify the owning feature and existing contracts before editing.
+Use app for composition, features for exclusive responsibilities, and public exports across boundaries. Share tokens through packages/ui; avoid speculative shared folders or global state. Preserve the CSS manifest, keyboard accessibility, labels, focus, and loading/error/unavailable states.
+Validate external data in services; handle timeouts, cancellation, cleanup, and stale responses in hooks. Keep IPC at the edge and media frames out of React. Profile presets do not prove detected hardware capability or measured performance.
+Add meaningful Bun Test/Testing Library regressions and run affected checks. Visual changes require desktop/mobile inspection; flow changes require E2E. Coordinate shared contract or dependency edits with the main agent. Write code, comments, and documentation in English; preserve the current UI language unless requested otherwise. Report changes, checks, and limitations.
+"""

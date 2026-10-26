@@ -1,7 +1,10 @@
+import { LanguageSelector } from '@screen-share/i18n';
 import { useAppInfo } from '../../hooks/use-app-info';
+import { useControlMessages } from '../../locales';
 
 export function ControlPage() {
   const { info, error } = useAppInfo();
+  const t = useControlMessages();
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -12,52 +15,49 @@ export function ControlPage() {
           </span>{' '}
           screen share
         </div>
-        <span className="badge">Cliente desktop · M0</span>
+        <div className="header-controls">
+          <span className="badge">{t('badge')}</span>
+          <LanguageSelector />
+        </div>
       </header>
-      <div className="eyebrow">Compartilhar, com intenção</div>
-      <h1>O começo da sua transmissão.</h1>
-      <p>
-        O cliente está em construção. A captura nativa no Windows e o transporte WebRTC serão
-        validados na próxima etapa.
-      </p>
+      <div className="eyebrow">{t('eyebrow')}</div>
+      <h1>{t('heading')}</h1>
+      <p>{t('intro')}</p>
       <div className="layout">
         <section className="panel player">
           <span className="screen" aria-hidden="true">
             ▣
           </span>
-          <h2>Nenhuma fonte selecionada</h2>
-          <p>Captura e transmissão ainda não implementadas.</p>
+          <h2>{t('sourceHeading')}</h2>
+          <p>{t('mediaUnavailable')}</p>
           <button type="button" disabled>
-            Iniciar transmissão
+            {t('start')}
           </button>
         </section>
         <aside className="panel">
-          <h2>Estado do aplicativo</h2>
+          <h2>{t('appHeading')}</h2>
           {error ? (
-            <p role="status">{error}</p>
+            <p role="status">{t('shellError')}</p>
           ) : info ? (
             <dl className="details">
-              <dt>Versão</dt>
+              <dt>{t('version')}</dt>
               <dd>{info.version}</dd>
-              <dt>Plataforma</dt>
+              <dt>{t('platform')}</dt>
               <dd>{info.platform}</dd>
-              <dt>Motor de mídia</dt>
+              <dt>{t('mediaEngine')}</dt>
               <dd>
                 {info.mediaStatus === 'unsupported_platform'
-                  ? 'Plataforma sem suporte'
-                  : 'Ainda não implementado'}
+                  ? t('unsupported')
+                  : t('notImplemented')}
               </dd>
             </dl>
           ) : (
-            <p role="status">Consultando o shell…</p>
+            <p role="status">{t('shellLoading')}</p>
           )}
-          <p className="notice">Sem sessão de mídia, métricas ou criptografia ativa.</p>
+          <p className="notice">{t('notice')}</p>
         </aside>
       </div>
-      <footer>
-        Windows 11 x64 é a plataforma prevista para transmissão. Nenhuma captura é iniciada
-        automaticamente.
-      </footer>
+      <footer>{t('footer')}</footer>
     </main>
   );
 }

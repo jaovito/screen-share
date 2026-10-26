@@ -1,0 +1,4 @@
+interface:
+  display_name: "Decide architecture"
+  short_description: "Technical decisions grounded in the plan and code"
+  default_prompt: "Use $ss-architecture to evaluate the requested technical decision against the plan and implementation."

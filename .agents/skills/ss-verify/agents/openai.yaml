@@ -1,0 +1,4 @@
+interface:
+  display_name: "Verify a delivery"
+  short_description: "Checks, coverage, and evidence based on actual risk"
+  default_prompt: "Use $ss-verify to validate the current change and report actual checks and limitations."

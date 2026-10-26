@@ -1,0 +1,4 @@
+interface:
+  display_name: "Prove the media path"
+  short_description: "Windows media experiments with measured evidence"
+  default_prompt: "Use $ss-media-spike to prepare or run the authorized media proof with reproducible evidence."
