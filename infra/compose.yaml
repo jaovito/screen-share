@@ -1,0 +1,77 @@
+name: screen-share
+services:
+  postgres:
+    image: postgres:17.11-bookworm
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Execute bun run bootstrap}
+      POSTGRES_DB: ${POSTGRES_DB:?Execute bun run bootstrap}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Execute bun run bootstrap}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+  livekit:
+    image: livekit/livekit-server:v1.13.11
+    command: ["--config", "/etc/livekit.yaml"]
+    volumes:
+      - ./livekit/local.yaml:/etc/livekit.yaml:ro
+    ports:
+      - "127.0.0.1:7880:7880"
+      - "127.0.0.1:7881:7881"
+      - "127.0.0.1:7882:7882/udp"
+    restart: unless-stopped
+  migrate:
+    profiles: [app]
+    image: screen-share-control-api:0.1.0
+    build:
+      context: ..
+      dockerfile: apps/control-api/Dockerfile
+    environment: &backend-env
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      HOST: 0.0.0.0
+      PORT: 3000
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      LIVEKIT_URL: http://livekit:7880
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}
+    command: ["node", "apps/control-api/dist/migrate.js"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+  control-api:
+    profiles: [app]
+    image: screen-share-control-api:0.1.0
+    build:
+      context: ..
+      dockerfile: apps/control-api/Dockerfile
+    environment: *backend-env
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/readyz',{signal:AbortSignal.timeout(2500)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 4s
+      retries: 10
+    init: true
+    restart: unless-stopped
+volumes:
+  postgres_data:

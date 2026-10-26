@@ -1,0 +1,165 @@
+@import "./theme.css";
+
+@layer components {
+  :root {
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    color: var(--foreground);
+    background: var(--background);
+    font-synthesis: none;
+    font-weight: 400;
+    line-height: 1.5;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+  }
+  button {
+    font: inherit;
+  }
+  main {
+    max-width: 1120px;
+    margin: auto;
+    padding: 40px 28px;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 24px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 650;
+    letter-spacing: -0.5px;
+  }
+  .mark {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    background: var(--primary);
+    color: var(--mark-foreground);
+    border-radius: 10px;
+  }
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--eyebrow);
+    margin-top: 44px;
+  }
+  h1 {
+    font-weight: 700;
+    font-size: clamp(30px, 5vw, 48px);
+    line-height: 1.15;
+    letter-spacing: -1.8px;
+    margin: 16px 0;
+  }
+  h2 {
+    margin-block: 0.83em;
+    font-size: 19px;
+    font-weight: 550;
+  }
+  strong {
+    font-weight: 700;
+  }
+  p {
+    margin-block: 1em;
+    color: var(--copy);
+    max-width: 650px;
+  }
+  .badge {
+    font-size: 12px;
+    padding: 6px 11px;
+    border: 1px solid var(--badge-border);
+    border-radius: 99px;
+    color: var(--badge-foreground);
+  }
+  .layout {
+    display: grid;
+    grid-template-columns: 1.75fr 1fr;
+    gap: 24px;
+    margin-top: 32px;
+  }
+  .panel {
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--card);
+    padding: 24px;
+  }
+  .player {
+    min-height: 320px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    background: radial-gradient(ellipse at center, var(--player-from), var(--player-to));
+  }
+  .screen {
+    font-size: 40px;
+    color: var(--screen);
+  }
+  .player p {
+    font-size: 14px;
+    max-width: 330px;
+  }
+  button {
+    border: 0;
+    border-radius: 8px;
+    padding: 12px 20px;
+    background: var(--primary);
+    color: var(--primary-foreground);
+    cursor: pointer;
+  }
+  button:disabled {
+    background: var(--muted);
+    color: var(--muted-foreground);
+    cursor: not-allowed;
+  }
+  button.secondary {
+    padding: 6px 0;
+    background: transparent;
+    color: var(--primary);
+    text-decoration: underline;
+  }
+  footer {
+    margin-top: 32px;
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+    color: var(--footer);
+    font-size: 12px;
+  }
+  .notice {
+    margin: 24px 0 0;
+    font-size: 13px;
+  }
+  @media (max-width: 760px) {
+    main {
+      padding: 24px 18px;
+    }
+    .layout {
+      grid-template-columns: 1fr;
+    }
+    header {
+      align-items: flex-start;
+    }
+    .badge {
+      max-width: 160px;
+    }
+    h1 {
+      letter-spacing: -1px;
+    }
+  }
+
+  button:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 4px;
+  }
+}

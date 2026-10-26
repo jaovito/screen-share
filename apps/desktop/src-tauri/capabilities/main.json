@@ -1,0 +1,6 @@
+{
+  "identifier": "main",
+  "description": "Janela principal sem plugins, filesystem, shell ou permissões administrativas.",
+  "windows": ["main"],
+  "permissions": ["allow-get-app-info"]
+}

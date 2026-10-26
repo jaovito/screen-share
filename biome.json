@@ -1,0 +1,117 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.6.3/schema.json",
+  "files": {
+    "includes": [
+      "**",
+      "!**/dist",
+      "!**/node_modules",
+      "!**/target",
+      "!infra/livekit/local.yaml",
+      "!bun.lock",
+      "!Cargo.lock",
+      "!apps/desktop/src-tauri/gen",
+      "!.playwright-mcp",
+      "!playwright-report",
+      "!test-results",
+      "!coverage",
+      "!apps/*/coverage",
+      "!packages/*/coverage"
+    ]
+  },
+  "formatter": {
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "enabled": true,
+    "lineWidth": 100
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "correctness": {
+        "useHookAtTopLevel": "error",
+        "useExhaustiveDependencies": "error"
+      },
+      "style": {
+        "noExcessiveLinesPerFile": {
+          "level": "warn",
+          "options": {
+            "maxLines": 300,
+            "skipBlankLines": true
+          }
+        }
+      }
+    }
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "trailingCommas": "all"
+    }
+  },
+  "overrides": [
+    {
+      "includes": [
+        "apps/viewer-web/src/**",
+        "apps/desktop/src/**",
+        "apps/control-api/src/**/domain/**",
+        "apps/control-api/src/**/application/**",
+        "!**/*.test.ts",
+        "!**/*.test.tsx"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedGlobals": {
+              "level": "error",
+              "options": {
+                "deniedGlobals": {
+                  "Bun": "Use ports or browser-safe APIs in this layer.",
+                  "process": "Use ports or browser-safe APIs in this layer.",
+                  "Buffer": "Use ports or browser-safe APIs in this layer.",
+                  "require": "Use ports or browser-safe APIs in this layer."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/control-api/src/**/domain/**", "!**/*.test.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedGlobals": {
+              "level": "error",
+              "options": {
+                "deniedGlobals": {
+                  "Bun": "Use ports or browser-safe APIs in this layer.",
+                  "process": "Use ports or browser-safe APIs in this layer.",
+                  "Buffer": "Use ports or browser-safe APIs in this layer.",
+                  "require": "Use ports or browser-safe APIs in this layer.",
+                  "fetch": "Domain must remain pure.",
+                  "setTimeout": "Domain must remain pure.",
+                  "setInterval": "Domain must remain pure.",
+                  "WebSocket": "Domain must remain pure."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

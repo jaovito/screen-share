@@ -1,0 +1,20 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
+    "types": ["bun", "node"],
+    "lib": ["ES2023", "DOM"]
+  },
+  "include": [
+    "scripts/**/*.ts",
+    "tooling/**/*.ts",
+    "tests/**/*.ts",
+    "*.ts",
+    "apps/*/vite.config.ts",
+    "packages/*/test/**/*.ts"
+  ]
+}

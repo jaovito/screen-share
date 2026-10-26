@@ -1,0 +1,60 @@
+{
+  "name": "screen-share",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.4.3",
+  "engines": {
+    "node": ">=24.11.0 <25",
+    "bun": "1.4.3"
+  },
+  "scripts": {
+    "bootstrap": "bun scripts/task.ts bootstrap",
+    "doctor": "bun scripts/task.ts doctor",
+    "infra:up": "bun scripts/task.ts infra:up",
+    "infra:down": "bun scripts/task.ts infra:down",
+    "db:migrate": "bun scripts/task.ts db:migrate",
+    "dev": "bun scripts/task.ts dev",
+    "dev:desktop": "bun scripts/task.ts dev:desktop",
+    "stack:up": "bun scripts/task.ts stack:up",
+    "stack:down": "bun scripts/task.ts stack:down",
+    "check:ts": "bun scripts/task.ts check:ts",
+    "check:rust": "bun scripts/task.ts check:rust",
+    "check": "bun scripts/task.ts check",
+    "smoke": "bun scripts/task.ts smoke",
+    "build:desktop": "bun scripts/task.ts build:desktop",
+    "test:integration": "bun scripts/task.ts test:integration",
+    "test:persistence": "bun scripts/task.ts test:persistence",
+    "lint": "bun --bun node_modules/@biomejs/biome/bin/biome lint . && bun run check:architecture",
+    "format": "bun --bun node_modules/@biomejs/biome/bin/biome format --write .",
+    "format:check": "bun --bun node_modules/@biomejs/biome/bin/biome format .",
+    "typecheck": "bun scripts/task.ts typecheck",
+    "check:architecture": "bun tooling/architecture/check.ts",
+    "test": "bun scripts/task.ts test",
+    "test:unit": "bun scripts/task.ts test",
+    "test:coverage": "bun scripts/task.ts test:coverage",
+    "test:e2e": "bun scripts/task.ts test:e2e",
+    "test:e2e:install": "bun --bun node_modules/@playwright/test/cli.js install chromium",
+    "build": "bun scripts/task.ts build"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.3",
+    "@happy-dom/global-registrator": "21.0.4",
+    "@playwright/test": "1.64.1",
+    "@testing-library/dom": "10.4.1",
+    "@testing-library/react": "16.3.3",
+    "@types/bun": "1.4.3",
+    "@types/node": "24.19.2",
+    "happy-dom": "21.0.4",
+    "oxc-parser": "0.155.0",
+    "typescript": "7.0.2"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "trustedDependencies": [
+    "@biomejs/biome",
+    "esbuild"
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "date": "2026-10-26",
+  "platform": "macOS arm64",
+  "method": "3 alternating runs; wall-clock seconds including process startup; local caches not cleared",
+  "testRunner": "Vitest 5.0.5",
+  "testCount": 32,
+  "node": {
+    "version": "24.22.1",
+    "command": "node node_modules/vitest/vitest.mjs run",
+    "seconds": [3.344, 1.8, 1.977],
+    "median": 1.977,
+    "allPassed": true
+  },
+  "bun": {
+    "version": "1.4.3",
+    "command": "bun --bun node_modules/vitest/vitest.mjs run",
+    "seconds": [1.718, 0.802, 0.916],
+    "median": 0.916,
+    "allPassed": true
+  },
+  "notes": [
+    "Workers confirmed Bun via process.execPath and process.versions.bun.",
+    "Coverage/DB and Playwright are verified separately and are not part of this timing.",
+    "Local sample; not a general benchmark or guarantee."
+  ]
+}

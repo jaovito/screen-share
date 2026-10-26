@@ -1,0 +1,18 @@
+[workspace]
+resolver = "2"
+members = ["crates/domain", "crates/application", "crates/media-windows", "crates/rtc-livekit", "apps/desktop/src-tauri"]
+default-members = ["crates/domain", "crates/application", "crates/media-windows", "crates/rtc-livekit"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+license = "UNLICENSED"
+
+[workspace.dependencies]
+ss-domain = { path = "crates/domain" }
+ss-application = { path = "crates/application" }
+ss-media-windows = { path = "crates/media-windows" }
+ss-rtc-livekit = { path = "crates/rtc-livekit" }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.154"

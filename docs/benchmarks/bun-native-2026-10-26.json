@@ -1,0 +1,45 @@
+{
+  "runs": {
+    "vitest-on-bun": [
+      {
+        "seconds": 1.052,
+        "exit": 0
+      },
+      {
+        "seconds": 0.696,
+        "exit": 0
+      },
+      {
+        "seconds": 0.69,
+        "exit": 0
+      }
+    ],
+    "native-bun-test": [
+      {
+        "seconds": 0.783,
+        "exit": 0
+      },
+      {
+        "seconds": 0.727,
+        "exit": 0
+      },
+      {
+        "seconds": 0.696,
+        "exit": 0
+      }
+    ]
+  },
+  "medians": {
+    "vitest-on-bun": 0.696,
+    "native-bun-test": 0.727
+  },
+  "notes": [
+    "Vitest baseline: 32 existing tests.",
+    "Native Bun: 35 tests, including the same 32 behaviors plus 3 LCOV policy tests.",
+    "Native command includes contracts build and separate server/DOM processes.",
+    "No coverage, database or E2E in this timing; caches not cleared."
+  ],
+  "date": "2026-10-26",
+  "runtime": "Bun 1.4.3",
+  "platform": "macOS arm64"
+}

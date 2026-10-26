@@ -1,0 +1,16 @@
+node_modules/
+**/dist/
+target/
+.env
+.env.*
+!.env.example
+infra/livekit/local.yaml
+/coverage/
+.DS_Store
+*.log
+apps/desktop/src-tauri/gen/
+.playwright-mcp/
+playwright-report/
+test-results/
+apps/*/coverage/
+packages/*/coverage/

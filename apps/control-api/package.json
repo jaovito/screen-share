@@ -1,0 +1,28 @@
+{
+  "name": "@screen-share/control-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "build": "bun --bun ../../node_modules/typescript/bin/tsc -p tsconfig.json",
+    "typecheck": "bun --bun ../../node_modules/typescript/bin/tsc -p tsconfig.check.json",
+    "migrate": "bun src/migrate.ts",
+    "smoke": "bun src/smoke.ts",
+    "test:integration": "bun test --isolate --timeout 15000 ./test/database.integration.test.ts",
+    "db:generate": "bun --bun node_modules/drizzle-kit/bin.cjs generate"
+  },
+  "dependencies": {
+    "@screen-share/contracts": "workspace:*",
+    "@hono/node-server": "2.1.5",
+    "hono": "4.13.14",
+    "drizzle-orm": "0.45.4",
+    "pg": "8.23.1",
+    "zod": "4.6.7",
+    "livekit-server-sdk": "2.19.2"
+  },
+  "devDependencies": {
+    "@types/pg": "8.23.1",
+    "drizzle-kit": "0.31.11"
+  }
+}

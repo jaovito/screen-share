@@ -1,0 +1,8 @@
+[install]
+auto = "disable"
+
+[test]
+coverageThreshold = { lines = 0.8, functions = 0.8 }
+coverageReporter = ["text", "lcov"]
+coverageSkipTestFiles = true
+coveragePathIgnorePatterns = ["**/node_modules/**", "**/dist/**", "**/*.d.ts", "**/*.config.ts", "scripts/**", "tooling/tests/**", "tooling/coverage/**", "apps/control-api/src/index.ts", "apps/control-api/src/migrate.ts", "apps/control-api/src/smoke.ts"]

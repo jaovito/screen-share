@@ -1,0 +1,29 @@
+{
+  "name": "@screen-share/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --bun node_modules/vite/bin/vite.js --host 127.0.0.1",
+    "build": "bun --bun ../../node_modules/typescript/bin/tsc --noEmit && bun --bun node_modules/vite/bin/vite.js build",
+    "typecheck": "bun --bun ../../node_modules/typescript/bin/tsc --noEmit && bun --bun ../../node_modules/typescript/bin/tsc -p tsconfig.test.json",
+    "tauri": "bun --bun node_modules/@tauri-apps/cli/tauri.js",
+    "preview": "bun --bun node_modules/vite/bin/vite.js preview --host 127.0.0.1"
+  },
+  "dependencies": {
+    "@screen-share/contracts": "workspace:*",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "@tauri-apps/api": "2.12.4",
+    "@screen-share/ui": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "vite": "8.3.5",
+    "@tauri-apps/cli": "2.12.4",
+    "tailwindcss": "4.3.3",
+    "@tailwindcss/vite": "4.3.3"
+  }
+}

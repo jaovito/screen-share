@@ -1,0 +1,15 @@
+@layer components {
+  .details {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+    font-size: 14px;
+  }
+  .details dt {
+    color: var(--detail);
+  }
+  .details dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+}

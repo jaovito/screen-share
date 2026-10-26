@@ -1,0 +1,49 @@
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-destructive: var(--destructive);
+  --color-copy: var(--copy);
+  --color-eyebrow: var(--eyebrow);
+  --color-badge-border: var(--badge-border);
+  --color-badge-foreground: var(--badge-foreground);
+  --color-profile-border: var(--profile-border);
+  --color-profile-foreground: var(--profile-foreground);
+  --color-screen: var(--screen);
+  --color-footer: var(--footer);
+  --color-detail: var(--detail);
+  --color-mark-foreground: var(--mark-foreground);
+  --color-player-from: var(--player-from);
+  --color-player-to: var(--player-to);
+}
+
+@layer base {
+  :root {
+    --background: #0c1018;
+    --foreground: #e6e9ef;
+    --card: #121924;
+    --border: #28303e;
+    --primary: #b8f0d4;
+    --primary-foreground: #132d24;
+    --muted: #2a3544;
+    --muted-foreground: #94a4b9;
+    --destructive: #ffc1b2;
+    --copy: #aab6c7;
+    --eyebrow: #9faec3;
+    --badge-border: #344053;
+    --badge-foreground: #bbcada;
+    --profile-border: #303b4b;
+    --profile-foreground: #98a8bb;
+    --screen: #8c9aaf;
+    --footer: #7f91a9;
+    --detail: #8c9fb8;
+    --mark-foreground: #10251d;
+    --player-from: #1d2c38;
+    --player-to: #101721;
+  }
+}

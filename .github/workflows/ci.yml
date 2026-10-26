@@ -1,0 +1,84 @@
+name: M0 checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  typescript-postgres:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+      - run: bun install --frozen-lockfile
+      - run: bun run bootstrap
+      - run: bun run check:ts
+      - run: bun run test:coverage
+      - run: bun run test:persistence
+      - run: bun --bun node_modules/@playwright/test/cli.js install --with-deps chromium
+      - run: bun run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: typescript-coverage-and-e2e
+          path: |
+            coverage/
+            playwright-report/
+            test-results/
+          if-no-files-found: warn
+  portable-rust:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+      - run: rustup toolchain install 1.99.1 --profile minimal --component rustfmt --component clippy
+      - run: bun run check:rust
+  windows-desktop:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+      - run: rustup toolchain install 1.99.1 --profile minimal --component rustfmt --component clippy
+      - run: bun install --frozen-lockfile
+      - run: bun run check:rust
+      - run: bun run --filter @screen-share/contracts build
+      - run: bun run --filter @screen-share/desktop build
+      - run: cargo check --locked -p screen-share-desktop --all-targets
+      - run: cargo test --locked -p screen-share-desktop --lib
+      - run: bun run build:desktop
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-windows-development-unsigned
+          path: target/release/bundle/nsis/*.exe
+          if-no-files-found: error
+  compose-image:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+      - run: bun run bootstrap
+      - run: docker compose --env-file .env -f infra/compose.yaml --profile app config --quiet
+      - run: bun run stack:up
+      - run: docker compose --env-file .env -f infra/compose.yaml exec -T control-api node apps/control-api/dist/smoke.js
+      - if: always()
+        run: bun run stack:down
