@@ -73,7 +73,7 @@ export function fixtureApi(serverUrl: string, apiKey: string, apiSecret: string)
       role,
       serverUrl,
       accessToken: await token.toJwt(),
-      expiresAt: Date.now() + 60_000,
+      expiresAt: Math.floor(Date.now() / 1000) + 60,
     });
   }
 
