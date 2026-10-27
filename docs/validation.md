@@ -310,3 +310,21 @@ H264/Opus and a pinned real SFU. Its provider result remains pending at this ent
 local browser playback and Mac compilation do not establish Windows execution.
 Physical GPU/capture, two-PC/TURN, prolonged operation and signed-install/update
 acceptance remain unexecuted gates.
+
+
+### Windows receiver CI failure investigation
+
+[Run 40524158081](https://github.com/jaovito/screen-share/actions/runs/40524158081)
+passed TypeScript/PostgreSQL, portable Rust, both images and owner policy on
+`205889f`. Windows native checks and NSIS packaging succeeded; the actual receiver
+fixture failed with `EPERM` while removing its owned temporary directory. Because
+cleanup threw from `finally`, the earlier fixture error was hidden. This run does
+not establish working WebView2 playback.
+
+The correction awaits process closure, attempts every cleanup independently and
+preserves the original failure. A bounded native Windows remover handles the
+filesystem fallback. Four regressions cover ordered async release, original-error
+preservation, cleanup continuation and failure propagation. Local TypeScript checks
+and database-backed coverage passed (84 runtime files inventoried, all per-file
+gates passed). Actual Windows probe/playback remains pending the corrected provider
+run; no encryption/CSP assertion or acceptance gate was removed.

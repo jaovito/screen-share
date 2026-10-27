@@ -116,3 +116,15 @@ covered separately by the real product E2E suite. The test owns and cleans up it
 process trees, files and ports. It does not establish physical capture, restrictive
 network/TURN, two-PC connectivity or prolonged playback acceptance. See
 [validation.md](validation.md) for actual execution evidence.
+
+The Windows receiver fixture awaits owned process termination before removing its
+temporary directory. Cleanup attempts every release and preserves the original
+failure when cleanup also fails. Windows uses a bounded native removal fallback
+for archive attributes/filesystem locks. Failed runs retain only a static stage
+label and a screenshot of the synthetic WebView fixture, with no request trace.
+
+CI first runs `bun scripts/test-desktop-receiver.ts --publisher-only` to validate
+the Windows SFU and synthetic H264/Opus transport before the expensive native build.
+This preliminary probe does not replace the actual WebView2 playback assertions.
+The ordinary NSIS artifact and bounded Rust build cache are saved before the full
+runtime test, so a runtime failure remains visible without discarding build evidence.

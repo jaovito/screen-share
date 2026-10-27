@@ -1,7 +1,8 @@
-import { type ChildProcess, spawn, spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { basename, dirname, join, resolve } from 'node:path';
 import { run } from '../../scripts/lib';
 
 const release = 'https://github.com/livekit/livekit/releases/download/v1.13.11/';
@@ -43,25 +44,64 @@ export function ownedProcess(command: string, args: string[], env = process.env)
   child.on('error', () => {
     failure = true;
   });
+  const closed = new Promise<void>((resolveClosed) => {
+    child.once('close', () => resolveClosed());
+    child.once('error', () => resolveClosed());
+  });
   return {
     child,
     alive() {
       return !failure && child.exitCode === null;
     },
-    stop() {
-      stopOwned(child);
+    async stop() {
+      if (child.pid && child.exitCode === null && !failure) {
+        // Only process IDs created by this fixture are eligible for tree cleanup.
+        if (process.platform === 'win32')
+          spawnSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], {
+            stdio: 'ignore',
+            timeout: 10_000,
+            windowsHide: true,
+          });
+        else child.kill('SIGKILL');
+      }
+      let timeout: ReturnType<typeof setTimeout> | undefined;
+      try {
+        await Promise.race([
+          closed,
+          new Promise<never>((_, reject) => {
+            timeout = setTimeout(() => reject(new Error('Owned process did not close')), 4000);
+          }),
+        ]);
+      } finally {
+        clearTimeout(timeout);
+      }
     },
   };
 }
 
-function stopOwned(child: ChildProcess) {
-  if (!child.pid || child.exitCode !== null) return;
-  // Only process IDs created by this fixture are eligible for tree cleanup.
-  spawnSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], {
-    stdio: 'ignore',
-    timeout: 10_000,
-    windowsHide: true,
-  });
+export async function removeOwnedDirectory(directory: string) {
+  if (
+    resolve(dirname(directory)) !== resolve(tmpdir()) ||
+    !basename(directory).startsWith('ss-desktop-receiver-')
+  )
+    throw new Error('Cleanup requires the fixture-owned temporary directory');
+  try {
+    await rm(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 500 });
+  } catch (error) {
+    if (process.platform !== 'win32') throw error;
+    // Windows archive attributes/Bun filesystem handles can reject recursive rm.
+    // Use the native remover only after every process/server has closed.
+    await run(
+      'powershell',
+      [
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        '$ErrorActionPreference = "Stop"; if (Test-Path -LiteralPath $env:SS_OWNED_FIXTURE_DIR) { Remove-Item -LiteralPath $env:SS_OWNED_FIXTURE_DIR -Recurse -Force }',
+      ],
+      { env: { ...process.env, SS_OWNED_FIXTURE_DIR: directory }, timeout: 10_000 },
+    );
+  }
 }
 
 export async function waitFor(url: string, alive: () => boolean, timeout = 20_000) {
