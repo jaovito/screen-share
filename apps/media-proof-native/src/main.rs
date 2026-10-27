@@ -1,3 +1,5 @@
+#[cfg(all(feature = "native-proof", any(test, target_os = "windows")))]
+mod arguments;
 #[cfg(any(test, all(target_os = "windows", feature = "native-proof")))]
 mod input;
 #[cfg(all(target_os = "windows", feature = "native-proof"))]

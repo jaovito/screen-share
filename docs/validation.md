@@ -220,3 +220,12 @@ Provider CI for bootstrap commit 0b77a70 passed all four jobs in [run 4043283547
 ### First feature-CI correction
 
 The first M1 PR run (40475111381) passed the Linux image, portable Rust, all 74 TS/database tests and 12 desktop/mobile E2E cases, then failed during the media fixture's RTC connection. The same forced-loopback failure was reproduced locally; no codec/privacy assertion was relaxed. Both transport fixtures now advertise only the owned SFU's routable private container interface, retaining loopback-published host ports and a fail-fast private-route prerequisite. Local browser H.264 negotiation/worker/decode/wrong-key regression passed after the change. Windows native validation is placed before slower desktop packaging so API/ACL failures surface earlier. No LAN configuration, grant privilege or required check was weakened.
+
+The Windows native commands are separate CI steps: each Cargo exit status must gate the job independently rather than relying on the final command of a PowerShell block. The pure publisher arguments and bounded regular-file reader also run as host tests; Windows filesystem/graphics behavior remains platform-specific.
+
+
+### Executed Windows and Linux feature CI
+
+[Run 40476236349](https://github.com/jaovito/screen-share/actions/runs/40476236349) passed on commit `5052fa0` on 2026-10-27: TypeScript/PostgreSQL, portable Rust, Compose image, Windows desktop and code-owner policy checks. The Windows logs were inspected beyond the grouped step status: all nine native SDK guard tests, eight acquisition/framing/owned-watchdog tests, and six publisher pacing/input/private-key filesystem tests passed. The private-key tests inspect the protected current-user DACL, fresh key generation, overwrite refusal and delete-on-close behavior on Windows. The complete opt-in publisher compiled, the Tauri IPC test passed, and the unsigned NSIS bundle was produced. No interactive capture or GPU encoder ran in this hosted job.
+
+The same run passed the 74 TypeScript/database tests, 12 browser UI scenarios, real encrypted H.264 browser transport fixture, API standalone executable/persistence checks and Compose smoke. Subsequent changes extract and host-test the argument parser, reject duplicate flags, split native CI commands into independent failure gates, and add the physical acceptance runbook/offline synthetic source. Those follow-up changes require their own CI result; the run above proves the identified commit only.

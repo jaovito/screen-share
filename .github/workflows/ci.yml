@@ -68,15 +68,33 @@ jobs:
         env:
           CARGO_BUILD_JOBS: 2
           RUSTFLAGS: -C target-feature=+crt-static
-      - name: Test native grants, cleanup, pacing and private key file ACLs
-        run: |
-          cargo test --locked -p ss-rtc-livekit --features native-proof --lib
-          cargo test --locked -p ss-media-windows --features probe-ui
-          cargo test --locked -p ss-media-proof --features native-proof
-          cargo build --locked -p ss-media-proof --features native-proof
+      - name: Test native grant and shutdown guards
+        run: cargo test --locked -p ss-rtc-livekit --features native-proof --lib
         env:
           CARGO_BUILD_JOBS: 2
           RUSTFLAGS: -C target-feature=+crt-static
+      - name: Test Windows acquisition framing and owned watchdog
+        run: cargo test --locked -p ss-media-windows --features probe-ui
+        env:
+          CARGO_BUILD_JOBS: 2
+          RUSTFLAGS: -C target-feature=+crt-static
+      - name: Test Windows private key ACLs and publisher pacing
+        run: cargo test --locked -p ss-media-proof --features native-proof
+        env:
+          CARGO_BUILD_JOBS: 2
+          RUSTFLAGS: -C target-feature=+crt-static
+      - name: Build the complete experimental Windows publisher
+        run: cargo build --locked -p ss-media-proof --features native-proof
+        env:
+          CARGO_BUILD_JOBS: 2
+          RUSTFLAGS: -C target-feature=+crt-static
+      - name: Save the experimental publisher for authorized hardware testing
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: native-windows-media-proof-development-unsigned
+          path: target/debug/ss-media-proof.exe
+          if-no-files-found: error
+          retention-days: 7
       - run: bun run --filter @screen-share/contracts typecheck
       - run: bun run --filter @screen-share/desktop build
       - run: cargo check --locked -p screen-share-desktop --all-targets

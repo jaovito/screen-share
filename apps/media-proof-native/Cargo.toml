@@ -9,10 +9,12 @@ license.workspace = true
 default = []
 native-proof = ["dep:ss-media-windows", "dep:ss-rtc-livekit", "dep:ss-domain", "dep:tokio", "dep:windows", "dep:base64"]
 
+[dependencies]
+ss-domain = { workspace = true, optional = true }
+
 [target.'cfg(target_os = "windows")'.dependencies]
 ss-media-windows = { workspace = true, optional = true, features = ["probe-ui"] }
 ss-rtc-livekit = { workspace = true, optional = true, features = ["native-proof"] }
-ss-domain = { workspace = true, optional = true }
 tokio = { version = "=1.54.1", optional = true, features = ["rt", "sync", "time", "macros"] }
 base64 = { version = "=0.23.1", optional = true }
 windows = { version = "=0.62.2", optional = true, features = ["Win32_Foundation", "Win32_Security", "Win32_Security_Authorization", "Win32_Security_Cryptography", "Win32_Storage_FileSystem", "Win32_System_Threading", "Win32_System_Com", "Win32_System_IO", "Win32_System_SystemServices"] }

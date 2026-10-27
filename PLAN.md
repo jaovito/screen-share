@@ -3,7 +3,7 @@
 - **Version:** 1.1 — initial planning/setup contract.
 - **Review date:** 2026-10-26.
 - **Status:** M0 implemented with portable local validation and passing provider CI (including Windows build/IPC). M1 implementation has started; its Windows hardware/two-PC gate and M2–M5 remain pending.
-- **Immediate scope:** repository bootstrap, applications, architecture, local infrastructure.
+- **Current development scope:** M1 media proof and its explicit advancement gates; M0 remains the executable foundation.
 - **Product scope:** private streaming among friends, low computer overhead, quality diagnostics.
 
 > Commands, paths, endpoints, and checks below are implementation requirements. Their presence does not mean they exist or have run. Bitrates, resource budgets, latency, and schedules are hypotheses to validate.

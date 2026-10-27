@@ -6,7 +6,7 @@ Reviewed on 2026-10-26. This document distinguishes SDK capabilities from execut
 
 The browser proof uses pinned livekit-client 2.23.0. The production receiver creates a local E2EE worker, configures `Room` through `encryption`, installs an independently distributed string key, and enables encryption before attempting connection. It never acquires camera, microphone, or screen media. Subscription is manual and limited to one encrypted screen-share video from the designated publisher.
 
-The opt-in form accepts a five-minute operator-issued viewer envelope and media key. Form values are cleared on submission; neither is written to storage or URLs. The locale preference remains the only application storage used by this flow. The receiver verifies the connected room and local participant before subscribing. Reconnect, identity mismatch, unexpected tracks, encryption errors, expiry, and timeouts stop reception and require another explicit action. A subscribed track is not a claim that frames have decoded or that the privacy model has been independently verified.
+The opt-in form accepts a five-minute operator-issued viewer envelope and media key. Form values are cleared on submission; neither is written to storage or URLs. The locale preference is application-managed persisted state. The SDK may persist non-secret logging preferences; neither grant nor media key is stored by this flow. The receiver verifies the connected room and local participant before subscribing. Reconnect, identity mismatch, unexpected tracks, encryption errors, expiry, and timeouts stop reception and require another explicit action. A subscribed track is not a claim that frames have decoded or that the privacy model has been independently verified.
 
 Official sources:
 

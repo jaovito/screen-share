@@ -20,3 +20,5 @@ Historical benchmark results and setup prompts describe earlier stages; current 
 - [M1 experiment](media-proof.md): offline grants, opt-in receiver, disposable transport regression, Windows acquisition boundary and pending hardware gate.
 
 - [Native M1 utility](../apps/media-proof-native/README.md): explicit Windows publisher, private key export and hardware gate.
+
+- [M1 hardware runbook](m1-hardware-runbook.md): Windows/two-PC procedure and unexecuted advancement gates.

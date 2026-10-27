@@ -1,9 +1,7 @@
 use crate::{pipeline, private_key};
-use ss_domain::VideoProfile;
 use ss_media_windows::{CaptureStatus, NativeCapture, PickedSource, ProbeWindow, pick_source};
 use ss_rtc_livekit::native_proof::PublisherGrant;
 use std::{
-    path::PathBuf,
     sync::{
         Arc,
         atomic::{AtomicBool, Ordering},
@@ -12,54 +10,8 @@ use std::{
     time::{Duration, Instant},
 };
 
-struct Arguments {
-    grant: PathBuf,
-    key_output: PathBuf,
-    profile: VideoProfile,
-    bitrate: u32,
-    seconds: u64,
-}
-
-impl Arguments {
-    fn parse() -> Result<Self, &'static str> {
-        let mut grant = None;
-        let mut key_output = None;
-        let (mut height, mut fps, mut bitrate, mut seconds) = (1080, 60, 10_000_000, 30);
-        let args: Vec<_> = std::env::args().skip(1).collect();
-        if args.is_empty() || args.len() % 2 != 0 {
-            return Err(
-                "Pass --publisher-grant <file> --private-key-output <absolute-file>, optionally --height --fps --bitrate-bps --seconds.",
-            );
-        }
-        for pair in args.as_chunks::<2>().0 {
-            match pair[0].as_str() {
-                "--publisher-grant" if grant.is_none() => grant = Some(PathBuf::from(&pair[1])),
-                "--private-key-output" if key_output.is_none() => {
-                    key_output = Some(PathBuf::from(&pair[1]))
-                }
-                "--height" => height = pair[1].parse().map_err(|_| "Invalid catalog height")?,
-                "--fps" => fps = pair[1].parse().map_err(|_| "Invalid catalog frame rate")?,
-                "--bitrate-bps" => bitrate = pair[1].parse().map_err(|_| "Invalid bitrate")?,
-                "--seconds" => seconds = pair[1].parse().map_err(|_| "Invalid proof duration")?,
-                _ => return Err("Unknown or duplicate private input argument"),
-            }
-        }
-        let profile = VideoProfile::new(height, fps).map_err(|_| "Invalid catalog profile")?;
-        if !(64_000..=50_000_000).contains(&bitrate) || !(1..=240).contains(&seconds) {
-            return Err("Bitrate must be 64000..50000000 and duration 1..240 seconds");
-        }
-        Ok(Self {
-            grant: grant.ok_or("A trusted publisher grant file is required")?,
-            key_output: key_output.ok_or("An explicit private key export path is required")?,
-            profile,
-            bitrate,
-            seconds,
-        })
-    }
-}
-
 pub fn run() -> Result<(), &'static str> {
-    let args = Arguments::parse()?;
+    let args = crate::arguments::Arguments::parse_from(std::env::args().skip(1).collect())?;
     let json = crate::input::read_grant(&args.grant)?;
     let grant =
         PublisherGrant::from_json(&json).map_err(|_| "Invalid or expired publisher grant")?;
