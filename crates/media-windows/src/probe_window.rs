@@ -15,9 +15,9 @@ use windows::{
         },
         UI::WindowsAndMessaging::{
             CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, IsWindow, MSG,
-            PM_REMOVE, PeekMessageW, PostQuitMessage, RegisterClassW, TranslateMessage,
-            UnregisterClassW, WINDOW_EX_STYLE, WM_DESTROY, WM_QUIT, WNDCLASSW, WS_OVERLAPPEDWINDOW,
-            WS_VISIBLE,
+            PM_REMOVE, PeekMessageW, PostQuitMessage, RegisterClassW, SW_HIDE, ShowWindow,
+            TranslateMessage, UnregisterClassW, WINDOW_EX_STYLE, WM_DESTROY, WM_QUIT, WNDCLASSW,
+            WS_OVERLAPPEDWINDOW, WS_VISIBLE,
         },
     },
     core::w,
@@ -56,7 +56,7 @@ impl ProbeWindow {
             CreateWindowExW(
                 WINDOW_EX_STYLE::default(),
                 class.lpszClassName,
-                w!("Screen Share M1 probe - close to stop"),
+                w!("Screen Share"),
                 WS_OVERLAPPEDWINDOW | WS_VISIBLE,
                 100,
                 100,
@@ -73,6 +73,14 @@ impl ProbeWindow {
             handle,
             _apartment: PhantomData,
         })
+    }
+
+    /// The desktop owns the sharing controls once the system picker is finished.
+    /// Keep this STA owner alive and pumping without showing a second empty window.
+    pub fn hide_after_selection(&self) {
+        unsafe {
+            let _ = ShowWindow(self.handle, SW_HIDE);
+        }
     }
 
     /// Polls only on the owning thread while continuing the Windows message loop.
@@ -188,5 +196,23 @@ mod tests {
             }
             std::thread::sleep(Duration::from_millis(10));
         }
+    }
+}
+
+#[cfg(test)]
+mod picker_owner_tests {
+    use super::*;
+    use windows::Win32::UI::WindowsAndMessaging::IsWindowVisible;
+
+    #[test]
+    fn hidden_picker_owner_remains_alive_and_pumps_until_explicit_drop() {
+        let window = ProbeWindow::open().expect("owned STA picker window");
+        assert!(unsafe { IsWindowVisible(window.handle) }.as_bool());
+        window.hide_after_selection();
+        assert!(!unsafe { IsWindowVisible(window.handle) }.as_bool());
+        assert!(window.pump());
+        let handle = window.handle;
+        drop(window);
+        assert!(!unsafe { IsWindow(Some(handle)) }.as_bool());
     }
 }

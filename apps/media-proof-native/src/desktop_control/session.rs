@@ -75,6 +75,7 @@ impl Session {
             status.reason = Some(SharingReason::SelectionCanceled);
             return Ok(());
         };
+        window.hide_after_selection();
         let binding = Binding::from_grant(&request.grant);
         let grant = PublisherGrant::from_json(
             &request
