@@ -1,6 +1,8 @@
 import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { run } from './lib';
+import { resolve } from 'node:path';
+import { z } from 'zod';
+import { root, run } from './lib';
 
 const name = `screen-share-persistence-${randomBytes(5).toString('hex')}`;
 const volume = `${name}-data`;
@@ -22,7 +24,7 @@ async function wait() {
     await new Promise<void>((resolve) => setTimeout(resolve, 500));
   }
 
-  throw new Error('Banco descartável não iniciou');
+  throw new Error('Disposable database did not start');
 }
 
 const sql = (statement: string) =>
@@ -39,6 +41,10 @@ try {
     [
       'run',
       '-d',
+      '--cpus',
+      '1',
+      '--memory',
+      '256m',
       '--name',
       name,
       '--env',
@@ -62,7 +68,7 @@ try {
     .split(':')
     .at(-1);
 
-  if (!port || !/^\d+$/.test(port)) throw new Error('Porta descartável indisponível');
+  if (!port || !/^\d+$/.test(port)) throw new Error('Disposable database port unavailable');
 
   await run('bun', ['run', '--filter', '@screen-share/contracts', 'typecheck']);
   await run('bun', ['run', '--filter', '@screen-share/control-api', 'migrate'], {
@@ -74,12 +80,18 @@ try {
   await sql(
     "INSERT INTO rooms (id, owner_id) VALUES ('00000000-0000-4000-8000-000000000001', 'persistence-owner');",
   );
+  await sql(
+    "INSERT INTO auth_user(id,name,email) VALUES ('00000000-0000-4000-8000-000000000001','Synthetic durability owner','durability@example.test'); INSERT INTO private_rooms(id,name,owner_id) VALUES('00000000-0000-4000-8000-000000000002','Synthetic durability room','00000000-0000-4000-8000-000000000001'); INSERT INTO room_members(room_id,user_id,status,role) VALUES('00000000-0000-4000-8000-000000000002','00000000-0000-4000-8000-000000000001','approved','owner');",
+  );
+  const journal = z
+    .object({ entries: z.array(z.object({ tag: z.string() })) })
+    .parse(await Bun.file(resolve(root, 'apps/control-api/drizzle/meta/_journal.json')).json());
   await run('docker', ['restart', name], quiet);
   await wait();
   await sql(
-    "DO $$ BEGIN IF (SELECT owner_id FROM rooms WHERE id='00000000-0000-4000-8000-000000000001') IS DISTINCT FROM 'persistence-owner' OR (SELECT count(*) FROM drizzle.__drizzle_migrations) <> 1 THEN RAISE EXCEPTION 'persistence failed'; END IF; END $$;",
+    `DO $$ BEGIN IF (SELECT owner_id FROM rooms WHERE id='00000000-0000-4000-8000-000000000001') IS DISTINCT FROM 'persistence-owner' OR (SELECT count(*) FROM drizzle.__drizzle_migrations) <> ${journal.entries.length} OR (SELECT count(*) FROM room_members WHERE room_id='00000000-0000-4000-8000-000000000002' AND role='owner') <> 1 THEN RAISE EXCEPTION 'persistence failed'; END IF; END $$;`,
   );
-  console.log('Persistência confirmada após reinício de PostgreSQL descartável.');
+  console.log('Persistence confirmed after restarting disposable PostgreSQL.');
 } finally {
   spawnSync('docker', ['rm', '-f', name], { stdio: 'ignore' });
   spawnSync('docker', ['volume', 'rm', volume], { stdio: 'ignore' });

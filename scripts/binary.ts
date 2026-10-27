@@ -1,4 +1,5 @@
 import type { ChildProcess } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { chmod, copyFile, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -16,6 +17,7 @@ await withTestDatabase(async (databaseEnv) => {
   const env = {
     ...databaseEnv,
     PORT: port,
+    AUTH_BASE_URL: `http://127.0.0.1:${port}`,
     HOST: '127.0.0.1',
     CORS_ORIGINS: 'http://localhost:5173',
     LIVEKIT_URL: 'http://127.0.0.1:1',
@@ -57,6 +59,33 @@ await withTestDatabase(async (databaseEnv) => {
     profilesResponseSchema.parse(await catalog.json());
     const token = await fetch(`http://127.0.0.1:${port}/token`, { method: 'POST' });
     if (token.status !== 404) throw new Error('Standalone API unexpectedly exposes tokens');
+    const base = `http://127.0.0.1:${port}`;
+    const signup = await fetch(`${base}/api/auth/sign-up/email`, {
+      method: 'POST',
+      headers: { Origin: base, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Synthetic binary user',
+        email: `${randomUUID()}@example.test`,
+        password: `Synthetic-${randomUUID()}`,
+      }),
+    });
+    if (!signup.ok) throw new Error('Standalone authentication failed');
+    const cookie = signup.headers
+      .getSetCookie()
+      .map((value) => value.split(';')[0])
+      .join('; ');
+    const signedIn: unknown = await signup.json();
+    if (
+      !cookie ||
+      (signedIn && typeof signedIn === 'object' && ('token' in signedIn || 'session' in signedIn))
+    )
+      throw new Error('Standalone authentication boundary failed');
+    const room = await fetch(`${base}/v1/rooms`, {
+      method: 'POST',
+      headers: { Origin: base, 'Content-Type': 'application/json', Cookie: cookie },
+      body: JSON.stringify({ name: 'Synthetic standalone room' }),
+    });
+    if (room.status !== 201) throw new Error('Standalone authenticated room creation failed');
     server.kill('SIGTERM');
     const timeout = setTimeout(() => server?.kill('SIGKILL'), 9000);
     try {
@@ -65,7 +94,7 @@ await withTestDatabase(async (databaseEnv) => {
       clearTimeout(timeout);
     }
     console.log(
-      'Standalone binary passed: embedded migrations, isolated CWD, readiness, catalog, shutdown.',
+      'Standalone binary passed: embedded migrations, isolated CWD, readiness, catalog, real cookie authentication, private room, shutdown.',
     );
   } finally {
     if (server?.exitCode === null && server.signalCode === null) {

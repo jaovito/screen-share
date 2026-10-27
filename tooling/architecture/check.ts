@@ -5,6 +5,21 @@ import { analyzeSource, findCycles, normalizedPath } from './analyze';
 const root = resolve(import.meta.dirname, '../..');
 const sources = new Map<string, string>();
 let errors = 0;
+const publicExports = new Map<string, Set<string>>();
+
+for (const directory of readdirSync(resolve(root, 'packages'))) {
+  const manifest: unknown = JSON.parse(
+    readFileSync(resolve(root, 'packages', directory, 'package.json'), 'utf8'),
+  );
+  if (
+    manifest &&
+    typeof manifest === 'object' &&
+    'exports' in manifest &&
+    manifest.exports &&
+    typeof manifest.exports === 'object'
+  )
+    publicExports.set(directory, new Set(Object.keys(manifest.exports)));
+}
 
 for (const directory of ['apps', 'packages']) {
   for (const name of readdirSync(resolve(root, directory), { recursive: true, encoding: 'utf8' })) {
@@ -23,7 +38,7 @@ for (const directory of ['apps', 'packages']) {
 
     sources.set(file, code);
 
-    const issues = analyzeSource(normalizedPath(root, file), code);
+    const issues = analyzeSource(normalizedPath(root, file), code, publicExports);
     const lines = code.split('\n').length;
 
     if (lines >= 500) issues.push('Source must stay below 500 lines; refactor.');

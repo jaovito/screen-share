@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
-members = ["crates/domain", "crates/application", "crates/media-windows", "crates/rtc-livekit", "apps/desktop/src-tauri"]
-default-members = ["crates/domain", "crates/application", "crates/media-windows", "crates/rtc-livekit"]
+members = ["crates/audio-windows", "crates/control-client", "crates/domain", "crates/application", "crates/media-windows", "crates/rtc-livekit", "apps/desktop/src-tauri", "apps/media-proof-native"]
+default-members = ["crates/audio-windows", "crates/control-client", "crates/domain", "crates/application", "crates/media-windows", "crates/rtc-livekit"]
 
 [workspace.package]
 version = "0.1.0"
@@ -10,6 +10,8 @@ rust-version = "1.99"
 license = "MIT"
 
 [workspace.dependencies]
+ss-audio-windows = { path = "crates/audio-windows" }
+ss-control-client = { path = "crates/control-client" }
 ss-domain = { path = "crates/domain" }
 ss-application = { path = "crates/application" }
 ss-media-windows = { path = "crates/media-windows" }

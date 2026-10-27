@@ -9,7 +9,7 @@ it('parses real Bun line/function counters and identifies uncovered lines', () =
   expect(files[0]?.lines).toEqual({ total: 2, covered: 1, pct: 50 });
   expect(files[0]?.functions.pct).toBe(50);
   expect(files[0]?.uncoveredLines).toEqual([2]);
-  expect(() => enforceCoverage(files)).toThrow('por arquivo');
+  expect(() => enforceCoverage(files)).toThrow('per file');
 });
 
 it('never lets a highly covered module compensate a low-coverage module', () => {
@@ -36,7 +36,7 @@ it('rejects malformed/empty reports and invalid counters', () => {
     'SF:a.ts\nFNF:1\nFNH:1\nDA:2,-1\nend_of_record',
   ])
     expect(() => parseLcov(source, '/repo')).toThrow();
-  expect(() => metric(1, 2)).toThrow('Contadores');
+  expect(() => metric(1, 2)).toThrow('counters');
   expect(metric(0, 0).pct).toBe(100);
   expect(() =>
     enforceCoverage([

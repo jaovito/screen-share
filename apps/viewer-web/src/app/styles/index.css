@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "@screen-share/ui/styles.css";
+@import "@screen-share/ui/product/styles.css";
 @import "../../features/stream-viewer/styles/index.css";
 
 /* Include future shared components in class detection. */

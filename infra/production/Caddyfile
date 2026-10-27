@@ -1,0 +1,48 @@
+{
+	admin off
+	email {$ACME_EMAIL}
+	servers {
+		protocols h1 h2
+	}
+	# Proxy error/access records can contain RTC query credentials. Application
+	# authorization audit events remain in the API's sanitized structured logs.
+	log default {
+		level WARN
+		exclude http.log.access http.log.error
+	}
+}
+
+{$SITE_HOST} {
+	header {
+		-Server
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		X-Frame-Options DENY
+		Permissions-Policy "camera=(), microphone=(), display-capture=()"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://{$RTC_HOST} wss://{$RTC_HOST}; worker-src 'self' blob:; media-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
+	}
+	@control path /api/auth/* /v1/* /healthz /readyz
+	handle @control {
+		reverse_proxy control-api:3000
+	}
+	handle {
+		root * /srv/viewer
+		try_files {path} /index.html
+		header Cache-Control no-store
+		file_server
+	}
+}
+
+{$RTC_HOST} {
+	header {
+		-Server
+		Strict-Transport-Security "max-age=31536000"
+		Referrer-Policy no-referrer
+	}
+	reverse_proxy livekit:7880
+}
+
+http://127.0.0.1:9080 {
+	respond /healthz 200
+}

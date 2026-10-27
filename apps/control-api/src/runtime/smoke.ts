@@ -11,7 +11,7 @@ export async function checkControlPlane(config: Config) {
       signal: AbortSignal.timeout(4000),
     });
 
-    if (!response.ok) throw new Error('HTTP indisponível');
+    if (!response.ok) throw new Error('HTTP unavailable');
 
     const body: unknown = await response.json();
 

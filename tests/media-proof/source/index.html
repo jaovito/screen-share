@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Screen Share synthetic capture source</title>
+    <style>
+      :root { color-scheme: dark; font: 18px system-ui, sans-serif; background: #10131d; color: #f5f7ff; }
+      body { margin: 0; padding: 32px; }
+      main { max-width: 1200px; margin: auto; }
+      .motion { height: 35vh; min-height: 160px; overflow: hidden; position: relative; background: repeating-linear-gradient(90deg,#183248 0 16px,#293762 16px 32px); }
+      .motion::after { content: ''; position: absolute; top: 0; bottom: 0; width: 8%; background: white; animation: travel 2s linear infinite alternate; }
+      @keyframes travel { from { transform: translateX(0); } to { transform: translateX(1150%); } }
+      .swatches { display: flex; height: 64px; }
+      .swatches span { flex: 1; }
+      .small { font-size: 12px; }
+      .medium { font-size: 20px; }
+      .large { font-size: 40px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Synthetic capture source</h1>
+      <p>This page requests no permissions and makes no network connection. Select this window explicitly in the Windows proof. Its animation is an input pattern, not a measured FPS or latency indicator.</p>
+      <div class="motion" role="img" aria-label="Moving contrast bar"></div>
+      <div class="swatches" role="img" aria-label="Synthetic color swatches">
+        <span style="background:#000"></span><span style="background:#fff"></span>
+        <span style="background:#f00"></span><span style="background:#0f0"></span>
+        <span style="background:#00f"></span><span style="background:#808080"></span>
+      </div>
+      <p class="small">Small text · ABCDEFGHIJKLMNOPQRSTUVWXYZ · 0123456789</p>
+      <p class="medium">Medium text · Source scope must remain the same after Alt+Tab.</p>
+      <p class="large">854×480 · 1280×720 · 1920×1080 · 2560×1440</p>
+      <p>Resize, minimize and restore this same window. Closing it must stop the source, never select another window or monitor. No content is saved by this page.</p>
+    </main>
+  </body>
+</html>

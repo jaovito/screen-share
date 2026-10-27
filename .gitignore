@@ -14,3 +14,9 @@ playwright-report/
 test-results/
 apps/*/coverage/
 packages/*/coverage/
+
+# Local M1 grants contain short-lived bearer tokens.
+.media-proof/
+
+# Generated fixed native sidecar, packaged only by the Windows build.
+apps/desktop/src-tauri/binaries/

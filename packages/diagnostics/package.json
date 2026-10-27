@@ -1,0 +1,12 @@
+{
+  "name": "@screen-share/diagnostics",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./receiver": "./src/receiver.ts",
+    "./quality": "./src/quality.ts"
+  },
+  "license": "MIT"
+}

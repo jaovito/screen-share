@@ -19,7 +19,7 @@ it('rejects after the configured maximum instead of retrying forever', async () 
   const check = mock().mockRejectedValue(new Error('private detail'));
 
   await expect(retryDatabase(check, 1)).rejects.toThrow(
-    'Banco indisponível após tentativas limitadas',
+    'Database unavailable after bounded retries',
   );
   expect(check).toHaveBeenCalledTimes(1);
 });

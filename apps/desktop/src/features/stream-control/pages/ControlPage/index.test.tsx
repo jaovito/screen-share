@@ -4,7 +4,17 @@ import { fireEvent, render, screen } from '@testing-library/react';
 const invoke = mock();
 const isTauri = mock(() => true);
 mock.module('@tauri-apps/api/core', () => ({ invoke, isTauri }));
-const { App } = await import('@app/App');
+const { ControlPage } = await import('./index');
+const { controlTranslations } = await import('../../locales');
+const { LocaleProvider } = await import('@screen-share/i18n');
+
+function App() {
+  return (
+    <LocaleProvider translations={controlTranslations} titleKey="documentTitle">
+      <ControlPage />
+    </LocaleProvider>
+  );
+}
 
 beforeEach(() => {
   isTauri.mockReturnValue(true);

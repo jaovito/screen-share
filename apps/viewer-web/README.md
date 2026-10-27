@@ -1,28 +1,11 @@
 # Web viewer
 
-React/Vite interface for the future private browser player. M0 shows control connectivity and a static catalog; playback, room membership, authentication, and E2EE are unavailable.
+React/Vite frontend for authenticated private rooms and encrypted reception. The shared product workspace includes account sessions, invitation requests and owner approval, session/key controls and local diagnostics. It never acquires the camera, microphone or desktop.
 
-## Run locally
+Run `bun install --frozen-lockfile`, `bun run bootstrap`, `bun run infra:up`, `bun run db:migrate`, then `bun run dev` from the repository root. Open `http://127.0.0.1:5173` (or `VIEWER_PORT` from `.env`). Use the same hostname for viewer/API so HttpOnly SameSite cookies work. `VITE_API_URL` is public configuration; secrets must never use `VITE_`.
 
-Follow [root setup](../../README.md#run-locally). bun run dev starts API/viewer together. To run this interface separately from repository root:
+Create an account and room, invite friends privately and approve their requests. The owner prepares an epoch and distributes its fresh content key outside the service before activation. Viewers enter that independent key and explicitly connect. Membership changes retire the session and require a fresh key. Browser publishing is unavailable; use the Windows desktop application.
 
-```sh
-bun run --filter @screen-share/viewer-web dev
-```
+The client lazily loads LiveKit and its actual E2EE worker. It verifies the designated room/participant/publisher, accepts encrypted selected-source tracks and stops on unknown authorization, epoch changes, expiry or transport/encryption failure. Signed grant renewal is explicit and may briefly interrupt playback. Audio has local playback controls because autoplay may be blocked.
 
-Default address: http://localhost:5173. Root .env sets VIEWER_PORT and the public VITE_API_URL; configure matching CORS_ORIGINS on the API. VITE variables must contain no secrets. The API must be started separately when using the isolated frontend command.
-
-Use the header selector for pt-BR, Spanish, and English. Choices persist locally per origin; translations are bundled and available without an external translation service.
-
-## Build and contribute
-
-```sh
-bun run --filter @screen-share/viewer-web build
-bun run --filter @screen-share/viewer-web preview
-```
-
-Production browser output is dist; preview defaults to 127.0.0.1:5273 and still needs a reachable API with matching CORS configuration.
-
-Composition lives in src/app; viewer behavior/copy belongs to features/stream-viewer. Local aliases are `@features/*`, `@app/*`, `@shared/*`, and workspace contracts/UI are public @screen-share exports. Add all locale values when changing UI text. See [frontend conventions](../../docs/frontend.md) and [contributing](../../CONTRIBUTING.md).
-
-From root, run bun run check:ts, bun run test:coverage, and bun run test:e2e for relevant changes. Layout changes need desktop/mobile visual inspection. Do not claim media capability from a passing control connection.
+Profiles and counters are not measured hardware support or visual latency. The advanced `?mode=experiment` page retains the bounded M1 diagnostic form. Use the repository's Bun unit/DOM, coverage, real product E2E and media interoperability runners; see [testing](../../docs/testing.md).

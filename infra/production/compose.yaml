@@ -1,0 +1,125 @@
+name: screen-share-production
+services:
+  postgres:
+    image: postgres:17.11-bookworm
+    environment:
+      POSTGRES_USER: screen_share
+      POSTGRES_DB: screen_share
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Prepare production configuration first}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U screen_share -d screen_share]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    networks: [database]
+    mem_limit: 512m
+    cpus: 1
+    restart: unless-stopped
+  livekit:
+    image: livekit/livekit-server:v1.13.11
+    command: [--config, /etc/livekit.yaml]
+    volumes:
+      - ./.generated/livekit.yaml:/etc/livekit.yaml:ro
+      - ./.generated/turn-fullchain.pem:/etc/turn/fullchain.pem:ro
+      - ./.generated/turn-private-key.pem:/etc/turn/private-key.pem:ro
+    ports:
+      - "${RTC_PUBLIC_IP:?Set the dedicated RTC IPv4}:443:443/tcp"
+      - "${RTC_PUBLIC_IP:?Set the dedicated RTC IPv4}:3478:3478/udp"
+      - "${RTC_PUBLIC_IP:?Set the dedicated RTC IPv4}:7881:7881/tcp"
+      - "${RTC_PUBLIC_IP:?Set the dedicated RTC IPv4}:7882:7882/udp"
+    networks: [application]
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 1g
+    cpus: 2
+    restart: unless-stopped
+  migrate:
+    profiles: [maintenance]
+    image: screen-share-control-api:production
+    build:
+      context: ../..
+      dockerfile: apps/control-api/Dockerfile
+    environment: &api-environment
+      DATABASE_URL: postgresql://screen_share:${POSTGRES_PASSWORD}@postgres:5432/screen_share
+      HOST: 0.0.0.0
+      PORT: 3000
+      NODE_ENV: production
+      AUTH_SECRET: ${AUTH_SECRET:?Prepare production configuration first}
+      AUTH_BASE_URL: https://${SITE_HOST}
+      CORS_ORIGINS: https://${SITE_HOST}
+      LIVEKIT_PUBLIC_URL: wss://${RTC_HOST}
+      LIVEKIT_URL: http://livekit:7880
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}
+    command: [/app/control-api, migrate]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [database, application]
+    restart: "no"
+  control-api:
+    image: screen-share-control-api:production
+    build:
+      context: ../..
+      dockerfile: apps/control-api/Dockerfile
+    environment: *api-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, /app/control-api, ready]
+      interval: 5s
+      timeout: 4s
+      retries: 12
+    networks: [database, application]
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 512m
+    cpus: 1
+    init: true
+    restart: unless-stopped
+  web:
+    image: screen-share-web:production
+    build:
+      context: ../..
+      dockerfile: infra/production/Dockerfile
+      args:
+        PUBLIC_API_URL: https://${SITE_HOST}
+    environment:
+      SITE_HOST: ${SITE_HOST}
+      RTC_HOST: ${RTC_HOST}
+      ACME_EMAIL: ${ACME_EMAIL}
+    ports:
+      - "${WEB_PUBLIC_IP:?Set the dedicated web IPv4}:80:80/tcp"
+      - "${WEB_PUBLIC_IP:?Set the dedicated web IPv4}:443:443/tcp"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      control-api:
+        condition: service_healthy
+    networks: [application]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    sysctls:
+      net.ipv4.ip_unprivileged_port_start: "0"
+    mem_limit: 256m
+    cpus: 1
+    healthcheck:
+      test: [CMD, wget, -q, -T, "3", -O, /dev/null, http://127.0.0.1:9080/healthz]
+      interval: 10s
+      timeout: 4s
+      retries: 6
+    restart: unless-stopped
+networks:
+  database:
+    internal: true
+  application: {}
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:

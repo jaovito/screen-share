@@ -16,7 +16,7 @@ export const videoProfileSchema = z
   .refine(
     (profile) =>
       widths[profile.height] === profile.width && profile.id === `${profile.height}p${profile.fps}`,
-    { message: 'Perfil fora do catálogo' },
+    { message: 'Profile is not in the catalog' },
   );
 export const profilesResponseSchema = z.object({
   profiles: z
@@ -36,3 +36,17 @@ export const appInfoSchema = z.object({
 });
 
 export type AppInfoDto = z.infer<typeof appInfoSchema>;
+
+export {
+  type AudioSource,
+  type AudioSourcesResponse,
+  audioSourceSchema,
+  audioSourcesResponseSchema,
+} from './audio-sources';
+export {
+  type MediaProofGrant,
+  mediaProofGrantSchema,
+  mediaProofServerSchema,
+} from './media-proof';
+export * from './product';
+export * from './receiver-reports';

@@ -28,6 +28,7 @@ jobs:
       - run: bun run test:persistence
       - run: bun --bun node_modules/@playwright/test/cli.js install --with-deps chromium
       - run: bun run test:e2e
+      - run: bun run test:media
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
@@ -50,7 +51,7 @@ jobs:
       - run: rustup toolchain install 1.99.1 --profile minimal --component rustfmt --component clippy
       - run: bun run check:rust
   windows-desktop:
-    timeout-minutes: 30
+    timeout-minutes: 45
     runs-on: windows-2025
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -62,10 +63,52 @@ jobs:
       - run: rustup toolchain install 1.99.1 --profile minimal --component rustfmt --component clippy
       - run: bun install --frozen-lockfile
       - run: bun run check:rust
+      - name: Check the opt-in Windows media proof and SDK
+        run: cargo clippy --locked -p ss-media-proof --features native-proof --all-targets -- -D warnings
+        env:
+          CARGO_BUILD_JOBS: 2
+          RUSTFLAGS: -C target-feature=+crt-static
+      - name: Test native grant and shutdown guards
+        run: cargo test --locked -p ss-rtc-livekit --features native-proof --lib
+        env:
+          CARGO_BUILD_JOBS: 2
+          RUSTFLAGS: -C target-feature=+crt-static
+      - name: Test Windows acquisition framing and owned watchdog
+        run: cargo test --locked -p ss-media-windows --features probe-ui
+        env:
+          CARGO_BUILD_JOBS: 2
+          RUSTFLAGS: -C target-feature=+crt-static
+      - name: Test Windows private key ACLs and publisher pacing
+        run: cargo test --locked -p ss-media-proof --features native-proof
+        env:
+          CARGO_BUILD_JOBS: 2
+          RUSTFLAGS: -C target-feature=+crt-static
+      - name: Build the complete experimental Windows publisher
+        run: cargo build --locked -p ss-media-proof --features native-proof
+        env:
+          CARGO_BUILD_JOBS: 2
+          RUSTFLAGS: -C target-feature=+crt-static
+      - name: Save the experimental publisher for authorized hardware testing
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: native-windows-media-proof-development-unsigned
+          path: target/debug/ss-media-proof.exe
+          if-no-files-found: error
+          retention-days: 7
       - run: bun run --filter @screen-share/contracts typecheck
       - run: bun run --filter @screen-share/desktop build
+      - name: Prepare the fixed native publisher sidecar
+        run: bun scripts/build-sidecar.ts
+      - name: Strictly check the packaged Windows parent and native command boundaries
+        run: cargo clippy --locked -p screen-share-desktop --all-targets -- -D warnings
+        env:
+          CARGO_BUILD_JOBS: 2
       - run: cargo check --locked -p screen-share-desktop --all-targets
+        env:
+          CARGO_BUILD_JOBS: 2
       - run: cargo test --locked -p screen-share-desktop --lib
+        env:
+          CARGO_BUILD_JOBS: 2
       - run: bun run build:desktop
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -86,5 +129,75 @@ jobs:
       - run: docker compose --env-file .env -f infra/compose.yaml --profile app config --quiet
       - run: bun run stack:up
       - run: docker compose --env-file .env -f infra/compose.yaml exec -T control-api /app/control-api smoke
+      - name: Verify the standalone API image runtime
+        run: |
+          docker compose --env-file .env -f infra/compose.yaml exec -T control-api sh -eu -c '
+            test "$(id -u)" = 10001
+            test -s /etc/ssl/certs/ca-certificates.crt
+            test ! -d /app/node_modules
+            test ! -e /app/.env
+            ! command -v node >/dev/null 2>&1
+          '
+      - name: Build and inspect the production viewer image without deploying it
+        shell: bash
+        run: |
+          set -euo pipefail
+          image=ss-product-web-check:ci
+          container=ss-ci-web-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}
+          directory=$(mktemp -d)
+          cleanup() {
+            docker rm -fv "$container" >/dev/null 2>&1 || true
+            docker image rm "$image" >/dev/null 2>&1 || true
+            rm -rf "$directory"
+          }
+          trap cleanup EXIT
+          limits=()
+          if [[ "$(docker build --help)" == *"--resource"* ]]; then
+            limits=(--resource memory=512m --resource cpu-quota=100000)
+          fi
+          docker build "${limits[@]}" --build-arg PUBLIC_API_URL=https://share.example.org -f infra/production/Dockerfile -t "$image" .
+          docker run --rm --network none --cpus 1 --memory 128m --cap-drop ALL --read-only --entrypoint sh "$image" -eu -c '
+            test "$(id -u)" = 10001
+            test -s /etc/ssl/certs/ca-certificates.crt
+            test -f /srv/viewer/index.html
+            test ! -d /srv/viewer/node_modules
+            test ! -d /usr/local/lib/node_modules
+            ! command -v node >/dev/null 2>&1
+            ! command -v bun >/dev/null 2>&1
+          '
+          docker run --rm --network none --cpus 1 --memory 128m --cap-drop ALL --read-only \
+            --env SITE_HOST=share.example.org --env RTC_HOST=rtc.example.org --env ACME_EMAIL=operator@example.org \
+            "$image" caddy adapt --config /etc/caddy/Caddyfile > /dev/null
+          docker create --name "$container" "$image" > /dev/null
+          docker cp "$container:/srv/viewer" "$directory/viewer"
+          WEB_DIST="$directory/viewer" bun --no-env-file - <<'TS'
+          import { readFileSync, readdirSync, statSync } from 'node:fs';
+          import { resolve } from 'node:path';
+          const secretNames = new Set(['POSTGRES_PASSWORD', 'AUTH_SECRET', 'LIVEKIT_API_KEY', 'LIVEKIT_API_SECRET']);
+          const secrets: string[] = [];
+          for (const line of readFileSync('.env', 'utf8').split(/\r?\n/)) {
+            const separator = line.indexOf('=');
+            if (!secretNames.has(line.slice(0, separator))) continue;
+            let value = line.slice(separator + 1).trim();
+            if (value.startsWith('"')) value = JSON.parse(value);
+            else if (value.startsWith("'")) value = value.slice(1, -1);
+            if (value.length < 12) throw new Error('Missing generated CI credential');
+            secrets.push(value);
+          }
+          if (secrets.length !== secretNames.size || !process.env.WEB_DIST) throw new Error('Image scan prerequisites are missing');
+          let files = 0;
+          let publicOriginFound = false;
+          for (const name of readdirSync(process.env.WEB_DIST, { recursive: true, encoding: 'utf8' })) {
+            const path = resolve(process.env.WEB_DIST, name);
+            if (!statSync(path).isFile()) continue;
+            if (name.split(/[\\/]/).some((part) => part === '.env' || part === 'node_modules') || /\.(?:pem|key)$/.test(name)) throw new Error('Private configuration appeared in the static image');
+            const content = readFileSync(path);
+            if (secrets.some((secret) => content.includes(secret))) throw new Error('A server credential was embedded in the static image');
+            publicOriginFound ||= content.includes('https://share.example.org');
+            files++;
+          }
+          if (files === 0 || !publicOriginFound) throw new Error('Expected public frontend configuration is absent');
+          console.log(`Inspected ${files} static image files; server credentials are absent.`);
+          TS
       - if: always()
         run: bun run stack:down

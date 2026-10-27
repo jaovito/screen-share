@@ -1,0 +1,225 @@
+export const es = {
+  documentTitle: 'Screen Share — salas privadas',
+  badge: 'Salas privadas',
+  heading: 'Una pantalla. Tu gente.',
+  introduction:
+    'Comparte una ventana con las personas que apruebes. Las claves del contenido permanecen con los participantes.',
+  signIn: 'Iniciar sesión',
+  signUp: 'Crear cuenta',
+  signOut: 'Cerrar sesión',
+  email: 'Email',
+  password: 'Contraseña',
+  name: 'Nombre visible',
+  accountNotice:
+    'Usa una contraseña única de al menos 12 caracteres. Una cuenta no concede acceso automático a las salas.',
+  loading: 'Cargando…',
+  retry: 'Reintentar',
+  error:
+    'No se pudo completar la solicitud. Revisa la conexión y los permisos e inténtalo de nuevo.',
+  offline: 'No se pudo renovar la autorización. La reproducción y la publicación se han detenido.',
+  rooms: 'Tus salas',
+  noRooms: 'Tus salas aparecerán aquí. Crea una o acepta una invitación.',
+  createRoom: 'Crear sala',
+  roomName: 'Nombre de la sala',
+  inviteToken: 'Invitación privada',
+  acceptInvite: 'Solicitar acceso',
+  inviteNotice:
+    'Pega una invitación en privado. El responsable de la sala debe aprobar la solicitud.',
+  pending: 'Esperando aprobación del responsable',
+  owner: 'Responsable',
+  member: 'Participante',
+  members: 'Personas',
+  approve: 'Aprobar',
+  remove: 'Eliminar',
+  createInvite: 'Crear invitación',
+  expiresIn: 'Caduca en minutos',
+  maxUses: 'Máximo de solicitudes',
+  revokeInvite: 'Revocar invitación',
+  invitationCreated: 'Invitación creada. Compártela en privado; solo se muestra ahora.',
+  copySecret: 'Copiar en privado',
+  copied: 'Copiado',
+  copyFailed: 'No se pudo copiar. Selecciona y copia el valor manualmente.',
+  invitePrivacy:
+    'Las invitaciones permiten solicitar acceso, sin aprobación automática. Nunca las publiques en incidencias o registros.',
+  session: 'Transmisión',
+  epoch: 'Época de sesión {{epoch}}',
+  noSession: 'No hay ninguna transmisión. El responsable puede preparar una sesión nueva.',
+  prepare: 'Preparar transmisión',
+  activate: 'Abrir sesión a participantes aprobados',
+  activateNotice:
+    'Activa solo después de enviar esta clave nueva en privado a cada participante aprobado.',
+  stopSession: 'Finalizar sesión',
+  keyLabel: 'Clave del contenido',
+  keyNotice:
+    'Envía esta clave por un canal cifrado de confianza. Nunca se envía a este servicio. Un cambio de participantes exige una sesión y clave independientes.',
+  keyRequired: 'Introduce la clave recibida en privado del emisor.',
+  newKey: 'Generar clave nueva',
+  keyUnavailable:
+    'Se requiere un contexto seguro con generación criptográfica de números aleatorios.',
+  profile: 'Perfil de vídeo',
+  bitrate: 'Bitrate máximo (Mbps)',
+  selectSource: 'Elegir ventana y comenzar',
+  sourceNotice:
+    'Windows te pedirá que elijas la fuente. La captura nunca cambia silenciosamente a otra ventana o monitor.',
+  nativeUnavailable:
+    'La publicación requiere la aplicación de escritorio de Windows. Este navegador puede recibir una transmisión aprobada.',
+  pause: 'Pausar',
+  resume: 'Reanudar misma fuente',
+  stop: 'Detener',
+  connect: 'Ver transmisión cifrada',
+  disconnect: 'Desconectar',
+  consent: 'Recibí la clave en privado y quiero ver esta transmisión seleccionada.',
+  player: 'Reproductor de pantalla privada',
+  waiting: 'Esperando una transmisión aprobada',
+  reconnectNotice:
+    'Un cambio de sesión o permisos detiene la reproducción. Solicita la nueva clave y vuelve a conectar explícitamente.',
+  status_idle: 'Inactivo',
+  status_selecting: 'Elige la fuente en el selector de Windows',
+  status_connecting: 'Conectando de forma segura…',
+  status_waiting: 'Esperando al emisor',
+  status_subscribed: 'Pista cifrada suscrita; verifica la reproducción visible',
+  status_sharing: 'Publicando la fuente seleccionada',
+  status_paused: 'En pausa',
+  status_stopped: 'Detenido',
+  status_failed: 'Detenido por un fallo de medios o autorización',
+  status_unsupported_platform: 'La publicación no está disponible en esta plataforma',
+  status_engine_missing: 'El motor nativo no está instalado',
+  status_unsupported: 'Este navegador no admite el cifrado requerido',
+  status_expired: 'La autorización ha caducado. Solicita una sesión nueva.',
+  status_invalidGrant: 'La autorización de sesión no es válida',
+  status_invalidKey: 'El formato de la clave no es válido',
+  diagnostics: 'Diagnóstico local',
+  framesCaptured: 'Fotogramas consumidos',
+  framesEncoded: 'Fotogramas codificados',
+  encodedBytes: 'Bytes de contenido codificado',
+  elapsed: 'Segundos transcurridos',
+  metricNotice:
+    'Los contadores describen este procesamiento local, no bitrate de red, FPS medidos, latencia ni prueba de decodificación del receptor.',
+  state_idle: 'Inactiva',
+  state_preparing: 'Preparando',
+  state_active: 'Activa',
+  state_closing: 'Cerrando',
+  state_closed: 'Cerrada',
+  privacy:
+    'El servicio de control no almacena grabaciones, miniaturas ni claves de contenido. Los participantes aprobados pueden grabar lo que reciben.',
+  applyProfile: 'Aplicar perfil a la misma fuente',
+  receiverDiagnostics: 'Diagnóstico del receptor',
+  decodedFps: 'Fotogramas decodificados / segundo',
+  inboundBitrate: 'Bitrate de medios recibido',
+  droppedFrames: 'Fotogramas descartados en la muestra',
+  averageDecode: 'Tiempo medio de decodificación',
+  packetLoss: 'Pérdida de paquetes en la muestra',
+  jitter: 'Jitter',
+  transportRtt: 'RTT del transporte',
+  dimensions: 'Dimensiones decodificadas',
+  receiverMetricNotice:
+    'Los contadores no disponibles quedan en blanco. RTT mide el transporte, no la latencia visual de extremo a extremo. Las muestras del receptor no identifican por sí solas un cuello de botella del codificador del emisor.',
+  systemAudio: 'Incluir audio del sistema',
+  systemAudioNotice:
+    'Incluye todo el audio del ordenador, incluidas las llamadas y otras aplicaciones. Desactívalo para compartir sin sonido. No hay una fuente de audio alternativa automática.',
+  streamAudio: 'Audio de la transmisión',
+  audioPlaybackNotice:
+    'El audio comienza silenciado. Activa el sonido con el control de audio. No hay subtítulos en directo.',
+  accessChanging:
+    'Actualizando el acceso a la sala. Una sesión nueva estará disponible cuando la transmisión anterior termine de forma segura.',
+  invitationHistory: 'Historial de invitaciones',
+  invitationUses: '{{uses}} de {{max}} solicitudes utilizadas',
+  revoked: 'Revocada',
+  inviteHistoryUnavailable: 'El historial de invitaciones no está disponible temporalmente.',
+  updates: 'Actualizaciones',
+  updateNotice:
+    'Las actualizaciones usan el canal configurado y requieren una firma válida del editor. Buscar nunca instala automáticamente.',
+  checkUpdates: 'Buscar actualizaciones',
+  updateBusy: 'Procesando actualización…',
+  updateFailed:
+    'No se pudo verificar o completar la actualización. Busca de nuevo antes de reintentar.',
+  updateNotConfigured: 'Esta compilación no tiene un canal de versiones firmadas configurado.',
+  updateCurrent: 'Este canal no tiene una versión más reciente.',
+  updateAvailable: 'La versión {{version}} está disponible.',
+  updateConsent: 'Estoy listo para detener la transmisión y reiniciar la aplicación.',
+  installUpdate: 'Instalar actualización firmada y reiniciar',
+  qualityMode: 'Prioridad de calidad',
+  qualityMotion: 'Movimiento',
+  qualityText: 'Legibilidad del texto',
+  qualityNotice:
+    'Movimiento reduce primero la resolución ante presión de red sostenida. Texto conserva la resolución más tiempo a 30 FPS. Detén la transmisión para cambiar esta prioridad.',
+  qualityReduced:
+    'Último ajuste: calidad reducida. Objetivo actual {{profile}}, {{bitrate}} bps. Cambios aplicados: {{changes}}.',
+  qualityRestored:
+    'Último ajuste: calidad restaurada tras margen sostenido. Objetivo actual {{profile}}, {{bitrate}} bps. Cambios aplicados: {{changes}}.',
+  audioMode: 'Fuente de audio',
+  audioOff: 'Sin audio',
+  applicationAudio: 'Aplicación seleccionada',
+  applicationAudioNotice:
+    'Elige el audio independientemente de la ventana de vídeo. Se captura la aplicación y sus procesos hijos, incluidas otras pestañas o llamadas de esa aplicación. Nunca cambia automáticamente al audio del sistema.',
+  audioApplication: 'Aplicación para audio',
+  chooseAudioApplication: 'Elegir aplicación de audio',
+  loadingAudioApplications: 'Consultando aplicaciones locales con ventanas visibles…',
+  audioApplicationsUnavailable:
+    'No se pueden consultar las aplicaciones. Reintenta explícitamente o deja el audio desactivado. No se eligió otra fuente.',
+  noAudioApplications:
+    'No hay aplicaciones visibles y accesibles. Abre su ventana y vuelve a elegir.',
+  peerReports: 'Informes de espectadores',
+  peerReportNotice:
+    'ENVIADO POR EL CLIENTE · Observaciones privadas y temporales. Estos valores orientativos no autorizan participantes ni cambian la calidad automáticamente.',
+  peerReportsUnavailable: 'Los informes de espectadores no están disponibles.',
+  peerReportsEmpty: 'No hay informes recientes. Su ausencia no demuestra un fallo de reproducción.',
+  peerPossiblyLimited:
+    'Varias observaciones recientes sugieren un posible límite de decodificación o descarga para este espectador mientras el emisor codificaba al ritmo objetivo. Es una orientación, no un diagnóstico confirmado.',
+  missingSessionKey:
+    'La clave de contenido se borró al recargar esta página. Finaliza esta sesión, prepara otra y distribuye su nueva clave en privado antes de reiniciar.',
+  reason_source_closed:
+    'La fuente seleccionada se cerró. La transmisión se detuvo; elige una fuente explícitamente para volver a empezar.',
+  reason_selection_canceled: 'Se canceló la selección de fuente. No se está capturando nada.',
+  reason_authorization_failed:
+    'La transmisión se detuvo porque no se pudo verificar el acceso actual. Actualiza la sala antes de reiniciar.',
+  reason_capture_failed:
+    'La fuente seleccionada dejó de estar disponible. La transmisión se detuvo sin cambiar de fuente. Elige una fuente explícitamente para reintentar.',
+  reason_encoder_failed:
+    'Falló el procesamiento de vídeo. La transmisión se detuvo; revisa el perfil y vuelve a intentarlo.',
+  reason_transport_failed:
+    'Falló la conexión de medios cifrada. La transmisión se detuvo; revisa la conexión antes de reiniciar.',
+  reason_cleanup_failed:
+    'La liberación de medios no terminó normalmente. Cierra y vuelve a abrir la aplicación antes de compartir de nuevo.',
+  reason_lease_expired:
+    'La autorización de transmisión caducó. Actualiza la sala e inicia de nuevo explícitamente.',
+  reason_invalid_request:
+    'La solicitud de transmisión no es válida. Elige ajustes compatibles antes de reintentar.',
+  reason_worker_failed:
+    'El motor de medios nativo se detuvo. Reinicia la transmisión explícitamente.',
+  reason_engine_missing:
+    'Falta el motor de medios incluido. Reinstala la aplicación de escritorio.',
+  reason_child_unresponsive:
+    'El motor de medios nativo dejó de responder y se cerró. Reinicia la transmisión explícitamente.',
+  reason_stopped_by_user:
+    'La transmisión se detuvo explícitamente. No se está publicando ninguna fuente.',
+  reason_unsupported_platform: 'La captura nativa no está disponible en este sistema operativo.',
+  reason_unknown:
+    'La transmisión se detuvo por un motivo no disponible. Actualiza la sala antes de reintentar.',
+  advice_insufficientEvidence:
+    'Aún no hay evidencia continua suficiente para identificar un cuello de botella. El contenido estático puede producir pocos fotogramas legítimamente.',
+  advice_sourceInactive:
+    'Se ha confirmado que la fuente está inactiva. La cadencia de captura por sí sola no confirma esta condición.',
+  advice_captureLimited:
+    'La actividad verificada de la fuente supera la cadencia de captura observada. Investiga la disponibilidad de captura.',
+  advice_encoderLimited:
+    'El trabajo medido del codificador supera el tiempo por fotograma mientras la captura alcanza el objetivo. Esto no confirma saturación de la GPU.',
+  advice_processingLimited:
+    'La captura alcanza el objetivo, pero la salida codificada se retrasa y la latencia medida entre entrada y salida supera el tiempo por fotograma. Incluye demoras de MFT, controlador, GPU y colas; no identifica un cuello de botella del códec o de la GPU.',
+  advice_uploadLimited:
+    'El objetivo reciente de bitrate del transporte permanece por debajo del máximo solicitado. Investiga la ruta de envío; este objetivo no mide la capacidad de subida.',
+  advice_receiverLimited:
+    'La salida del emisor alcanza el objetivo, pero este espectador presenta presión de decodificación o recepción. Investiga su reproducción y red.',
+  advice_healthy:
+    'Las observaciones proporcionadas de fuente, procesamiento y reproducción alcanzan sus objetivos.',
+  sourceActivityUnknown:
+    'La actividad de renderizado de la fuente no está disponible. Una captura con pocos FPS puede reflejar contenido estático, una ventana minimizada o una fuente lenta; por sí sola no identifica un fallo de captura.',
+  captureFps: 'Fotogramas capturados por segundo',
+  encodedFps: 'Fotogramas codificados por segundo',
+  targetFps: 'Objetivo actual de fotogramas por segundo',
+  conversionSubmission: 'Tiempo de CPU al enviar la conversión',
+  encoderOutputLatency: 'Latencia entre entrada y salida del codificador',
+  availableSendTarget: 'Objetivo reciente de bitrate del transporte',
+  processingMetricNotice:
+    'Los tiempos son medias móviles acotadas a la generación actual. El envío de conversión mide la llamada de CPU, no la ejecución de GPU. La latencia de salida incluye colas de MFT/controlador/GPU. Pausas, reconexiones, cambios de perfil y recuperación reinician la ventana de evidencia.',
+} as const;

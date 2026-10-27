@@ -22,7 +22,7 @@ Frontend tests live near the page/hook/service behavior they exercise. Decorativ
 
 Current cases cover catalog validation, liveness/readiness separation, sanitized configuration errors, unavailable database, repeated SQL, constraints, reconnection, bounded retries, shutdown, smoke, viewer loading/retry/error/cleanup, and unavailable/invalid desktop IPC. Fake clocks avoid real timeout waits. Real network/database calls have deadlines. Write test descriptions/comments in English; assertions may retain Portuguese UI/runtime strings.
 
-E2E uses a disposable database, free ports, and owned processes without reusing existing servers or touching development data. The main flow queries the real API, applies migrations, and displays eight profiles. Error cases intercept only the test's requests to cause 503/invalid contracts; they do not prove media networking. Desktop browser preview does not prove the Windows shell/capture.
+E2E uses a disposable database, free ports, and owned processes without reusing existing servers or touching development data. The product flow uses real cookie authentication, disposable PostgreSQL and an owned SFU to exercise room creation, invitations, approval, grants/session transitions and revocation. Synthetic credentials belong only to that run. Controlled error cases and browser-preview checks do not prove hardware capture or arbitrary network connectivity. Desktop browser preview does not prove the Windows shell/capture.
 
 The E2E runner builds interfaces with its own public API URL. reuseExistingServer: false avoids using another app accidentally. Traces are retained on failure; HTML lives in playwright-report and screenshots in test-results. `bun run test:e2e -- --project=chromium` selects desktop. Success screenshots allow visual review alongside geometry assertions.
 
@@ -44,13 +44,13 @@ For docs, AGENTS.md, agents, and skills without executable changes, validate lin
 
 Linux runs TS checks, disposable-database coverage, persistence, and desktop/mobile Chromium E2E. Reports are uploaded as artifacts including failures. Separate jobs preserve portable Rust, Windows shell, and image/Compose checks. Missing Docker/Chromium fails explicitly rather than producing silently skipped green tests.
 
-CI configuration alone cannot confirm provider execution. Windows and media gates remain pending. TS coverage does not establish numeric Rust coverage, WebView2 behavior, encoding, WebRTC, or E2EE.
+CI configuration alone cannot confirm provider execution. Windows compilation/tests, interactive hardware execution and two-PC media acceptance are separate evidence; consult the dated validation log for the exact executed revision. TS coverage does not establish numeric Rust coverage, WebView2 behavior, encoding, WebRTC, or E2EE.
 
 Native migration preserves per-file gates/reports. Regressions reject below-80% modules despite high aggregate coverage, invalid counters, and values rounded up to 80%. A temporary 100% native threshold was also confirmed to exit nonzero. Vite/Playwright explicitly use bun --bun; E2E API runs TypeScript directly on Bun, matching the default source runtime. The standalone executable has a separate disposable binary check. See ADRs 0007/0008.
 
 ## Native Bun Test equivalence and isolation
 
-scripts/test-suites.ts discovers backend/DOM suites; .integration.test.ts is included only with a disposable database. bun run test typechecks source contracts and runs 46 unit/DOM tests; coverage adds SQL integration, totaling 47. Environments/preloads are separated and each file uses --isolate so module mocks/globals do not leak across files.
+scripts/test-suites.ts discovers backend/DOM suites; .integration.test.ts is included only with a disposable database. bun run test typechecks source contracts and runs the discovered unit/DOM suites; coverage adds real SQL integration. Current counts belong in the dated validation log rather than this command contract. Environments/preloads are separated and each file uses --isolate so module mocks/globals do not leak across files.
 
 Mocks use mock, mock.module, and spyOn, registering module mocks before dynamic import of the exercised module. Timers use Bun's synchronous jest APIs and explicit microtask draining; no Vitest shim is installed. Mounting tests use a distinct module identifier for the missing-root case rather than vi.resetModules. DOM preload registers Happy DOM before React Testing Library and cleans up/restores spies after each test.
 
@@ -66,6 +66,30 @@ UI tests use the real localization provider/resources rather than mocking transl
 
 The default API runs TypeScript on Bun without compilation, and source-based contracts require no emitted dist files. Native HTTP tests open an ephemeral loopback socket; a sandbox restricting sockets must permit this action rather than skip the test. Tests cover graceful drain, repeated shutdown, forced deadlines, bind/database-close failures, command validation, and readiness without migrations.
 
-`bun run test:binary` builds the host executable, copies only that executable into an empty temporary directory, migrates a disposable PostgreSQL database twice, verifies readiness/eight profiles/no token endpoint, and requires successful SIGTERM shutdown. This proves embedded SQL/journal lookup independently of source/CWD/node_modules. It does not establish cross-platform execution: macOS/Linux results cannot stand in for Windows. CI runs this check separately from coverage/E2E.
+`bun run test:binary` builds the host executable, copies only that executable into an empty temporary directory, migrates a disposable PostgreSQL database twice, verifies readiness, the catalog and authenticated private-product behavior while denying unauthenticated grant requests, and requires successful SIGTERM shutdown. This proves embedded SQL/journal lookup independently of source/CWD/node_modules. It does not establish cross-platform execution: macOS/Linux results cannot stand in for Windows. CI runs this check separately from coverage/E2E.
 
 Architecture regressions include alias-based private imports, shared/app/feature direction, domain/application adapter restrictions, and cycles. Typechecking uses module Preserve/moduleResolution Bundler with noEmit; Bun execution is not typechecking. Frontend builds remain Vite browser bundles.
+
+
+## M1 experimental receiver and native boundaries
+
+`bun run test:media` uses a separate disposable LiveKit container, synthetic credentials, a test-only 320×180/5 FPS canvas publisher, the real SDK encryption worker, and one Chromium worker. Its correct-key viewer must decode multiple frames; its wrong-key viewer must decode none while the correct client continues. It does not use capture hardware, normal local services, or the development database. Resources/configuration are owned and cleaned up by scripts/test-media.ts. No trace/screenshot records credentials or synthetic media in this proof. See media-proof.md.
+
+Unit/DOM cases cover grant scope/allowlist/unsafe signaling, independent secrets, private exclusive files, explicit consent, cleared form values, lazy loading/cancellation, supported encryption, verified identity/room before subscription, unexpected media, timeouts, expiry, disconnect/collapse/unmount and SDK cleanup exceptions. Per-file gates apply to every measured occurrence; operator-only input schemas live in tooling rather than the browser client contract.
+
+Rust tests add explicit source/session/epoch invariants, trusted-clock expiry across delayed authorization/preparation/start/resume/pause, idempotent/failed cleanup, bounded concurrent frame ownership, and H.264 access-unit framing limits. The Windows-target WGC implementation has a cross-target strict clippy check; that is API/type evidence, not an executed Windows capture or two-PC test.
+
+
+## Current product and image validation
+
+Shared React workspace tests run in the DOM suite, while authentication/room/grant rules and SQL concurrency run through their appropriate server/disposable-database suites. Regressions cover memory-only keys, invitation history/revocation, polling failures, stale responses, explicit local application-audio selection, PID/creation-time binding, continuous grant renewal, metrics and updater consent. No numeric coverage gate is lowered for these modules.
+
+The Linux image job builds/starts the actual compiled API composition, checks readiness and authenticated SFU control, and verifies its UID/CA bundle/no-Node/no-node_modules runtime. It separately builds the production viewer with a public test API origin, checks the Caddy runtime and configuration in network-isolated containers, and scans copied static assets against generated CI database/auth/SFU credentials. It never provisions a production certificate, domain or public listener. Build-container CPU/memory limits are applied when the installed Buildx exposes its resource flags; runtime inspection is explicitly capped. Cleanup removes only that job's own inspection container/image.
+
+The Windows job prepares the fixed sidecar before strict parent Clippy, IPC tests and NSIS packaging. Configuring these gates does not prove the run succeeded or that GPU/audio devices work. Signed release preparation remains manual and independently protected; CI development installers are unsigned. See [releases](releases.md).
+
+## Native processing and same-source recovery regressions
+
+Portable timing tests cover the external encoder's two-input bound, matched monotonic output timestamps, finite rolling observations and reset behavior. Pure recovery tests cover immutable source identity, three session-total attempts/backoff, pause/revocation/cancel gates, clock regression and strict recoverable DXGI HRESULTs. Windows-gated metadata tests exercise stale-generation, terminal source closure and the synchronized publication gate. Cross-target Clippy validates these Windows APIs but does not execute graphics recovery.
+
+The visible publisher advisor and DOM tests cover continuous evidence windows, processing latency versus GPU/codec attribution, transport pressure, missing source activity, pause/generation/gap resets, allowlisted native stop reasons and safe active-session key-loss recovery. Browser screenshots use an explicitly synthetic component fixture for visual inspection; these displayed values are not hardware measurements. Actual Windows device-loss/recovery and prolonged timing observations remain hardware acceptance.

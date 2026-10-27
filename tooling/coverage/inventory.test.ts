@@ -15,7 +15,7 @@ it('rejects runtime sources absent from coverage and accepts type-only modules',
     writeFileSync(source, 'export const state = 1;');
     writeFileSync(resolve(root, 'packages/contracts/src/types.ts'), 'export type ID = string;');
     writeFileSync(report, '{}');
-    expect(() => verifyCoverageInventory(root, report)).toThrow('Fontes sem relatório');
+    expect(() => verifyCoverageInventory(root, report)).toThrow('Sources missing coverage reports');
 
     writeFileSync(report, JSON.stringify({ [source]: { lines: { pct: 100 } } }));
     expect(verifyCoverageInventory(root, report)).toBe(1);

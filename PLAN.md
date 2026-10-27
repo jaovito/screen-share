@@ -1,9 +1,9 @@
 # Technical plan: private screen sharing
 
-- **Version:** 1.1 — initial planning/setup contract.
-- **Review date:** 2026-10-26.
-- **Status:** M0 implemented with portable local validation; Windows/remote CI gates pending. M1–M5 and media benchmarks have not run.
-- **Immediate scope:** repository bootstrap, applications, architecture, local infrastructure.
+- **Version:** 1.2 — private product implementation and acceptance contract.
+- **Review date:** 2026-10-27.
+- **Status:** M0–M5 product code is implemented, with integration and acceptance validation in progress. Physical Windows/GPU capture, two-PC interoperability, prolonged measurements and a configured signed production release remain acceptance gates; implementation does not establish those results.
+- **Current development scope:** implement M1–M5 product behavior in parallel, explicitly authorized by the user on 2026-10-27. Hardware, two-PC and prolonged-test gates remain acceptance/release criteria, not blockers to implementing subsequent milestones. Never report an unexecuted gate as passed.
 - **Product scope:** private streaming among friends, low computer overhead, quality diagnostics.
 
 > Commands, paths, endpoints, and checks below are implementation requirements. Their presence does not mean they exist or have run. Bitrates, resource budgets, latency, and schedules are hypotheses to validate.
@@ -190,7 +190,7 @@ M0 acceptance checklist:
 **Setup evidence (2026-10-26):** see [docs/validation.md](docs/validation.md). Local viewer uses 5175 because other projects own 5173/5174. Current diagnostic command: bun run doctor.
 
 - [ ] Windows gate: shell execution, IPC tests, NSIS bundle on Windows 11 x64. macOS shell checks/tests do not validate this gate.
-- [ ] Run GitHub Actions in the provider; versioned configuration is not executed CI.
+- [x] Run GitHub Actions in the provider: CI run 40432835471 passed all four jobs, including Windows IPC/NSIS build. This does not prove interactive Windows 11 capture.
 
 **M0 convention update:** feature-based frontend adapted from Truco; TypeScript/Bun scripts; Biome/import rules; 80% per-file lines/functions coverage; desktop/mobile E2E. bun run check includes disposable-database coverage/Docker; partial check:ts/check:rust remain independent of Docker. See docs/frontend.md, docs/testing.md, ADR 0006. This does not start M1.
 
@@ -314,7 +314,7 @@ Choose providers by quota, overage, throughput, latency, CPU/RAM. These calculat
 | M4 — Diagnostics      | Reports/recommendations                                  | Distinguished bottlenecks, stable adaptation     |
 | M5 — Distributed beta | Revocation, migration, installer, updates                | Session security, prolonged tests                |
 
-M0 prepares work; M1 establishes viability before broader product implementation. Security cannot wait until sharing with friends: authorization/E2EE are beta requirements.
+M0 prepares work. The original sequence used M1 viability as a prerequisite to broader implementation; the user explicitly authorized implementing all remaining milestones on 2026-10-27 while retaining the hardware evidence as an acceptance/release gate. Security cannot wait until sharing with friends: authorization/E2EE are beta requirements.
 
 Initial beta estimate: 12–20 weeks with two developers, one experienced in Windows/media. A solo developer learning these areas may need 4–8 months or more. M1 may change budget; never turn estimates into bootstrap delivery promises.
 
@@ -386,3 +386,14 @@ M0 viewer/desktop copy now uses bundled pt-BR, es, and en catalogs with i18next/
 ## API runtime and import resolution update — 2026-10-26
 
 At the user's request, the control API now runs TypeScript directly on Bun without a build, using native Bun.serve at the HTTP boundary. Optional builds produce a standalone executable with embedded migration assets; Docker deploys that executable. Contracts export TypeScript source, not generated JS. App-scoped frontend/API aliases and extensionless local imports use Bundler resolution; architecture checks resolve aliases before enforcing boundaries/cycles. Default API behavior, authorization limits, and media milestones remain unchanged. See ADR 0010.
+
+
+## M1 implementation progress — 2026-10-26
+
+The first implementation slice adds offline allowlisted proof grants, an opt-in encrypted browser receiver, a disposable synthetic encrypted transport test, portable authorization/clock/source/queue/access-unit invariants, and a target-specific WGC/D3D11 acquisition primitive. See [media-proof.md](docs/media-proof.md) and ADR 0011. The desktop publisher is still disabled. GPU conversion/hardware H.264 and native LiveKit publication/feedback are implemented in the optional proof utility. Native-to-browser interoperability passes a real local synthetic test. Windows runtime/hardware and two-PC measurements remain required before M1 completion or M2 advancement. Browser synthetic decoding is separate evidence and never a native performance claim.
+
+## Private product implementation — 2026-10-27
+
+The user authorized completing M1–M5 code while retaining physical acceptance gates. The normal application now uses real cookie authentication, pending/approved membership, bounded/revocable invitations, epoch/revision transactions, durable RTC cleanup and sixty-second role-scoped grants. The Windows desktop launches its bundled native publisher through private pipes, renews authorization from Rust, preserves the selected source, supports all eight profiles, pause/resume, explicit system/application audio and conservative adaptation. The browser consumes designated encrypted video/audio and reports bounded advisory observations. Production topology, a signed-update client and a manually gated draft-release workflow are implemented. See [architecture.md](docs/architecture.md), [deployment.md](docs/deployment.md), [releases.md](docs/releases.md) and [validation.md](docs/validation.md).
+
+Implementation is not completion of the physical acceptance column: Windows 11/GPU capture, game/background behavior, two physical PCs, restrictive-network TURN, prolonged measurements and installation/update with operator signing credentials must be exercised on the exact release candidate. The earlier dated bootstrap/proof sections describe their historical scope, not today's product entry point.

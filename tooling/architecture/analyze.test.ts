@@ -123,3 +123,27 @@ it('enforces boundaries and detects cycles through aliases', () => {
     ),
   ).toHaveLength(1);
 });
+
+it('permits only explicitly exported workspace subpaths and protects shared browser packages', () => {
+  const exports = new Map([
+    ['ui', new Set(['./product'])],
+    ['diagnostics', new Set(['./receiver'])],
+  ]);
+  expect(
+    analyzeSource(
+      'apps/desktop/src/app/App.tsx',
+      "import '@screen-share/ui/product'; import '@screen-share/diagnostics/receiver';",
+      exports,
+    ),
+  ).toEqual([]);
+  expect(
+    analyzeSource(
+      'apps/desktop/src/app/App.tsx',
+      "import '@screen-share/ui/src/product';",
+      exports,
+    ),
+  ).toContain('Workspaces must be imported through public exports.');
+  expect(
+    analyzeSource('packages/ui/src/product/services.ts', "import 'node:fs';", exports),
+  ).toContain('Browser cannot import server/runtime adapters.');
+});

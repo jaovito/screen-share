@@ -1,3 +1,16 @@
+mod encoded_video;
+mod quality;
+
+pub use quality::{AdaptiveQuality, QualityMode, QualityReason, QualityUpdate};
+
+pub use encoded_video::{EncodedAccessUnit, EncodedVideoError, MAX_ACCESS_UNIT_BYTES};
+
+mod session;
+
+pub use session::{
+    CaptureKind, CaptureSelection, PauseReason, SessionError, SessionLease, SharingState,
+};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct VideoProfile {
     pub width: u16,

@@ -1,3 +1,11 @@
+mod frame_queue;
+
+pub use frame_queue::{FrameQueueCounters, FrameQueueError, LatestFrameQueue};
+
+mod session;
+
+pub use session::{SessionAuthorizer, SessionClock, SharingPipeline, SharingSession};
+
 use ss_domain::{MediaError, MediaState, VideoProfile};
 pub trait CapturePort {
     fn prepare(&self, profile: VideoProfile) -> Result<(), MediaError>;

@@ -1,13 +1,15 @@
 import { randomUUID } from 'node:crypto';
+import type { ProductRuntime } from '@modules/private-rooms';
 import { videoProfiles } from '@modules/profiles';
 import { isReady, type ReadinessPort } from '@modules/system/application/readiness';
 import { profilesResponseSchema } from '@screen-share/contracts';
 import { Hono } from 'hono';
+import { bodyLimit } from 'hono/body-limit';
 import { cors } from 'hono/cors';
 import { secureHeaders } from 'hono/secure-headers';
 import { log } from './log';
 
-export function createApp(database: ReadinessPort, origins: string[]) {
+export function createApp(database: ReadinessPort, origins: string[], product?: ProductRuntime) {
   const app = new Hono();
 
   app.use('*', async (c, next) => {
@@ -27,9 +29,14 @@ export function createApp(database: ReadinessPort, origins: string[]) {
   app.use('*', secureHeaders());
   app.use(
     '*',
+    bodyLimit({ maxSize: 16384, onError: (c) => c.json({ error: 'request_too_large' }, 413) }),
+  );
+  app.use(
+    '*',
     cors({
       origin: origins,
-      allowMethods: ['GET'],
+      allowMethods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+      credentials: true,
       allowHeaders: ['Content-Type'],
     }),
   );
@@ -42,6 +49,7 @@ export function createApp(database: ReadinessPort, origins: string[]) {
   app.get('/v1/video-profiles', (c) =>
     c.json(profilesResponseSchema.parse({ profiles: videoProfiles })),
   );
+  product?.mount(app);
   app.onError((_error, c) => {
     log('request_failed');
 

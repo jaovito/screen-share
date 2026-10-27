@@ -1,6 +1,12 @@
 {
   "identifier": "main",
-  "description": "Janela principal sem plugins, filesystem, shell ou permissões administrativas.",
+  "description": "Main application window with narrowly scoped native commands and no shell/filesystem plugins.",
   "windows": ["main"],
-  "permissions": ["allow-get-app-info"]
+  "permissions": [
+    "allow-get-app-info",
+    "allow-sharing-control",
+    "allow-control-request",
+    "allow-signed-updates",
+    "allow-list-audio-sources"
+  ]
 }

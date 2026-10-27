@@ -4,6 +4,7 @@ COPY package.json bun.lock bunfig.toml tsconfig.base.json ./
 COPY packages/contracts/package.json packages/contracts/package.json
 COPY packages/ui/package.json packages/ui/package.json
 COPY packages/i18n/package.json packages/i18n/package.json
+COPY packages/diagnostics/package.json packages/diagnostics/package.json
 COPY apps/control-api/package.json apps/control-api/package.json
 COPY apps/viewer-web/package.json apps/viewer-web/package.json
 COPY apps/desktop/package.json apps/desktop/package.json
