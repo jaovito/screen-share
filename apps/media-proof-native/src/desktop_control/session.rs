@@ -255,7 +255,10 @@ impl Session {
             if let Some(capture) = &self.capture {
                 match capture.status().map_err(|_| SharingReason::CaptureFailed)? {
                     CaptureStatus::Capturing => {}
-                    CaptureStatus::SourceClosed => { status.reason = Some(SharingReason::SourceClosed); break; },
+                    CaptureStatus::SourceClosed => {
+                        status.reason = Some(SharingReason::SourceClosed);
+                        break;
+                    }
                     CaptureStatus::Stopped => break,
                     CaptureStatus::Failed(_) => return Err(SharingReason::CaptureFailed),
                 }

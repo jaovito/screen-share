@@ -19,6 +19,9 @@ RUN bun run --filter @screen-share/viewer-web build
 FROM caddy:2.11.7-alpine@sha256:eb4d35b7452d1ab6171fbdbe8d9275b2301dad6dad92115d91e19fb9b24d510f AS runtime
 COPY --from=build /app/apps/viewer-web/dist /srv/viewer
 COPY infra/production/Caddyfile /etc/caddy/Caddyfile
-RUN mkdir -p /data/caddy /config/caddy && chown -R 10001:10001 /data /config /srv/viewer
+# Compose permits unprivileged low ports; remove the upstream file capability
+# so exec also works with the container's empty capability bounding set.
+RUN setcap -r /usr/bin/caddy && test -z "$(getcap /usr/bin/caddy)" \
+    && mkdir -p /data/caddy /config/caddy && chown -R 10001:10001 /data /config /srv/viewer
 USER 10001:10001
 EXPOSE 80 443

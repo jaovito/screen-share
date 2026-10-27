@@ -17,3 +17,7 @@ Revocation is an explicit asynchronous closing/cleanup transition. Membership ch
 The reviewer ran only a small synthetic service proof from a temporary directory with environment autoload disabled; it used no network/database, real secrets, media, shared services or external targets. The proof was removed and tracked files were unchanged. Coordinator validation uses separately owned disposable resources. This is neither certification nor physical Windows/E2EE acceptance.
 
 Invite, audit and authentication-rate records require an operator retention policy before wider deployment. Keep audit evidence for an explicit retention period and remove expired records in bounded maintenance batches with backups; do not delete current membership or unfinished cleanup. No maintenance job has been scheduled or run against the development or production database by this review.
+
+## Second independent pass
+
+The read-only second pass reviewed the native authorization supervisor, cancellation/nonces, logout suspension, fixed cookie proxy, private report authorization/cache and receiver transmission. It confirmed no new actionable issue. Report reads/writes remain bound to the current approved roster/session under the room lock; client values are explicitly advisory and do not grant access or drive publisher adaptation. No build, real credential, shared/external service or proof artifact was used by this pass. Physical platform/network timing and end-to-end revocation remain separate acceptance work.
