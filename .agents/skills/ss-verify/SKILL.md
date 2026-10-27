@@ -17,10 +17,10 @@ Select checks by affected code:
 | SQL/persistence                   | Real integration included in coverage; `bun run test:persistence` for durability/restart changes                                                 |
 | Portable Rust                     | `bun run check:rust`; IPC changes also need fixture and Windows gate                                                                             |
 | UI flow/runtime/build/browser     | `bun run test:e2e`; layout requires desktop/mobile visual inspection                                                                             |
-| Image/Compose/production          | Image build and smoke/readiness of the authorized composition; final API uses Node                                                               |
+| Image/Compose/production          | Image build and smoke/readiness of the authorized composition; final API is the standalone Bun executable                                        |
 | Windows shell/capture/encoder/RTC | Windows checks and the PLAN.md experiment; portability cannot replace hardware evidence                                                          |
 
-For combined TS/Rust changes, `bun run check` aggregates checks/coverage; do not repeat its steps without reason. Coverage uses Docker/disposable PostgreSQL. E2E requires installed Chromium and pinned Node. Missing tools mean a blocked check, not a mocked replacement for announced integration.
+For combined TS/Rust changes, `bun run check` aggregates checks/coverage; do not repeat its steps without reason. Coverage uses Docker/disposable PostgreSQL. E2E requires installed Chromium and pinned Bun; it starts the API directly from TypeScript. Use bun run test:binary to verify the compiled executable with embedded migrations in an isolated working directory. Missing tools mean a blocked check, not a mocked replacement for announced integration.
 
 Coordinate runners that clear reports or manage processes: one owner runs coverage/E2E per checkout. Never use a shared database as a fixture or stop servers found by port. Scripts own their resources and preserve development volumes.
 

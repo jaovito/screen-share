@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
-import { verifyCoverageInventory } from './inventory.ts';
-import { enforceCoverage, type FileCoverage, metric, parseLcov } from './lcov.ts';
+import { verifyCoverageInventory } from './inventory';
+import { enforceCoverage, type FileCoverage, metric, parseLcov } from './lcov';
 
 function escapeHtml(value: string) {
   return value

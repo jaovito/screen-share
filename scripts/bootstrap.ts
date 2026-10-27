@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { isIP } from 'node:net';
 import { resolve } from 'node:path';
-import { envFile, loadEnv, root } from './lib.ts';
+import { envFile, loadEnv, root } from './lib';
 
 export function bootstrap() {
   if (!existsSync(envFile)) {

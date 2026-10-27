@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto';
+import { videoProfiles } from '@modules/profiles';
+import { isReady, type ReadinessPort } from '@modules/system/application/readiness';
 import { profilesResponseSchema } from '@screen-share/contracts';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { secureHeaders } from 'hono/secure-headers';
-import { log } from './log.js';
-import { videoProfiles } from './modules/profiles/domain/profiles.js';
-import { isReady, type ReadinessPort } from './modules/system/application/readiness.js';
+import { log } from './log';
 
 export function createApp(database: ReadinessPort, origins: string[]) {
   const app = new Hono();

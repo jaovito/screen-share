@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { run } from './lib.ts';
+import { run } from './lib';
 
 export async function withTestDatabase(work: (env: NodeJS.ProcessEnv) => Promise<void>) {
   const name = `screen-share-test-${randomBytes(5).toString('hex')}`;

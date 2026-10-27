@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { analyzeSource, findCycles, normalizedPath } from './analyze.ts';
+import { analyzeSource, findCycles, normalizedPath } from './analyze';
 
 const root = resolve(import.meta.dirname, '../..');
 const sources = new Map<string, string>();

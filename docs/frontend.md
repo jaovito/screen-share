@@ -41,7 +41,7 @@ TypeScript stays strict with noUncheckedIndexedAccess, exactOptionalPropertyType
 
 All documentation, code identifiers, comments, and developer-facing test descriptions are English. UI copy is localized in pt-BR, es, and en. Translation values use their target language; keys, documentation, and comments stay English. Protocol values and public identifiers are not translated.
 
-Authored scripts migrated from .mjs to .ts and run on Bun 1.4.3. Root tsconfig checks tooling/configs/E2E without emission. Rust retains rustfmt and its conventions. Native Bun Test runs unit/DOM tests with bun:test imports, DOM preload, and per-file isolation. Bun manages dependencies/tools; the published API remains Node LTS, and browser/domain code imports no Bun APIs.
+Authored scripts migrated from .mjs to .ts and run on Bun 1.4.3. Root tsconfig checks tooling/configs/E2E without emission. Rust retains rustfmt and its conventions. Native Bun Test runs unit/DOM tests with bun:test imports, DOM preload, and per-file isolation. Bun manages dependencies/tools; the API also runs on Bun; browser/domain code imports no Bun APIs.
 
 
 ## UI internationalization
@@ -59,3 +59,15 @@ To add UI copy, add an English key and matching Spanish/Portuguese entries in th
 Validation covers default/persisted/invalid preferences, unavailable storage, live asynchronous state updates, translated native errors/status, and no extra HTTP/IPC on locale changes. E2E verifies all viewer locales and desktop English/Spanish with reload persistence, metadata, media remaining disabled, and desktop/mobile overflow assertions. Inspect generated screenshots for long translated text. The provider takes immutable bundled resources for the lifetime of an app mount.
 
 Primary documentation: [I18nextProvider](https://react.i18next.com/latest/i18nextprovider), [i18next configuration](https://www.i18next.com/overview/configuration-options).
+
+
+## Import aliases
+
+Each frontend tsconfig defines `@features/*`, `@app/*`, and `@shared/*` relative to its own src. Vite uses resolve.tsconfigPaths: true, so development/build read those paths without a second alias list or plugin. Bun Test resolves the owning app configuration as well; aliases with the same name in viewer/desktop remain independent. Short same-feature imports may stay relative.
+
+```ts
+import { ViewerPage } from '@features/stream-viewer';
+import { App } from '@app/App';
+```
+
+Local TypeScript imports omit .js/.ts/.tsx extensions; retain real asset extensions such as .css/.json. Workspaces use @screen-share public exports and expose TS source. Aliases are local to an application, not a replacement for workspace exports. Cross-feature imports still use the public index; @shared cannot depend on @features/@app. Architecture checks resolve aliases before checking direction and cycles. Do not create a shared directory merely because its alias exists.

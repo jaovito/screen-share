@@ -2,7 +2,7 @@
 
 > Usage: place PLAN.md at repository root, open the directory in Codex, and send the prompt below. The plan covers the whole product; this task implements **M0 bootstrap only**. Provisional technical name: screen-share; preserve an existing project's name.
 >
-> Historical context: this was the original setup prompt. Its pnpm/Vitest choices were later superseded by ADRs 0007/0008 and the current PLAN.md/AGENTS.md. Documentation language is now English at the user's request. Do not reintroduce superseded tools when using this reference.
+> Historical context: this was the original setup prompt. Its pnpm/Vitest and Node runtime choices were later superseded by ADRs 0007/0008/0010 and the current PLAN.md/AGENTS.md. Documentation language is now English at the user's request. Do not reintroduce superseded tools when using this reference.
 
 ---
 

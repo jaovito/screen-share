@@ -4,7 +4,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 const invoke = mock();
 const isTauri = mock(() => true);
 mock.module('@tauri-apps/api/core', () => ({ invoke, isTauri }));
-const { App } = await import('../../../../app/App');
+const { App } = await import('@app/App');
 
 beforeEach(() => {
   isTauri.mockReturnValue(true);

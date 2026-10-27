@@ -1,7 +1,7 @@
-import { run } from './lib.ts';
-import { withTestDatabase } from './test-database.ts';
+import { run } from './lib';
+import { withTestDatabase } from './test-database';
 
-await run('bun', ['run', '--filter', '@screen-share/contracts', 'build']);
+await run('bun', ['run', '--filter', '@screen-share/contracts', 'typecheck']);
 await withTestDatabase((env) =>
   run('bun', ['run', '--filter', '@screen-share/control-api', 'test:integration'], { env }),
 );

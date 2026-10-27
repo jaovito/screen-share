@@ -1,5 +1,5 @@
 import { afterEach, expect, it, jest, mock } from 'bun:test';
-import { retryDatabase } from '../src/modules/system/adapters/postgres.js';
+import { retryDatabase } from '@modules/system/adapters/postgres';
 
 afterEach(() => jest.useRealTimers());
 

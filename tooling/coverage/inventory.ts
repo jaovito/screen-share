@@ -2,11 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 import { parseSync } from 'oxc-parser';
 
-const entrypoints = new Set([
-  'apps/control-api/src/index.ts',
-  'apps/control-api/src/migrate.ts',
-  'apps/control-api/src/smoke.ts',
-]);
+const entrypoints = new Set(['apps/control-api/src/index.ts']);
 
 export function verifyCoverageInventory(
   root: string,

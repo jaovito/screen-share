@@ -20,23 +20,23 @@ Streaming starts only after explicit source selection and valid authorization. R
 
 ## 2. Technology decisions
 
-| Layer             | Choice                                 | Responsibility                                        |
-| ----------------- | -------------------------------------- | ----------------------------------------------------- |
-| Desktop UI        | Tauri + React + TypeScript             | Controls, room, diagnostics                           |
-| Local core        | Rust                                   | State, buffers, capture, encoding, native integration |
-| Windows capture   | Windows Graphics Capture               | Frames from the selected window/monitor               |
-| Processing        | Direct3D 11                            | GPU scaling/color conversion where supported          |
-| Initial encoder   | Hardware H.264                         | Start with Media Foundation integration               |
-| Transport         | LiveKit SDK + WebRTC                   | Publication/RTC transport mechanisms                  |
-| Media server      | LiveKit SFU                            | Forward streams to viewers                            |
-| Player            | React + LiveKit JavaScript             | Playback, E2EE, receiver metrics                      |
-| API               | Node.js LTS + strict TypeScript + Hono | Identity, invites, permissions, sessions              |
-| Database          | PostgreSQL + Drizzle                   | Control state/transactions                            |
-| Local development | Bun, Cargo, Docker Compose             | Reproducible builds/execution                         |
+| Layer             | Choice                         | Responsibility                                        |
+| ----------------- | ------------------------------ | ----------------------------------------------------- |
+| Desktop UI        | Tauri + React + TypeScript     | Controls, room, diagnostics                           |
+| Local core        | Rust                           | State, buffers, capture, encoding, native integration |
+| Windows capture   | Windows Graphics Capture       | Frames from the selected window/monitor               |
+| Processing        | Direct3D 11                    | GPU scaling/color conversion where supported          |
+| Initial encoder   | Hardware H.264                 | Start with Media Foundation integration               |
+| Transport         | LiveKit SDK + WebRTC           | Publication/RTC transport mechanisms                  |
+| Media server      | LiveKit SFU                    | Forward streams to viewers                            |
+| Player            | React + LiveKit JavaScript     | Playback, E2EE, receiver metrics                      |
+| API               | Bun + strict TypeScript + Hono | Identity, invites, permissions, sessions              |
+| Database          | PostgreSQL + Drizzle           | Control state/transactions                            |
+| Local development | Bun, Cargo, Docker Compose     | Reproducible builds/execution                         |
 
 TypeScript/Rust are the main authored languages. SFU internals may use Go without requiring a separate Go backend. Custom C++ adapters require a concrete integration benefit justifying maintenance cost.
 
-Consult official sources and record exact compatible versions: supported Node LTS, pinned Bun, pinned stable Rust, Tauri, SDKs, images. Never invent versions or use floating tags as a reproducibility contract. Preserve lockfiles and document updates.
+Consult official sources and record exact compatible versions: pinned supported Bun, pinned stable Rust, Tauri, SDKs, images. Never invent versions or use floating tags as a reproducibility contract. Preserve lockfiles and document updates.
 
 Tauri uses system WebViews; that does not prove low overhead. Budgets must include every product subprocess. [R1]
 
@@ -367,11 +367,11 @@ Sources for verifying bootstrap:
 
 ## Development tools update — 2026-10-26
 
-Bun 1.4.3 became workspace manager/tool runtime after benchmark and full validation. At that stage Vitest/per-file coverage were preserved; scripts/Vite/Playwright used Bun. bun.lock replaced pnpm lockfile and package.json declares workspaces. Published API stays Node 24.22.1, including E2E. Docker installs/builds with Bun and runs Node. ADR 0007 records evidence/limits; media M1–M5 scope is unchanged.
+Bun 1.4.3 became workspace manager/tool runtime after benchmark and full validation. At that stage Vitest/per-file coverage were preserved; scripts/Vite/Playwright used Bun. bun.lock replaced pnpm lockfile and package.json declares workspaces. At that historical stage the published API stayed Node 24.22.1, including E2E; ADR 0010 later supersedes that runtime choice. ADR 0007 records evidence/limits; media M1–M5 scope is unchanged.
 
 ## Test runner update — 2026-10-26
 
-Native Bun Test replaced Vitest after user-requested evaluation, preserving scenarios, per-file thresholds, inventory, isolated backend/DOM processes, and LCOV/HTML/JSON reports. Local timing was equivalent; this simplifies tools without promising more acceleration. See ADR 0008. Playwright/production Node remain unchanged.
+Native Bun Test replaced Vitest after user-requested evaluation, preserving scenarios, per-file thresholds, inventory, isolated backend/DOM processes, and LCOV/HTML/JSON reports. Local timing was equivalent; this simplifies tools without promising more acceleration. See ADR 0008. At that stage Playwright/production Node were unchanged; see ADR 0010 for the later API runtime decision.
 
 ## Agent workflow and language update — 2026-10-26
 
@@ -381,3 +381,8 @@ Repository documentation, code, comments, and developer-facing test descriptions
 ## UI localization update — 2026-10-26
 
 M0 viewer/desktop copy now uses bundled pt-BR, es, and en catalogs with i18next/react-i18next, typed feature-local keys, a shared provider/selector, and per-origin local preference persistence. Default/fallback is pt-BR. Metadata and status/error states translate without repeating control requests. This adds UI infrastructure without starting M1 or changing HTTP/IPC contracts. See docs/frontend.md.
+
+
+## API runtime and import resolution update — 2026-10-26
+
+At the user's request, the control API now runs TypeScript directly on Bun without a build, using native Bun.serve at the HTTP boundary. Optional builds produce a standalone executable with embedded migration assets; Docker deploys that executable. Contracts export TypeScript source, not generated JS. App-scoped frontend/API aliases and extensionless local imports use Bundler resolution; architecture checks resolve aliases before enforcing boundaries/cycles. Default API behavior, authorization limits, and media milestones remain unchanged. See ADR 0010.

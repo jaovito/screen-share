@@ -8,6 +8,7 @@ const envDir = fileURLToPath(new URL('../..', import.meta.url));
 export default defineConfig(({ mode }) => ({
   plugins: [react(), tailwindcss()],
   envDir,
+  resolve: { tsconfigPaths: true },
   clearScreen: false,
   server: {
     host: '127.0.0.1',

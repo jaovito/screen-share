@@ -1,7 +1,7 @@
 import { expect, it, mock, spyOn } from 'bun:test';
+import { App } from '@app/App';
 import { localeStorageKey } from '@screen-share/i18n';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { App } from '../../../../app/App';
 
 function unavailableApi() {
   spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 503 }));

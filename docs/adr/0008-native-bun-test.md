@@ -2,6 +2,8 @@
 
 Status: accepted after further user-requested evaluation · 2026-10-26. Supersedes Vitest in ADRs 0006/0007, preserving organization, security, and production Node runtime.
 
+**Later runtime update:** ADR 0010 supersedes retaining Node for the API; the original decision/evidence below remain historical.
+
 ## Evaluation
 
 The existing 32 unit/DOM scenarios passed after native API adaptation. Three LCOV-policy tests were added. Three alternating runs on macOS arm64/Bun 1.4.3 excluded coverage/database/E2E and did not clear caches. Data: docs/benchmarks/bun-native-2026-10-26.json.

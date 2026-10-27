@@ -6,19 +6,18 @@ Foundation for a private screen-sharing app among friends. This repository imple
 
 ## Prerequisites and versions
 
-| Tool                             | Pinned version                                         |
-| -------------------------------- | ------------------------------------------------------ |
-| Node.js LTS                      | 24.22.1 (.node-version; checks also accept 24 >=24.11) |
-| Bun                              | 1.4.3 (.bun-version, packageManager)                   |
-| Rust                             | 1.99.1, rustfmt/clippy (rust-toolchain.toml)           |
-| TypeScript / Hono / Node adapter | 7.0.2 / 4.13.14 / 2.1.5                                |
-| Tailwind CSS / Vite plugin       | 4.3.3 / 4.3.3                                          |
-| React / Vite                     | 19.3.1 / 8.3.5                                         |
-| Tauri Rust / JS CLI / build      | 2.12.5 / 2.12.4 / 2.7.4                                |
-| Drizzle ORM / Kit / pg           | 0.45.4 / 0.31.11 / 8.23.1                              |
-| Biome / Bun Test                 | 2.6.3 / 1.4.3 (native to Bun)                          |
-| PostgreSQL / LiveKit             | 17.11-bookworm / v1.13.11                              |
-| LiveKit server SDK               | 2.19.2                                                 |
+| Tool                        | Pinned version                               |
+| --------------------------- | -------------------------------------------- |
+| Bun                         | 1.4.3 (.bun-version, packageManager)         |
+| Rust                        | 1.99.1, rustfmt/clippy (rust-toolchain.toml) |
+| TypeScript / Hono           | 7.0.2 / 4.13.14                              |
+| Tailwind CSS / Vite plugin  | 4.3.3 / 4.3.3                                |
+| React / Vite                | 19.3.1 / 8.3.5                               |
+| Tauri Rust / JS CLI / build | 2.12.5 / 2.12.4 / 2.7.4                      |
+| Drizzle ORM / Kit / pg      | 0.45.4 / 0.31.11 / 8.23.1                    |
+| Biome / Bun Test            | 2.6.3 / 1.4.3 (native to Bun)                |
+| PostgreSQL / LiveKit        | 17.11-bookworm / v1.13.11                    |
+| LiveKit server SDK          | 2.19.2                                       |
 
 Docker/Compose v2 is required for database/SFU and disposable tests. Desktop needs Windows 11 x64, Visual Studio Build Tools with **Desktop development with C++**, Windows SDK, and WebView2 Runtime. Rust uses MSVC. macOS/Linux support API, web interfaces, and portable crates. Scripts do not install SDKs/global tools; Cargo may download the declared toolchain when invoked.
 
@@ -26,7 +25,7 @@ Versions were checked in official registries on 2026-10-26, with tool-generated 
 
 ## First run: host API
 
-Install/activate Bun 1.4.3, Node 24.22.1, and the prerequisites above. From the clone root:
+Install/activate Bun 1.4.3 and the prerequisites above. From the clone root:
 
 ```sh
 bun install --frozen-lockfile
@@ -61,7 +60,7 @@ bun run smoke
 
 stack:up starts infrastructure, stops the prior API, builds the image, runs a **fresh disposable migrator**, and starts API only after success. Every invocation applies/verifies current history rather than trusting an old completed migration container. Do not replace this flow with docker compose up after schema changes. Migration failure leaves API stopped.
 
-The image uses multi-stage build and unprivileged node runtime. Internal database: postgres:5432; internal LiveKit control: http://livekit:7880. Host clients use 127.0.0.1. Browser receives only the public local API URL via VITE_API_URL/default. Never put credentials in VITE variables.
+The image uses multi-stage build and an unprivileged standalone Bun executable. Internal database: postgres:5432; internal LiveKit control: http://livekit:7880. Host clients use 127.0.0.1. Browser receives only the public local API URL via VITE_API_URL/default. Never put credentials in VITE variables.
 
 stack:down removes containers/network and preserves the volume. infra:down stops only PostgreSQL/LiveKit. Normal commands never delete data.
 
@@ -76,7 +75,7 @@ stack:down removes containers/network and preserves the volume. infra:down stops
 | `bun run dev`                     | Host API/viewer with coordinated shutdown                                    |
 | `bun run dev:desktop`             | Tauri with its own Vite, Windows only                                        |
 | `bun run stack:up` / `stack:down` | Container API / stop stack without deleting volume                           |
-| `bun run check:ts`                | Biome, types, contract/HTTP/DOM tests, three TS app builds                   |
+| `bun run check:ts`                | Biome, types, contract/HTTP/DOM tests, frontend builds and API executable    |
 | `bun run check:rust`              | Format all source; locked clippy/tests for four portable crates              |
 | `bun run check`                   | TS, portable Rust, disposable-database coverage; requires Docker             |
 | `bun run smoke`                   | API, migration/readiness, catalog, authenticated LiveKit control listing     |
@@ -111,7 +110,7 @@ This supports control and future same-machine experiments. Docker Desktop/WSL us
 
 ## Troubleshooting
 
-- Wrong Node in doctor: activate .node-version; 24.11 execution is partial until repeated on 24.22.1.
+- Wrong Bun in doctor: activate the version pinned in .bun-version. Node is not required for the API.
 - readyz 503: check infra:up, configured database, and db:migrate. API omits database details from responses/logs. HTTP never triggers migrations.
 - Port 3000 busy: stop the previous API mode; use stack:down before returning to host mode.
 - Port 5173 busy: set VIEWER_PORT=5174 and matching local CORS_ORIGINS in .env; restart API/viewer. Vite loads root configuration.
@@ -126,7 +125,7 @@ Next, validate pending Windows/CI gates and proceed to **M1: WGC → D3D11 → H
 
 Frontend follows Truco-inspired feature conventions: src/app mounts/composes, features expose small public APIs with nearby tests, shared exists only with concrete reuse. See [frontend conventions](docs/frontend.md) and [test policy](docs/testing.md).
 
-Authored scripts are .ts, executed by Bun and checked by TypeScript. Bun manages workspaces/installation through bun.lock and runs native tests, Vite, and Playwright. Published API stays Node LTS. bun run test coordinates isolated backend/DOM suites importing bun:test. Biome uses 2 spaces, width 100, single quotes, trailing commas. bun run lint includes import boundaries.
+Authored scripts are .ts, executed by Bun and checked by TypeScript. Bun manages workspaces/installation through bun.lock and runs native tests, Vite, and Playwright. The API executes TypeScript directly on Bun; optional builds compile a standalone executable. bun run test coordinates isolated backend/DOM suites importing bun:test. Biome uses 2 spaces, width 100, single quotes, trailing commas. bun run lint includes import boundaries.
 
 ```sh
 bun run test                  # Unit + DOM components; no Docker
@@ -140,11 +139,11 @@ check:ts needs no Docker. check adds Rust/complete coverage and requires Docker.
 
 ## Bun and local performance
 
-Bun 1.4.3 was adopted after comparing the same suite: median 1.977s on Node 24.22.1 versus 0.916s on Bun across three alternating runs. This is local evidence, not a universal speed guarantee. Coverage/E2E/typechecks were preserved. See [ADR 0007](docs/adr/0007-bun-development.md). Final image stays Node; Bun handles development/build stages.
+Bun 1.4.3 was adopted after comparing the same suite: median 1.977s on Node 24.22.1 versus 0.916s on Bun across three alternating runs. This is local evidence, not a universal speed guarantee. Coverage/E2E/typechecks were preserved. See [ADR 0007](docs/adr/0007-bun-development.md). That benchmark records the earlier development-only adoption. [ADR 0010](docs/adr/0010-bun-api-and-import-aliases.md) now makes Bun the API runtime and standalone build target.
 
 ## Native test runner
 
-Bun Test replaced Vitest after further evaluation. The 32 existing scenarios were preserved and three LCOV policy tests added: 35 unit/DOM tests, 36 with SQL. Local medians were effectively tied: 0.696s Vitest/Bun versus 0.727s native workflow including contracts build/three extra tests. No additional speedup is claimed; the decision simplifies testing. See [ADR 0008](docs/adr/0008-native-bun-test.md).
+Bun Test replaced Vitest after further evaluation. The 32 existing scenarios were preserved and three LCOV policy tests added: 35 unit/DOM tests, 36 with SQL at that stage; later regressions extend the suite. Local medians were effectively tied: 0.696s Vitest/Bun versus 0.727s native workflow including contracts build/three extra tests. No additional speedup is claimed; the decision simplifies testing. See [ADR 0008](docs/adr/0008-native-bun-test.md).
 
 Native coverage preserves per-file thresholds/inventory. Reports: coverage/server/lcov.info, coverage/frontend/lcov.info, coverage/lcov.info, coverage/coverage-summary.json, and coverage/index.html (per-file summary/uncovered lines). Native counters are not directly comparable to previous V8/Vitest percentages.
 
@@ -156,3 +155,17 @@ Native coverage preserves per-file thresholds/inventory. Reports: coverage/serve
 ## UI languages
 
 Viewer and desktop provide a header language selector for **Português (Brasil)**, **Español**, and **English**. pt-BR is the default/fallback. The selection persists locally per origin; translations work from the bundled app without an external service. UI states, accessibility labels, document language/title, and errors change immediately. Documentation and code comments remain English. See [frontend internationalization](docs/frontend.md#ui-internationalization) for catalogs and extension rules.
+
+
+## Import paths and API execution
+
+Frontend tsconfig paths provide `@features/*`, `@app/*`, and `@shared/*`; API provides `@modules/*` and `@runtime/*`. Local TypeScript imports are extensionless. Vite reads aliases from tsconfig; Bun resolves API/tests. Workspaces expose TS source through public @screen-share exports, so no contracts build is required.
+
+```ts
+import { ViewerPage } from '@features/stream-viewer';
+import { videoProfiles } from '@modules/profiles';
+```
+
+From root, `bun run --filter @screen-share/control-api start` runs the API directly from source. `bun run --filter @screen-share/control-api build` optionally produces apps/control-api/dist/control-api (or .exe on Windows) using Bun build --compile, with embedded migration assets. The executable accepts serve (default), migrate, smoke, and ready, using runtime environment variables. Docker ships that executable rather than generated JS or Node. Frontend production output remains a Vite browser bundle.
+
+`bun run test:binary` verifies standalone migrations/readiness/catalog/shutdown from an empty temporary working directory against disposable PostgreSQL. See [development](docs/development.md#api-runtime-and-optional-binary) for configuration and target-platform limits.

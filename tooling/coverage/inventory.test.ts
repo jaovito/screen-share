@@ -2,7 +2,7 @@ import { expect, it } from 'bun:test';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
-import { verifyCoverageInventory } from './inventory.ts';
+import { verifyCoverageInventory } from './inventory';
 
 it('rejects runtime sources absent from coverage and accepts type-only modules', () => {
   const root = mkdtempSync(resolve(tmpdir(), 'screen-share-coverage-'));

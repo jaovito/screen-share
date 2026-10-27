@@ -8,29 +8,18 @@ COPY apps/control-api/package.json apps/control-api/package.json
 COPY apps/viewer-web/package.json apps/viewer-web/package.json
 COPY apps/desktop/package.json apps/desktop/package.json
 RUN bun install --frozen-lockfile
+COPY scripts scripts
 COPY packages/contracts packages/contracts
 COPY apps/control-api apps/control-api
-RUN bun run --filter @screen-share/contracts build && bun run --filter @screen-share/control-api build
+RUN bun run --filter @screen-share/control-api build
 
-FROM oven/bun:1.4.3 AS dependencies
+FROM debian:bookworm-slim@sha256:7ff6ba31527b9e336162fa061746c366c4b2032f4d2cff2078bea43f78efe3f8 AS runtime
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates libstdc++6 \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid 10001 app && useradd --uid 10001 --gid app --no-create-home app
 WORKDIR /app
-COPY package.json bun.lock bunfig.toml ./
-COPY packages/contracts/package.json packages/contracts/package.json
-COPY packages/ui/package.json packages/ui/package.json
-COPY packages/i18n/package.json packages/i18n/package.json
-COPY apps/control-api/package.json apps/control-api/package.json
-COPY apps/viewer-web/package.json apps/viewer-web/package.json
-COPY apps/desktop/package.json apps/desktop/package.json
-RUN bun install --production --frozen-lockfile --filter @screen-share/control-api --filter @screen-share/contracts --ignore-scripts
-
-# Published API stays on Node LTS; Bun handles tools and build stages.
-FROM node:24.22.1-bookworm-slim AS runtime
 ENV NODE_ENV=production
-WORKDIR /app
-COPY --from=dependencies --chown=node:node /app /app
-COPY --from=build --chown=node:node /app/packages/contracts/dist packages/contracts/dist
-COPY --from=build --chown=node:node /app/apps/control-api/dist apps/control-api/dist
-COPY --from=build --chown=node:node /app/apps/control-api/drizzle apps/control-api/drizzle
-USER node
+COPY --from=build --chown=app:app /app/apps/control-api/dist/control-api /app/control-api
+USER app
 EXPOSE 3000
-CMD ["node", "apps/control-api/dist/index.js"]
+CMD ["/app/control-api"]

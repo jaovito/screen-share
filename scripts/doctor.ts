@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { resolve } from 'node:path';
-import { composeArgs, envFile, root } from './lib.ts';
+import { composeArgs, envFile, root } from './lib';
 
 export async function doctor() {
   let problems = 0;
@@ -16,17 +16,6 @@ export async function doctor() {
     process.versions.bun === bunVersion,
     `Bun ${process.versions.bun ?? 'ausente'}`,
     `ative Bun ${bunVersion}`,
-  );
-  const installedNode =
-    spawnSync('node', ['--version'], { encoding: 'utf8', timeout: 10000 })
-      .stdout?.trim()
-      .replace(/^v/, '') ?? 'ausente';
-  const node = readFileSync(resolve(root, '.node-version'), 'utf8').trim();
-
-  report(
-    installedNode === node,
-    `Node ${installedNode}`,
-    `instale/ative ${node}; linha 24 >=24.11 aceita para checks parciais`,
   );
   report(existsSync(envFile), '.env', 'execute bun run bootstrap');
   report(
@@ -72,7 +61,7 @@ export async function doctor() {
 
   const configCheck = spawnSync(
     process.execPath,
-    ['--eval', 'import { readConfig } from "./apps/control-api/src/config.ts"; readConfig();'],
+    ['--eval', 'import { readConfig } from "./apps/control-api/src/config"; readConfig();'],
     { cwd: root, encoding: 'utf8', timeout: 10000 },
   );
 

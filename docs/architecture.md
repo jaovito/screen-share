@@ -1,6 +1,6 @@
 # Architecture
 
-M0 separates HTTP control, UI, and media boundaries. The API is a modular monolith: `profiles` owns pure rules; `system` provides a readiness port and PostgreSQL adapter; `rooms` contains only the initial persistence schema. `src/index.ts` composes configuration and delegates to `src/runtime/server.ts`, which connects the pool, application, and server. Migrations/smoke use measured services in `src/runtime` with minimal CLI wrappers. There are no room mutation or identity routes.
+M0 separates HTTP control, UI, and media boundaries. The API is a modular monolith: `profiles` owns pure rules; `system` provides a readiness port and PostgreSQL adapter; `rooms` contains only the initial persistence schema. `src/index.ts` invokes `src/runtime/command.ts`, which dispatches to `src/runtime/server.ts`, which connects the pool, application, and server. Migrations/smoke use measured services in src/runtime; one minimal CLI entry dispatches serve/migrate/smoke/ready. Bun.serve provides native HTTP with graceful drain and an eight-second forced shutdown deadline. There are no room mutation or identity routes.
 
 ```mermaid
 flowchart LR
@@ -20,7 +20,7 @@ Code dependencies point toward inner contracts. The Rust domain has no external 
 
 ## Contracts
 
-`packages/contracts/src/index.ts` is the source of truth for HTTP DTOs/validation and the TypeScript IPC representation. The API's pure catalog is converted/validated at the HTTP boundary. Drizzle entities never leave the adapter. Rust `AppInfo` serializes `version`, `platform`, and `mediaStatus`; its test compares names/values against a versioned fixture also validated by TS. The Rust IPC test runs in the Windows job. M0 has no broad binding-generation pipeline; changes must update both contracts and the fixture.
+`packages/contracts/src/index.ts` exports TypeScript source and is the source of truth for HTTP DTOs/validation and the TypeScript IPC representation. The API's pure catalog is converted/validated at the HTTP boundary. Drizzle entities never leave the adapter. Rust `AppInfo` serializes `version`, `platform`, and `mediaStatus`; its test compares names/values against a versioned fixture also validated by TS. The Rust IPC test runs in the Windows job. M0 has no broad binding-generation pipeline; changes must update both contracts and the fixture.
 
 ## Data and availability
 
@@ -37,3 +37,10 @@ The profile list is static and does not advertise GPU support. Adapters fail wit
 ## Feature-based frontend
 
 Both interfaces follow [frontend.md](frontend.md): mounting/composition in app, exclusive responsibilities in features, public feature APIs, and sharing only with actual reuse. Unit/DOM tests stay near behavior; E2E tests are grouped by feature in tests/e2e. Coverage policy and measured limits are in [testing.md](testing.md).
+
+
+## Resolution and deployment
+
+App-local aliases are defined in each tsconfig and local TS specifiers are extensionless. TypeScript uses Preserve/Bundler with noEmit; Bun resolves API/test aliases and Vite resolves frontend paths from tsconfig. The architecture checker resolves aliases too, preserving boundaries/cycle checks. Cross-workspace consumers still use public package exports.
+
+The API runs source TypeScript on Bun by default. Optional Bun compile produces a single host executable with embedded SQL/meta assets and Bun runtime. Source migration lookup remains relative to its adapter; standalone lookup uses embedded assets under import.meta.dir. Drizzle history/hash/constraints/readiness semantics remain unchanged. Docker ships the standalone binary without JS bundles, Node, or node_modules. Runtime-specific Bun APIs stay outside pure domain/application rules.

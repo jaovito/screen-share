@@ -1,26 +1,6 @@
-import { createServer } from 'node:net';
-import { buildWorkspaces, run } from './lib.ts';
-import { withTestDatabase } from './test-database.ts';
-
-async function freePort(): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const server = createServer();
-
-    server.once('error', reject);
-    server.listen(0, '127.0.0.1', () => {
-      const address = server.address();
-
-      if (!address || typeof address === 'string') {
-        reject(new Error('Porta indisponível'));
-        server.close();
-
-        return;
-      }
-
-      server.close(() => resolve(String(address.port)));
-    });
-  });
-}
+import { buildWorkspaces, run } from './lib';
+import { freePort } from './ports';
+import { withTestDatabase } from './test-database';
 
 const args = process.argv.slice(3);
 
@@ -40,7 +20,7 @@ await withTestDatabase(async (databaseEnv) => {
     CORS_ORIGINS: `http://127.0.0.1:${viewer}`,
   };
 
-  await buildWorkspaces(env);
+  await buildWorkspaces(env, ['viewer-web', 'desktop']);
   await run('bun', ['run', '--filter', '@screen-share/control-api', 'migrate'], { env });
   await run('bun', ['--bun', 'node_modules/@playwright/test/cli.js', 'test', ...args], { env });
 });

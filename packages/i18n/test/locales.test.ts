@@ -1,5 +1,5 @@
 import { expect, it } from 'bun:test';
-import { isLocale, readLocale } from '../src/locales.ts';
+import { isLocale, readLocale } from '../src/locales';
 
 it('allows only canonical supported locales and defaults safely without browser storage', () => {
   for (const locale of ['pt-BR', 'es', 'en']) expect(isLocale(locale)).toBe(true);

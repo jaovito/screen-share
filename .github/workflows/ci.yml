@@ -12,13 +12,11 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.3
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .node-version
       - run: bun install --frozen-lockfile
       - run: bun run bootstrap
       - run: bun run check:ts
       - run: bun run test:coverage
+      - run: bun run test:binary
       - run: bun run test:persistence
       - run: bun --bun node_modules/@playwright/test/cli.js install --with-deps chromium
       - run: bun run test:e2e
@@ -38,9 +36,6 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.3
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .node-version
       - run: rustup toolchain install 1.99.1 --profile minimal --component rustfmt --component clippy
       - run: bun run check:rust
   windows-desktop:
@@ -50,13 +45,10 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.3
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .node-version
       - run: rustup toolchain install 1.99.1 --profile minimal --component rustfmt --component clippy
       - run: bun install --frozen-lockfile
       - run: bun run check:rust
-      - run: bun run --filter @screen-share/contracts build
+      - run: bun run --filter @screen-share/contracts typecheck
       - run: bun run --filter @screen-share/desktop build
       - run: cargo check --locked -p screen-share-desktop --all-targets
       - run: cargo test --locked -p screen-share-desktop --lib
@@ -73,12 +65,9 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.3
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .node-version
       - run: bun run bootstrap
       - run: docker compose --env-file .env -f infra/compose.yaml --profile app config --quiet
       - run: bun run stack:up
-      - run: docker compose --env-file .env -f infra/compose.yaml exec -T control-api node apps/control-api/dist/smoke.js
+      - run: docker compose --env-file .env -f infra/compose.yaml exec -T control-api /app/control-api smoke
       - if: always()
         run: bun run stack:down

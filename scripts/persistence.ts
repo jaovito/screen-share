@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { run } from './lib.ts';
+import { run } from './lib';
 
 const name = `screen-share-persistence-${randomBytes(5).toString('hex')}`;
 const volume = `${name}-data`;
@@ -64,7 +64,7 @@ try {
 
   if (!port || !/^\d+$/.test(port)) throw new Error('Porta descartável indisponível');
 
-  await run('bun', ['run', '--filter', '@screen-share/contracts', 'build']);
+  await run('bun', ['run', '--filter', '@screen-share/contracts', 'typecheck']);
   await run('bun', ['run', '--filter', '@screen-share/control-api', 'migrate'], {
     env: {
       ...process.env,

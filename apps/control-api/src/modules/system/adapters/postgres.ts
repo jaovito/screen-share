@@ -1,11 +1,14 @@
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { readMigrationFiles } from 'drizzle-orm/migrator';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import pg from 'pg';
-import type { ReadinessPort } from '../application/readiness.js';
+import type { ReadinessPort } from '../application/readiness';
 
-export const migrationsFolder = fileURLToPath(new URL('../../../../drizzle', import.meta.url));
+export const migrationsFolder = join(
+  import.meta.dir,
+  Bun.isStandaloneExecutable ? 'drizzle' : '../../../../drizzle',
+);
 
 export function createDatabase(connectionString: string) {
   const pool = new pg.Pool({

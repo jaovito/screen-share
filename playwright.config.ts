@@ -26,7 +26,7 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: 'node apps/control-api/dist/index.js',
+      command: 'bun run --filter @screen-share/control-api start',
       url: `http://127.0.0.1:${apiPort}/readyz`,
       reuseExistingServer: false,
       timeout: 30000,

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'bun:test';
+import { createDatabase } from '@modules/system/adapters/postgres';
 import { profilesResponseSchema } from '@screen-share/contracts';
-import { createApp } from '../src/app.js';
-import { readConfig } from '../src/config.js';
-import { createDatabase } from '../src/modules/system/adapters/postgres.js';
+import { createApp } from '../src/app';
+import { readConfig } from '../src/config';
 
 describe('control HTTP', () => {
   it('separates liveness from readiness and sanitizes failures', async () => {

@@ -41,7 +41,7 @@ services:
       LIVEKIT_URL: http://livekit:7880
       LIVEKIT_API_KEY: ${LIVEKIT_API_KEY}
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}
-    command: ["node", "apps/control-api/dist/migrate.js"]
+    command: ["/app/control-api", "migrate"]
     depends_on:
       postgres:
         condition: service_healthy
@@ -61,13 +61,7 @@ services:
       migrate:
         condition: service_completed_successfully
     healthcheck:
-      test:
-        [
-          "CMD",
-          "node",
-          "-e",
-          "fetch('http://127.0.0.1:3000/readyz',{signal:AbortSignal.timeout(2500)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
-        ]
+      test: ["CMD", "/app/control-api", "ready"]
       interval: 5s
       timeout: 4s
       retries: 10

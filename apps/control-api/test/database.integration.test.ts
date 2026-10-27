@@ -1,11 +1,11 @@
 import { afterAll, beforeAll, expect, it } from 'bun:test';
 import { randomUUID } from 'node:crypto';
+import { rooms } from '@modules/rooms/adapters/schema';
+import { createDatabase } from '@modules/system/adapters/postgres';
+import { migrateDatabase } from '@runtime/migrate';
 import { getTableConfig } from 'drizzle-orm/pg-core';
-import { createApp } from '../src/app.js';
-import { readConfig } from '../src/config.js';
-import { rooms } from '../src/modules/rooms/adapters/schema.js';
-import { createDatabase } from '../src/modules/system/adapters/postgres.js';
-import { migrateDatabase } from '../src/runtime/migrate.js';
+import { createApp } from '../src/app';
+import { readConfig } from '../src/config';
 
 // Contract: an empty DISPOSABLE database from the runner/CI, never development .env.
 if (process.env.INTEGRATION_DATABASE !== 'disposable')

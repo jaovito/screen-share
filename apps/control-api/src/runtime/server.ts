@@ -1,11 +1,34 @@
-import { serve } from '@hono/node-server';
-import { createApp } from '../app.js';
-import type { Config } from '../config.js';
-import { log } from '../log.js';
-import { createDatabase, retryDatabase } from '../modules/system/adapters/postgres.js';
+import { createDatabase, retryDatabase } from '@modules/system/adapters/postgres';
+import { createApp } from '../app';
+import type { Config } from '../config';
+import { log } from '../log';
 
-export function startServer(config: Config, terminate: (code: number) => void = process.exit) {
+type HttpServer = Pick<Bun.Server<undefined>, 'stop' | 'port'>;
+type HttpOptions = {
+  hostname: string;
+  port: number;
+  fetch: (request: Request) => Response | Promise<Response>;
+};
+
+export function startServer(
+  config: Config,
+  terminate: (code: number) => void = process.exit,
+  listen: (options: HttpOptions) => HttpServer = (options) => Bun.serve(options),
+) {
   const database = createDatabase(config.DATABASE_URL);
+  let server: HttpServer;
+  try {
+    server = listen({
+      fetch: createApp(database.readiness, config.CORS_ORIGINS).fetch,
+      hostname: config.HOST,
+      port: config.PORT,
+    });
+  } catch {
+    void database.close().catch(() => log('database_close_failed'));
+    throw new Error('HTTP server startup failed');
+  }
+  log('listening', { port: config.PORT });
+
   // Liveness stays available during database recovery; readiness checks current state.
   void retryDatabase(async () => {
     await database.pool.query('SELECT 1');
@@ -13,42 +36,36 @@ export function startServer(config: Config, terminate: (code: number) => void = 
     .then(() => log('database_connected'))
     .catch(() => log('database_unavailable'));
 
-  const server = serve(
-    {
-      fetch: createApp(database.readiness, config.CORS_ORIGINS).fetch,
-      hostname: config.HOST,
-      port: config.PORT,
-    },
-    () => log('listening', { port: config.PORT }),
-  );
   let stopping = false;
+  let finished = false;
   const shutdown = () => {
     if (stopping) return;
-
     stopping = true;
     log('shutdown');
 
+    const finish = (code: number) => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(deadline);
+      process.off('SIGINT', shutdown);
+      process.off('SIGTERM', shutdown);
+      terminate(code);
+    };
     const deadline = setTimeout(() => {
-      if ('closeAllConnections' in server) server.closeAllConnections();
-
-      terminate(1);
+      void server.stop(true).catch(() => log('server_stop_failed'));
+      finish(1);
     }, 8000);
-
     deadline.unref();
-    server.close(() => {
-      void database.close().then(() => {
-        clearTimeout(deadline);
-        terminate(0);
+
+    void server
+      .stop()
+      .then(() => database.close())
+      .then(() => finish(0))
+      .catch(() => {
+        log('shutdown_failed');
+        finish(1);
       });
-    });
-
-    if ('closeIdleConnections' in server) server.closeIdleConnections();
   };
-
-  server.on('error', () => {
-    log('server_failed');
-    void database.close().finally(() => terminate(1));
-  });
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
 

@@ -5,16 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "bun --watch src/index.ts",
-    "build": "bun --bun ../../node_modules/typescript/bin/tsc -p tsconfig.json",
+    "build": "bun ../../scripts/build-api.ts",
     "typecheck": "bun --bun ../../node_modules/typescript/bin/tsc -p tsconfig.check.json",
-    "migrate": "bun src/migrate.ts",
-    "smoke": "bun src/smoke.ts",
+    "migrate": "bun src/index.ts migrate",
+    "smoke": "bun src/index.ts smoke",
     "test:integration": "bun test --isolate --timeout 15000 ./test/database.integration.test.ts",
-    "db:generate": "bun --bun node_modules/drizzle-kit/bin.cjs generate"
+    "db:generate": "bun --bun node_modules/drizzle-kit/bin.cjs generate",
+    "start": "bun src/index.ts"
   },
   "dependencies": {
     "@screen-share/contracts": "workspace:*",
-    "@hono/node-server": "2.1.5",
     "hono": "4.13.14",
     "drizzle-orm": "0.45.4",
     "pg": "8.23.1",

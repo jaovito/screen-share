@@ -1,4 +1,4 @@
-import { dirname, posix, relative, resolve } from 'node:path';
+import { posix, relative } from 'node:path';
 import { parseSync, Visitor } from 'oxc-parser';
 
 export function importsOf(filename: string, code: string): string[] {
@@ -28,6 +28,16 @@ export function importsOf(filename: string, code: string): string[] {
   return imports;
 }
 
+export function resolveSourceImport(filename: string, specifier: string): string | undefined {
+  const path = filename.replaceAll('\\', '/');
+  if (specifier.startsWith('.')) return posix.normalize(posix.join(posix.dirname(path), specifier));
+
+  const workspace = path.match(/^(.*?apps\/[^/]+)\/src\//)?.[1];
+  const alias = specifier.match(/^@(app|features|shared|modules|runtime)\/(.+)$/);
+  if (!workspace || !alias) return undefined;
+  return posix.normalize(`${workspace}/src/${alias[1]}/${alias[2]}`);
+}
+
 export function analyzeSource(filename: string, code: string): string[] {
   const path = filename.replaceAll('\\', '/');
   const issues: string[] = [];
@@ -49,12 +59,11 @@ export function analyzeSource(filename: string, code: string): string[] {
     if (browser && /^(node:|hono(?:\/|$)|pg$|drizzle-orm|livekit-server-sdk|bun$)/.test(specifier))
       issues.push('Browser cannot import server/runtime adapters.');
 
-    if (path.includes('/domain/') && !specifier.startsWith('.'))
+    const target = resolveSourceImport(path, specifier);
+    if (path.includes('/domain/') && !target)
       issues.push('Domain must not import frameworks or runtime packages.');
 
-    if (!specifier.startsWith('.')) continue;
-
-    const target = posix.normalize(posix.join(posix.dirname(path), specifier));
+    if (!target) continue;
     const originWorkspace = path.match(/^(apps|packages)\/[^/]+/)?.[0];
     const targetWorkspace = target.match(/^(apps|packages)\/[^/]+/)?.[0];
     if (originWorkspace && targetWorkspace && originWorkspace !== targetWorkspace)
@@ -77,9 +86,9 @@ export function analyzeSource(filename: string, code: string): string[] {
     )
       issues.push('Cross-feature imports must use the public index.');
 
-    if (path.includes('/domain/') && /\/(adapters|application)\//.test(target))
+    if (path.includes('/domain/') && !target.includes('/domain/'))
       issues.push('Domain dependencies must point inward.');
-    if (path.includes('/application/') && target.includes('/adapters/'))
+    if (path.includes('/application/') && /\/(adapters|runtime|app)\//.test(target))
       issues.push('Application must depend on ports, not adapters.');
   }
 
@@ -102,9 +111,9 @@ export function findCycles(sources: Map<string, string>): string[] {
     visiting.add(file);
 
     for (const specifier of importsOf(file, sources.get(file) ?? '')) {
-      if (!specifier.startsWith('.')) continue;
-
-      const base = resolve(dirname(file), specifier).replace(/\.js$/, '');
+      const resolved = resolveSourceImport(file, specifier);
+      if (!resolved) continue;
+      const base = resolved.replace(/\.js$/, '');
       const target = [
         base,
         `${base}.ts`,

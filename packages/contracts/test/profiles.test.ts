@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
-import { videoProfiles } from '../../../apps/control-api/src/modules/profiles/domain/profiles.js';
-import { profilesResponseSchema, videoProfileSchema } from '../src/index.js';
+import { videoProfiles } from '../../../apps/control-api/src/modules/profiles/domain/profiles';
+import { profilesResponseSchema, videoProfileSchema } from '../src/index';
 
 describe('product catalog', () => {
   it('rejects inconsistent dimensions and duplicate catalog entries', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { analyzeSource, findCycles, importsOf, normalizedPath } from './analyze.ts';
+import { analyzeSource, findCycles, importsOf, normalizedPath } from './analyze';
 
 describe('architecture boundaries', () => {
   it('reads static imports, exports and dynamic imports without matching comments', () => {
@@ -64,7 +64,7 @@ describe('architecture boundaries', () => {
     expect(
       findCycles(
         new Map([
-          ['/a.ts', `import './b.js'; import 'react';`],
+          ['/a.ts', `import './b'; import 'react';`],
           ['/b.ts', `import './a';`],
         ]),
       ),
@@ -72,4 +72,54 @@ describe('architecture boundaries', () => {
     expect(findCycles(new Map([['/a.ts', `import './missing';`]]))).toEqual([]);
     expect(normalizedPath('/repo', '/repo/apps/viewer.ts')).toBe('apps/viewer.ts');
   });
+});
+
+it('enforces boundaries and detects cycles through aliases', () => {
+  const page = 'apps/viewer-web/src/features/viewer/pages/Page/index.tsx';
+  expect(analyzeSource(page, "import '@features/other/components/Private';")).toContain(
+    'Cross-feature imports must use the public index.',
+  );
+  expect(analyzeSource(page, "import '@features/other';")).toEqual([]);
+  expect(analyzeSource(page, "import '@app/App';")).toContain(
+    'Feature must not depend on app composition.',
+  );
+  expect(
+    analyzeSource('apps/viewer-web/src/shared/state.ts', "import '@features/viewer';"),
+  ).toContain('Shared must not depend on app or features.');
+  expect(
+    analyzeSource(
+      'apps/control-api/src/modules/rooms/domain/room.ts',
+      "import '@modules/rooms/adapters/db';",
+    ),
+  ).toContain('Domain dependencies must point inward.');
+  expect(
+    analyzeSource(
+      'apps/control-api/src/modules/rooms/application/use-case.ts',
+      "import '@modules/rooms/adapters/db';",
+    ),
+  ).toContain('Application must depend on ports, not adapters.');
+  expect(
+    analyzeSource(
+      'apps/control-api/src/modules/rooms/domain/room.ts',
+      "import '@modules/profiles/domain/profile';",
+    ),
+  ).toEqual([]);
+  expect(
+    analyzeSource('apps/control-api/src/modules/rooms/domain/room.ts', "import '@runtime/server';"),
+  ).toContain('Domain dependencies must point inward.');
+  expect(
+    analyzeSource(
+      'apps/control-api/src/modules/rooms/application/use-case.ts',
+      "import '@runtime/server';",
+    ),
+  ).toContain('Application must depend on ports, not adapters.');
+
+  expect(
+    findCycles(
+      new Map([
+        ['/repo/apps/viewer-web/src/features/one/index.ts', "import '@features/two';"],
+        ['/repo/apps/viewer-web/src/features/two/index.ts', "import '@features/one';"],
+      ]),
+    ),
+  ).toHaveLength(1);
 });

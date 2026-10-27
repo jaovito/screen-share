@@ -1,6 +1,6 @@
 import { readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { root, run } from './lib.ts';
+import { root, run } from './lib';
 
 export type TestSuite = { name: string; files: string[]; preload?: string };
 
@@ -23,7 +23,7 @@ export function testSuites(database = false): TestSuite[] {
     {
       name: 'frontend',
       files: [...testsIn('apps/viewer-web/src'), ...testsIn('apps/desktop/src')],
-      preload: './tooling/tests/setup-dom.ts',
+      preload: './tooling/tests/setup-dom',
     },
   ];
 }

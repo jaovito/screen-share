@@ -1,5 +1,5 @@
 import { expect, it } from 'bun:test';
-import { enforceCoverage, metric, parseLcov } from './lcov.ts';
+import { enforceCoverage, metric, parseLcov } from './lcov';
 
 it('parses real Bun line/function counters and identifies uncovered lines', () => {
   const files = parseLcov(

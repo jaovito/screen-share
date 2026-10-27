@@ -2,7 +2,7 @@
 
 ## Windows 11 x64
 
-1. Install Git, Node 24.22.1, and Bun 1.4.3. Corepack is unnecessary.
+1. Install Git and Bun 1.4.3. Corepack is unnecessary.
 2. Install Rust through rustup and Visual Studio Build Tools (Desktop development with C++, MSVC, Windows SDK). Use x86_64-pc-windows-msvc, not MinGW for the shell.
 3. Confirm Microsoft Edge WebView2 Runtime. See [official Tauri prerequisites](https://v2.tauri.app/start/prerequisites/).
 4. Start Docker Desktop with WSL2 backend for Linux Compose. Windows desktop runs natively, outside WSL/container.
@@ -31,7 +31,7 @@ Review SQL, journal, and snapshot before committing; never edit an applied migra
 
 ## Development and validation
 
-check:ts builds contracts before consumers, typechecks API tests, and builds apps separately. dev builds contracts once; restart it or rebuild that package after contract edits. Bun scripts propagate failures. Local configuration comes from .env; existing environment variables take precedence. Vite receives only VITE-prefixed variables.
+check:ts typechecks source contracts and API tests before checking/building consumers. Contracts export their TypeScript source directly; no package build or generated .js imports are required. Source execution uses Bun, including the API. Bun scripts propagate failures. Local configuration comes from .env; existing environment variables take precedence. Vite receives only VITE-prefixed variables.
 
 check:rust uses portable default-members without GTK, Tauri, Win32, or libwebrtc. Cargo.lock includes the shell, but domain compilation does not compile it. Manual root checks: `cargo clippy --locked --all-targets -- -D warnings` and `cargo test --locked`. Do not indiscriminately add --workspace on Linux.
 
@@ -51,6 +51,17 @@ Existing viewer example: className="panel mt-6". Prefer complete utility strings
 
 shadcn/ui is not installed; shared components can be added when needed. See [official Vite integration](https://tailwindcss.com/docs/installation/using-vite).
 
-Authored operational scripts are scripts/*.ts with .ts imports, running natively on Bun 1.4.3. Execution does not typecheck; bun run typecheck includes scripts, tooling, configs, and E2E. bun run check includes disposable PostgreSQL coverage and requires Docker; E2E stays separate. See [frontend.md](frontend.md) and [testing.md](testing.md).
+Authored operational scripts are scripts/*.ts with extensionless local imports, running natively on Bun 1.4.3. Execution does not typecheck; bun run typecheck includes scripts, tooling, configs, and E2E. bun run check includes disposable PostgreSQL coverage and requires Docker; E2E stays separate. See [frontend.md](frontend.md) and [testing.md](testing.md).
 
 Native Bun Test is the unit/DOM runner, with preloads/isolation in scripts/test-suites.ts. Use bun run test for both suites; integration/coverage retain disposable databases. Native reports are LCOV/HTML/JSON without Vitest. See ADR 0008. Documentation, code, comments, and developer-facing test descriptions use English; this does not change product UI language.
+
+
+## API runtime and optional binary
+
+Run `bun run dev` for watch-mode API/viewer, or `bun run --filter @screen-share/control-api start` from root for the source API without a build. Bun reads app-scoped `@modules/*`/`@runtime/*` paths. Node-prefixed standard-library imports are Bun-compatible APIs, not a requirement to install Node.
+
+`bun run --filter @screen-share/control-api build` invokes Bun build --compile for the current host, producing apps/control-api/dist/control-api (control-api.exe on Windows). The executable supports serve (default), migrate, smoke, and ready. All versioned drizzle SQL/meta files are embedded with --asset; configuration/credentials remain runtime environment variables. The binary disables automatic .env/bunfig loading and does not inline environment secrets. No JS output or node_modules is needed at runtime. Provide the same validated environment for every command.
+
+The Docker build compiles inside its Linux build environment and copies only the executable into a digest-pinned Debian runtime with CA certificates/libstdc++. It runs as unprivileged app, uses the binary ready command as healthcheck, and invokes migrate before starting. Build native to the target image architecture; do not copy a macOS executable into Linux or claim an untested cross-target binary works.
+
+Use bun run test:binary for disposable standalone validation. The build intentionally embeds a snapshot of migration history; rebuild after adding migrations. Normal startup and readiness never apply schema changes. Compile-time typechecking remains a separate check. See ADR 0010.

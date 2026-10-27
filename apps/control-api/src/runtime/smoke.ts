@@ -1,7 +1,7 @@
 import { profilesResponseSchema } from '@screen-share/contracts';
 import { RoomServiceClient } from 'livekit-server-sdk';
-import type { Config } from '../config.js';
-import { log } from '../log.js';
+import type { Config } from '../config';
+import { log } from '../log';
 
 export async function checkControlPlane(config: Config) {
   const base = `http://127.0.0.1:${config.PORT}`;

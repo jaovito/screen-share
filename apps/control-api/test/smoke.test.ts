@@ -1,6 +1,6 @@
 import { afterEach, expect, it, mock, spyOn } from 'bun:test';
-import type { Config } from '../src/config.js';
-import { videoProfiles } from '../src/modules/profiles/domain/profiles.js';
+import { videoProfiles } from '@modules/profiles/domain/profiles';
+import type { Config } from '../src/config';
 
 const listRooms = mock();
 
@@ -10,7 +10,7 @@ mock.module('livekit-server-sdk', () => ({
   },
 }));
 
-const { checkControlPlane } = await import('../src/runtime/smoke.js');
+const { checkControlPlane } = await import('@runtime/smoke');
 
 const config: Config = {
   DATABASE_URL: 'postgres://unused',

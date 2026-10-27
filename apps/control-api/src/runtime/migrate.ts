@@ -1,6 +1,6 @@
-import type { Config } from '../config.js';
-import { log } from '../log.js';
-import { createDatabase, retryDatabase } from '../modules/system/adapters/postgres.js';
+import { createDatabase, retryDatabase } from '@modules/system/adapters/postgres';
+import type { Config } from '../config';
+import { log } from '../log';
 
 export async function migrateDatabase(config: Config) {
   const database = createDatabase(config.DATABASE_URL);

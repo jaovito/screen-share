@@ -1,6 +1,6 @@
 import { describe, expect, it, jest, mock, spyOn } from 'bun:test';
+import { App } from '@app/App';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { App } from '../../../../app/App';
 
 const profiles = [480, 720, 1080, 1440].flatMap((height) =>
   [30, 60].map((fps) => ({

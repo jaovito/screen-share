@@ -44,17 +44,18 @@ export const compose = (...args: string[]) => run('docker', [...composeArgs, ...
 
 export const workspaceApps = ['control-api', 'viewer-web', 'desktop'] as const;
 
-export async function buildWorkspaces(env: NodeJS.ProcessEnv = process.env) {
-  await run('bun', ['run', '--filter', '@screen-share/contracts', 'build'], { env });
+export async function buildWorkspaces(
+  env: NodeJS.ProcessEnv = process.env,
+  apps: readonly (typeof workspaceApps)[number][] = workspaceApps,
+) {
+  await run('bun', ['run', '--filter', '@screen-share/contracts', 'typecheck'], { env });
   await Promise.all(
-    workspaceApps.map((name) =>
-      run('bun', ['run', '--filter', `@screen-share/${name}`, 'build'], { env }),
-    ),
+    apps.map((name) => run('bun', ['run', '--filter', `@screen-share/${name}`, 'build'], { env })),
   );
 }
 
 export async function typecheckWorkspaces() {
-  await run('bun', ['run', '--filter', '@screen-share/contracts', 'build']);
+  await run('bun', ['run', '--filter', '@screen-share/contracts', 'typecheck']);
   await Promise.all(
     workspaceApps.map((name) =>
       run('bun', ['run', '--filter', `@screen-share/${name}`, 'typecheck']),

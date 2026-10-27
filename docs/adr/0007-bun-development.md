@@ -4,6 +4,8 @@ Status: accepted after user-requested evaluation · 2026-10-26. Supersedes devel
 
 **Later update:** ADR 0008 superseded retaining Vitest after another user request/evaluation. The evidence below records the preceding stage.
 
+**Later runtime update:** ADR 0010 supersedes retaining Node for the API; the original decision/evidence below remain historical.
+
 ## Local evidence
 
 Same Vitest 5.0.5 suite, 32 tests, three alternating runs on macOS arm64. Total time includes startup; caches were not cleared. Data: docs/benchmarks/bun-2026-10-26.json.

@@ -1,12 +1,12 @@
-import { bootstrap } from './bootstrap.ts';
-import { doctor } from './doctor.ts';
-import { buildWorkspaces, compose, loadEnv, run, start, typecheckWorkspaces } from './lib.ts';
-import { runTestSuites } from './test-suites.ts';
+import { bootstrap } from './bootstrap';
+import { doctor } from './doctor';
+import { buildWorkspaces, compose, loadEnv, run, start, typecheckWorkspaces } from './lib';
+import { runTestSuites } from './test-suites';
 
 loadEnv();
 
 const command = process.argv[2];
-const contracts = () => run('bun', ['run', '--filter', '@screen-share/contracts', 'build']);
+const contracts = () => run('bun', ['run', '--filter', '@screen-share/contracts', 'typecheck']);
 
 async function checkTs() {
   await run('bun', ['--bun', 'node_modules/@biomejs/biome/bin/biome', 'check', '.']);
@@ -125,23 +125,26 @@ async function main() {
     case 'check':
       await checkTs();
       await checkRust();
-      await import('./coverage.ts');
+      await import('./coverage');
       break;
     case 'smoke':
       await contracts();
       await run('bun', ['run', '--filter', '@screen-share/control-api', 'smoke']);
       break;
     case 'test:integration':
-      await import('./integration.ts');
+      await import('./integration');
+      break;
+    case 'test:binary':
+      await import('./binary');
       break;
     case 'test:e2e':
-      await import('./e2e.ts');
+      await import('./e2e');
       break;
     case 'test:coverage':
-      await import('./coverage.ts');
+      await import('./coverage');
       break;
     case 'test:persistence':
-      await import('./persistence.ts');
+      await import('./persistence');
       break;
     default:
       throw new Error(`Comando desconhecido: ${command}`);

@@ -1,15 +1,12 @@
-import { readConfig } from './config.js';
-import { log } from './log.js';
-import { startServer } from './runtime/server.js';
+import { runCommand } from '@runtime/command';
+import { log } from './log';
 
-try {
-  startServer(readConfig());
-} catch (error) {
-  log('startup_failed', {
+void runCommand(process.argv[2]).catch((error: unknown) => {
+  log('command_failed', {
     reason:
       error instanceof Error && error.message.startsWith('Configuração inválida:')
         ? error.message
-        : 'Verifique configuração e instalação',
+        : 'Check configuration and installation',
   });
   process.exitCode = 1;
-}
+});
