@@ -364,3 +364,16 @@ address-selection regressions passed, including rejection of public/malformed/ab
 interfaces. Runtime detection/installation now happens in the preliminary probe so
 missing prerequisites fail before native compilation. No application security or
 media assertion was relaxed.
+
+
+Run [40565514989](https://github.com/jaovito/screen-share/actions/runs/40565514989)
+confirmed the owned-interface Windows H264/Opus publisher probe, native checks and
+NSIS packaging. WebView2 Runtime 155.0.4283.62 was already installed, disproving the
+missing-runtime hypothesis above. The full application still timed out waiting for
+CDP, before playback. Microsoft documents that WebView2 150+ ignores `WEBVIEW2_*`
+environment configuration in elevated hosts; the test previously relied on those
+variables. The fixture now supplies browser arguments and an isolated app-data path
+through Tauri's compiled API configuration, preserving the original HTTPS window.
+Two regression tests cover preserved settings, invalid inputs and local-only
+loopback flags. Local TypeScript checks and database-backed coverage passed; the
+actual Windows playback result remains pending the provider retry.

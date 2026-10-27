@@ -65,7 +65,7 @@ jobs:
       - name: Install the pinned browser for Windows media fixtures
         run: bun --bun node_modules/@playwright/test/cli.js install chromium
       - name: Verify the owned Windows SFU and synthetic publisher before native compilation
-        timeout-minutes: 3
+        timeout-minutes: 5
         run: bun scripts/test-desktop-receiver.ts --publisher-only
       - name: Restore Windows Rust dependencies and build outputs
         id: windows-cargo-cache

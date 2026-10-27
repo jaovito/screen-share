@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { networkInterfaces, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { type Browser, chromium, expect, type Page } from '@playwright/test';
@@ -14,6 +14,7 @@ import {
 } from '../tests/desktop-receiver/resources';
 import { ensureWebViewRuntime } from '../tests/desktop-receiver/webview-runtime';
 import { finalizeFixture } from '../tooling/desktop-receiver/cleanup';
+import { fixtureWindowConfig } from '../tooling/desktop-receiver/config';
 import { fixtureRtcAddress } from '../tooling/desktop-receiver/network';
 import { root, run } from './lib';
 import { freePort } from './ports';
@@ -87,6 +88,12 @@ try {
   // These public fixture URLs are never packaged into the previously built installer.
   if (!publisherOnly) {
     progress('compile standalone fixture parent');
+    const automation = fixtureWindowConfig(
+      JSON.parse(await readFile(join(root, 'apps/desktop/src-tauri/tauri.conf.json'), 'utf8')),
+      join(directory, 'app-data'),
+      Number(debug),
+      rtcAddress === '127.0.0.1',
+    );
     await run(
       'cargo',
       [
@@ -104,6 +111,7 @@ try {
           CARGO_BUILD_JOBS: '2',
           SCREEN_SHARE_API_URL: fixture.apiUrl,
           SCREEN_SHARE_RTC_URL: serverUrl,
+          TAURI_CONFIG: JSON.stringify(automation),
         },
       },
     );
@@ -147,8 +155,6 @@ try {
     progress('launch Windows application');
     application = ownedProcess(join(root, 'target/release/screen-share-desktop.exe'), [], {
       ...process.env,
-      WEBVIEW2_USER_DATA_FOLDER: join(directory, 'webview-profile'),
-      WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${debug} ${rtcAddress === '127.0.0.1' ? '--allow-loopback-in-peer-connection ' : ''}--autoplay-policy=no-user-gesture-required`,
     });
     // Compilation/download are outside this bounded actual media execution window.
     watchdog = setTimeout(() => {

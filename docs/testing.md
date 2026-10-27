@@ -144,3 +144,13 @@ peer or external SFU. Local operator runs retain loopback. This avoids rewriting
 non-loopback ICE interface to 127.0.0.1. Address-selection regressions reject public,
 malformed and absent interfaces. These checks do not substitute for production UDP,
 TCP fallback or restrictive-network TURN acceptance.
+
+The standalone fixture passes CDP/autoplay arguments through Tauri's
+`additionalBrowserArgs` configuration and isolates app data through
+`appDirectoriesOverride`. Both are supplied with `TAURI_CONFIG` only during the
+fixture parent compilation. The original secure window configuration is retained;
+CSP, bundling and updater settings are not overridden. WebView2 150 and later ignore
+`WEBVIEW2_*` environment variables for elevated hosts, including hosted Windows CI;
+the API configuration avoids that documented restriction without changing machine
+policy or enabling debugging in the previously packaged installer. See
+[Microsoft's explanation](https://github.com/MicrosoftEdge/WebView2Feedback/issues/5645#issuecomment-4934355430).
