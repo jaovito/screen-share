@@ -7,7 +7,7 @@ default-members = ["crates/domain", "crates/application", "crates/media-windows"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.99"
-license = "UNLICENSED"
+license = "MIT"
 
 [workspace.dependencies]
 ss-domain = { path = "crates/domain" }

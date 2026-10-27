@@ -1,0 +1,12 @@
+name: Review events
+on:
+  pull_request_review:
+    types: [submitted, edited, dismissed]
+permissions: {}
+jobs:
+  signal:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Request trusted metadata reconciliation
+        run: echo "Review event received; no contribution code is executed."

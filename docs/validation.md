@@ -182,3 +182,16 @@ Executed locally on 2026-10-26 (macOS arm64 host, Linux arm64 Docker):
 - bun run doctor and frozen installation passed without requiring Node. Source/binary scan confirmed no emitted API/contracts JS and no local credential values in the host binary. Local docs/links and extensionless authored imports were checked.
 
 CI configuration now installs Bun, runs the standalone check, starts source API E2E, and uses compiled smoke for Compose. Provider CI and native Windows remain unexecuted. Browser output remains Vite JavaScript; the new binary preference applies to the API. There is no claim of new production performance, media, authentication, or E2EE capability. Rust behavior was unchanged and portable Rust checks were not repeated for this runtime/import change. Historical Node decisions/results above remain historical and are superseded by this section/ADR 0010.
+
+## Update: open-source onboarding and GitHub governance
+
+Prepared on 2026-10-26: public-facing root/application READMEs, contribution and private security reporting guides, official MIT license, issue/PR templates, universal CODEOWNERS, versioned branch rulesets, and pinned least-privilege GitHub workflows. The author-specific approval policy compares immutable identities and current review/head metadata. Its write-enabled reconciliation executes only trusted main-branch code; contribution CI and review-event signals have no write permissions.
+
+Executed locally:
+
+- `bun run check:ts` passed lint, strict types (including the GitHub runner), architecture, **51 unit/DOM tests**, browser builds, and standalone API compilation.
+- `bun run test:coverage` passed **52 tests** with disposable PostgreSQL; **99.34% lines**, **97.54% functions**, the unchanged **80% per-file gate**, and all **35 product runtime files** measured. The review decision helper has 100% line/function coverage. Regressions cover the owner-author exemption, other authors/reviewers, current versus stale heads, changes requested, dismissed reviews, comments, submission ordering, and invalid identity/head metadata.
+- Official actionlint 1.7.12 (download checksum verified) accepted all workflows. JSON rulesets and local Markdown references were checked.
+- All 295 historical Git blobs were scanned against the three local credential values before initial publication; no matches. Local .env and generated LiveKit credentials remain untracked.
+
+Remote configuration and first provider CI runs must be inspected after the initial push; these local results do not establish Windows or remote CI success. Existing product runtime/UI behavior was unchanged, so browser E2E and portable Rust suites were not repeated locally for this documentation/governance change. There is no new media or production-readiness claim.

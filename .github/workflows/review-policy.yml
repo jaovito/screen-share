@@ -1,0 +1,31 @@
+name: Code-owner policy
+on:
+  workflow_run:
+    workflows: [CI, Review events]
+    types: [requested, completed]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pull-requests: read
+  checks: write
+concurrency:
+  group: code-owner-policy
+  cancel-in-progress: false
+jobs:
+  reconcile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: 1.4.3
+      - name: Install only trusted default-branch dependencies
+        run: bun install --frozen-lockfile --ignore-scripts
+      - name: Reconcile current PR metadata
+        run: bun .github/scripts/review-policy.ts
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
