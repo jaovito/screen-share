@@ -28,3 +28,49 @@
     color: var(--destructive);
   }
 }
+
+@layer components {
+  .proof-panel summary {
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .proof-content {
+    margin-top: 18px;
+  }
+  .proof-form {
+    display: grid;
+    gap: 12px;
+  }
+  .proof-form textarea,
+  .proof-form input[type="password"] {
+    width: 100%;
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid var(--profile-border);
+    border-radius: 8px;
+    background: var(--background);
+    color: var(--foreground);
+    font: inherit;
+  }
+  .proof-form textarea {
+    min-height: 120px;
+    resize: vertical;
+  }
+  .proof-consent {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 14px;
+  }
+  .proof-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .proof-content video {
+    width: 100%;
+    max-height: 70vh;
+    border-radius: 10px;
+    background: #000;
+  }
+}

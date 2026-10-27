@@ -28,6 +28,7 @@ jobs:
       - run: bun run test:persistence
       - run: bun --bun node_modules/@playwright/test/cli.js install --with-deps chromium
       - run: bun run test:e2e
+      - run: bun run test:media
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
@@ -50,7 +51,7 @@ jobs:
       - run: rustup toolchain install 1.99.1 --profile minimal --component rustfmt --component clippy
       - run: bun run check:rust
   windows-desktop:
-    timeout-minutes: 30
+    timeout-minutes: 45
     runs-on: windows-2025
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -67,6 +68,20 @@ jobs:
       - run: cargo check --locked -p screen-share-desktop --all-targets
       - run: cargo test --locked -p screen-share-desktop --lib
       - run: bun run build:desktop
+      - name: Check the opt-in Windows media proof and SDK
+        run: cargo clippy --locked -p ss-media-proof --features native-proof --all-targets -- -D warnings
+        env:
+          CARGO_BUILD_JOBS: 2
+          RUSTFLAGS: -C target-feature=+crt-static
+      - name: Test native grants, cleanup, pacing and private key file ACLs
+        run: |
+          cargo test --locked -p ss-rtc-livekit --features native-proof --lib
+          cargo test --locked -p ss-media-windows --features probe-ui
+          cargo test --locked -p ss-media-proof --features native-proof
+          cargo build --locked -p ss-media-proof --features native-proof
+        env:
+          CARGO_BUILD_JOBS: 2
+          RUSTFLAGS: -C target-feature=+crt-static
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: desktop-windows-development-unsigned

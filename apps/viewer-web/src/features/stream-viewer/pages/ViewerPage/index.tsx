@@ -1,4 +1,5 @@
 import { LanguageSelector } from '@screen-share/i18n';
+import { EncryptedSessionPanel } from '../../components/EncryptedSessionPanel';
 import { useControlConnection } from '../../hooks/use-control-connection';
 import { useViewerMessages } from '../../locales';
 
@@ -72,6 +73,7 @@ export function ViewerPage() {
           <p>{connection.state === 'loading' ? t('catalogLoading') : t('catalogUnavailable')}</p>
         )}
       </section>
+      <EncryptedSessionPanel />
       <footer>{t('footer')}</footer>
     </main>
   );

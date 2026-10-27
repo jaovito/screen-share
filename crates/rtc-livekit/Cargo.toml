@@ -5,6 +5,19 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 
+[features]
+default = []
+native-proof = ["dep:livekit", "dep:tokio", "dep:serde", "dep:serde_json", "dep:base64", "dep:url", "dep:uuid"]
+
 [dependencies]
 ss-domain.workspace = true
 ss-application.workspace = true
+
+[target.'cfg(any(target_os = "windows", target_os = "macos"))'.dependencies]
+livekit = { version = "=0.9.7", optional = true, features = ["rustls-tls-native-roots"] }
+tokio = { version = "=1.54.1", optional = true, features = ["rt", "sync", "time", "macros"] }
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+base64 = { version = "=0.23.1", optional = true }
+url = { version = "=2.5.8", optional = true }
+uuid = { version = "=1.29.0", optional = true }

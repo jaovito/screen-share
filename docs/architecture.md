@@ -44,3 +44,14 @@ Both interfaces follow [frontend.md](frontend.md): mounting/composition in app, 
 App-local aliases are defined in each tsconfig and local TS specifiers are extensionless. TypeScript uses Preserve/Bundler with noEmit; Bun resolves API/test aliases and Vite resolves frontend paths from tsconfig. The architecture checker resolves aliases too, preserving boundaries/cycle checks. Cross-workspace consumers still use public package exports.
 
 The API runs source TypeScript on Bun by default. Optional Bun compile produces a single host executable with embedded SQL/meta assets and Bun runtime. Source migration lookup remains relative to its adapter; standalone lookup uses embedded assets under import.meta.dir. Drizzle history/hash/constraints/readiness semantics remain unchanged. Docker ships the standalone binary without JS bundles, Node, or node_modules. Runtime-specific Bun APIs stay outside pure domain/application rules.
+
+
+## M1 implementation slice
+
+The product API still exposes only the M0 control endpoints. Offline operator tooling creates allowlisted five-minute room-scoped proof grants in new private files; it is not mounted as an HTTP route. Client grant schemas live in contracts; the operator-only allowlist schema stays with the tooling boundary. See ADR 0011 and media-proof.md.
+
+The viewer's opt-in receiver dynamically loads its SDK only after explicit consent/submission, configures the actual encryption worker before connection, and manually subscribes to one encrypted designated publisher track only after validating connected identity/room. No browser publishing or automatic reconnect exists. Native sharing remains disabled in IPC.
+
+The portable Rust session controller uses a trusted monotonic clock and verified authorization port, guards every blocking transition with fresh deadlines, and keeps one immutable selected source/session/epoch. It reports cleanup failures and requires release before reuse. A one-pending-frame queue drops/reclaims replaced native buffers. EncodedAccessUnit bounds H.264 Annex B framing with SPS/PPS before IDR; it does not decode or prove codec compatibility.
+
+The target-specific Windows acquisition module preserves the exact system-picker GraphicsCaptureItem, uses a hardware D3D11 device and two-frame WGC pool, copies selected content into owned GPU textures, and recreates the same pool/item on resize. It is compile-checked and unwired, with per-frame allocation/copy and no hardware-performance claim. D3D11 conversion, asynchronous hardware Media Foundation encoding and an optional native encrypted LiveKit adapter now have implementation. The explicit apps/media-proof-native utility composes them on STA/MTA owner threads; full Windows runtime/hardware validation and regular product-shell integration remain pending M1 work.

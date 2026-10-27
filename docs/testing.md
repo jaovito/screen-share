@@ -69,3 +69,12 @@ The default API runs TypeScript on Bun without compilation, and source-based con
 `bun run test:binary` builds the host executable, copies only that executable into an empty temporary directory, migrates a disposable PostgreSQL database twice, verifies readiness/eight profiles/no token endpoint, and requires successful SIGTERM shutdown. This proves embedded SQL/journal lookup independently of source/CWD/node_modules. It does not establish cross-platform execution: macOS/Linux results cannot stand in for Windows. CI runs this check separately from coverage/E2E.
 
 Architecture regressions include alias-based private imports, shared/app/feature direction, domain/application adapter restrictions, and cycles. Typechecking uses module Preserve/moduleResolution Bundler with noEmit; Bun execution is not typechecking. Frontend builds remain Vite browser bundles.
+
+
+## M1 experimental receiver and native boundaries
+
+`bun run test:media` uses a separate disposable LiveKit container, synthetic credentials, a test-only 320×180/5 FPS canvas publisher, the real SDK encryption worker, and one Chromium worker. Its correct-key viewer must decode multiple frames; its wrong-key viewer must decode none while the correct client continues. It does not use capture hardware, normal local services, or the development database. Resources/configuration are owned and cleaned up by scripts/test-media.ts. No trace/screenshot records credentials or synthetic media in this proof. See media-proof.md.
+
+Unit/DOM cases cover grant scope/allowlist/unsafe signaling, independent secrets, private exclusive files, explicit consent, cleared form values, lazy loading/cancellation, supported encryption, verified identity/room before subscription, unexpected media, timeouts, expiry, disconnect/collapse/unmount and SDK cleanup exceptions. Per-file gates apply to every measured occurrence; operator-only input schemas live in tooling rather than the browser client contract.
+
+Rust tests add explicit source/session/epoch invariants, trusted-clock expiry across delayed authorization/preparation/start/resume/pause, idempotent/failed cleanup, bounded concurrent frame ownership, and H.264 access-unit framing limits. The Windows-target WGC implementation has a cross-target strict clippy check; that is API/type evidence, not an executed Windows capture or two-PC test.

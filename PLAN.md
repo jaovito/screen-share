@@ -2,7 +2,7 @@
 
 - **Version:** 1.1 — initial planning/setup contract.
 - **Review date:** 2026-10-26.
-- **Status:** M0 implemented with portable local validation; Windows/remote CI gates pending. M1–M5 and media benchmarks have not run.
+- **Status:** M0 implemented with portable local validation and passing provider CI (including Windows build/IPC). M1 implementation has started; its Windows hardware/two-PC gate and M2–M5 remain pending.
 - **Immediate scope:** repository bootstrap, applications, architecture, local infrastructure.
 - **Product scope:** private streaming among friends, low computer overhead, quality diagnostics.
 
@@ -190,7 +190,7 @@ M0 acceptance checklist:
 **Setup evidence (2026-10-26):** see [docs/validation.md](docs/validation.md). Local viewer uses 5175 because other projects own 5173/5174. Current diagnostic command: bun run doctor.
 
 - [ ] Windows gate: shell execution, IPC tests, NSIS bundle on Windows 11 x64. macOS shell checks/tests do not validate this gate.
-- [ ] Run GitHub Actions in the provider; versioned configuration is not executed CI.
+- [x] Run GitHub Actions in the provider: CI run 40432835471 passed all four jobs, including Windows IPC/NSIS build. This does not prove interactive Windows 11 capture.
 
 **M0 convention update:** feature-based frontend adapted from Truco; TypeScript/Bun scripts; Biome/import rules; 80% per-file lines/functions coverage; desktop/mobile E2E. bun run check includes disposable-database coverage/Docker; partial check:ts/check:rust remain independent of Docker. See docs/frontend.md, docs/testing.md, ADR 0006. This does not start M1.
 
@@ -386,3 +386,8 @@ M0 viewer/desktop copy now uses bundled pt-BR, es, and en catalogs with i18next/
 ## API runtime and import resolution update — 2026-10-26
 
 At the user's request, the control API now runs TypeScript directly on Bun without a build, using native Bun.serve at the HTTP boundary. Optional builds produce a standalone executable with embedded migration assets; Docker deploys that executable. Contracts export TypeScript source, not generated JS. App-scoped frontend/API aliases and extensionless local imports use Bundler resolution; architecture checks resolve aliases before enforcing boundaries/cycles. Default API behavior, authorization limits, and media milestones remain unchanged. See ADR 0010.
+
+
+## M1 implementation progress — 2026-10-26
+
+The first implementation slice adds offline allowlisted proof grants, an opt-in encrypted browser receiver, a disposable synthetic encrypted transport test, portable authorization/clock/source/queue/access-unit invariants, and a target-specific WGC/D3D11 acquisition primitive. See [media-proof.md](docs/media-proof.md) and ADR 0011. The desktop publisher is still disabled. GPU conversion/hardware H.264 and native LiveKit publication/feedback are implemented in the optional proof utility. Native-to-browser interoperability passes a real local synthetic test. Windows runtime/hardware and two-PC measurements remain required before M1 completion or M2 advancement. Browser synthetic decoding is separate evidence and never a native performance claim.

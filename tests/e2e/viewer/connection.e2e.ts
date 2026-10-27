@@ -79,3 +79,23 @@ test('viewer switches and remembers all supported languages', async ({ page }, i
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(heading);
   }
 });
+
+test('the experimental receiver requires consent, rejects invalid grants and clears credentials', async ({
+  page,
+}, info) => {
+  await page.goto('/');
+  await page.getByRole('combobox').selectOption('en');
+  await page.locator('summary').click();
+  await expect(page.getByRole('button', { name: 'Connect to proof', exact: true })).toBeDisabled();
+  await page.getByLabel('Viewer grant JSON', { exact: true }).fill('{}');
+  await page.getByLabel('Independent media key', { exact: true }).fill('a'.repeat(43));
+  await page.getByRole('checkbox').check();
+  await page.getByRole('button', { name: 'Connect to proof', exact: true }).click();
+  await expect(page.locator('.proof-content [role=status]')).toContainText('Invalid grant');
+  await expect(page.getByLabel('Viewer grant JSON', { exact: true })).toHaveValue('');
+  await expect(page.getByLabel('Independent media key', { exact: true })).toHaveValue('');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+  await page.screenshot({ path: info.outputPath('m1-receiver.png'), fullPage: true });
+  await page.locator('summary').click();
+  await expect(page.getByLabel('Viewer grant JSON', { exact: true })).toHaveCount(0);
+});

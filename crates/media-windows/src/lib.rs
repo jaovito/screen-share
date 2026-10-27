@@ -1,3 +1,32 @@
+#[cfg(all(target_os = "windows", feature = "probe-ui"))]
+mod probe_window;
+
+#[cfg(all(target_os = "windows", feature = "probe-ui"))]
+pub use probe_window::{ProbeWindow, terminate_probe};
+
+mod encoder_error;
+
+pub use encoder_error::EncoderError;
+
+#[cfg(target_os = "windows")]
+mod encode;
+
+#[cfg(target_os = "windows")]
+pub use encode::{EncoderPoll, HardwareEncoder, SubmitOutcome};
+
+#[cfg(all(test, not(target_os = "windows")))]
+#[path = "encode/h264.rs"]
+mod h264_framing_tests;
+
+#[cfg(target_os = "windows")]
+mod capture;
+
+#[cfg(target_os = "windows")]
+pub use capture::{
+    CaptureError, CaptureReader, CaptureStatus, NativeCapture, NativeFrame, PickedSource,
+    pick_source, supported,
+};
+
 use ss_application::CapturePort;
 use ss_domain::{MediaError, VideoProfile};
 pub struct WindowsCapture;

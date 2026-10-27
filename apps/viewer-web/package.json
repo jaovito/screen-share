@@ -11,10 +11,11 @@
   },
   "dependencies": {
     "@screen-share/contracts": "workspace:*",
-    "react": "19.3.1",
-    "react-dom": "19.3.1",
+    "@screen-share/i18n": "workspace:*",
     "@screen-share/ui": "workspace:*",
-    "@screen-share/i18n": "workspace:*"
+    "livekit-client": "2.23.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
   },
   "devDependencies": {
     "@types/react": "19.3.0",

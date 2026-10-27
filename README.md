@@ -4,7 +4,7 @@
 
 An open-source desktop and web application for private screen sharing among friends. The planned publisher is a Windows desktop app, with a browser viewer and a Rust media core.
 
-**Current status: early development (M0).** You can run the control API, database, web viewer, and desktop UI. Capture, streaming, audio, authentication, invitations, RTC playback, and end-to-end encryption are **not implemented yet**. Sharing remains disabled. The profile catalog shows planned options, not measured hardware capabilities. See the [roadmap](PLAN.md).
+**Current status: early development (M1 in progress).** You can run the control API, database, web viewer, and desktop UI. The opt-in native publisher proof is implemented; its Windows hardware/two-PC validation, the regular desktop sharing flow, audio, product authentication, and invitations are **not complete yet**. Publication in the regular desktop shell remains disabled. An opt-in encrypted browser receiver is available for the [M1 experiment](docs/media-proof.md); it is not the complete private product. The profile catalog shows planned options, not measured hardware capabilities. See the [roadmap](PLAN.md).
 
 ## Requirements
 
@@ -48,6 +48,8 @@ Bootstrap creates `.env` and `infra/livekit/local.yaml` only when absent, genera
 Stop the dev process with Ctrl+C. `bun run infra:down` stops PostgreSQL/LiveKit while preserving data. Do not delete volumes to repair a configuration problem.
 
 ### Desktop
+
+For the separate Windows M1 publisher experiment, read [native proof instructions](apps/media-proof-native/README.md).
 
 On Windows, with the same dependencies/configuration installed:
 

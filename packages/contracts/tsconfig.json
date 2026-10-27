@@ -4,7 +4,8 @@
     "module": "Preserve",
     "moduleResolution": "Bundler",
     "rootDir": "src",
-    "noEmit": true
+    "noEmit": true,
+    "lib": ["ES2023", "DOM"]
   },
   "include": ["src"]
 }

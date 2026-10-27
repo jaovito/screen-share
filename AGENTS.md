@@ -3,7 +3,7 @@
 ## Start with the scope
 
 - `PLAN.md` defines goals and milestone gates; `docs/architecture.md` describes implementation; `docs/adr` records decisions; `docs/validation.md` records dated evidence. Read only what the task requires. Resolve discrepancies against code and update the right source; planned behavior is not an implemented feature.
-- Reference state: portable M0 validated; Windows and remote CI gates pending; M1–M5 require implementation and evidence. Recheck evidence before changing this status.
+- Reference state: portable M0 and provider CI (including Windows build/IPC) validated. M1 implementation is in progress; native hardware/two-PC evidence and M2–M5 remain pending. Recheck evidence before changing this status.
 - Write all documentation, agent/skill instructions, code identifiers, code comments, and developer-facing test descriptions in English. UI supports pt-BR (default/fallback), es, and en through feature-local catalogs and @screen-share/i18n; keep translation keys in English and avoid hardcoded UI sentences. User-facing conversations retain the user's language. Do not translate protocol values, public identifiers, or runtime messages merely to translate prose.
 - Preserve existing changes and task scope. Inspect `git status`/diff before editing; do not revert another contributor's work or perform destructive cleanup.
 

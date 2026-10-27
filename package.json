@@ -35,7 +35,11 @@
     "test:e2e": "bun scripts/task.ts test:e2e",
     "test:e2e:install": "bun --bun node_modules/@playwright/test/cli.js install chromium",
     "build": "bun scripts/task.ts build",
-    "test:binary": "bun scripts/task.ts test:binary"
+    "test:binary": "bun scripts/task.ts test:binary",
+    "media:grants": "bun scripts/media-proof.ts",
+    "test:media": "bun scripts/test-media.ts",
+    "test:media:native": "bun scripts/test-media.ts --native",
+    "media:publish": "bun scripts/publish-media.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.3",
@@ -47,8 +51,11 @@
     "@types/bun": "1.4.3",
     "@types/node": "24.19.2",
     "happy-dom": "21.0.4",
+    "livekit-client": "2.23.0",
+    "livekit-server-sdk": "2.19.2",
     "oxc-parser": "0.155.0",
     "typescript": "7.0.2",
+    "vite": "8.3.5",
     "zod": "4.6.7"
   },
   "workspaces": [

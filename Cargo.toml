@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/domain", "crates/application", "crates/media-windows", "crates/rtc-livekit", "apps/desktop/src-tauri"]
+members = ["crates/domain", "crates/application", "crates/media-windows", "crates/rtc-livekit", "apps/desktop/src-tauri", "apps/media-proof-native"]
 default-members = ["crates/domain", "crates/application", "crates/media-windows", "crates/rtc-livekit"]
 
 [workspace.package]
