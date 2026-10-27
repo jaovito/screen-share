@@ -136,3 +136,8 @@ signature, installs it under a bounded deadline, and records the resulting runti
 version. Edge Stable is not a substitute for WebView2 Runtime. This setup is confined
 to the authorized Windows test host and does not alter application CSP/E2EE. See
 [Microsoft runtime distribution guidance](https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/distribution).
+
+The Windows application fixture explicitly forces SFU ICE/TCP on its owned local
+port. This isolates encrypted WebView playback from intermittent loopback UDP ICE
+negotiation on hosted Windows runners. It does not substitute for production UDP,
+TCP fallback or restrictive-network TURN acceptance.

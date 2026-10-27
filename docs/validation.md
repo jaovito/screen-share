@@ -346,3 +346,11 @@ process shutdown/repeated stop/temp-directory removal, and synthetic browser pro
 confirming that video.load resets the decoded-frame counter and the audio analyser
 processes its source. These probes falsified two possible assertion defects; they
 do not establish WebView2 behavior.
+
+
+Run 40564069076 stopped early in the preliminary publisher with `could not establish
+pc connection`; the same loopback fixture had succeeded on the preceding provider
+run. To isolate WebView playback, this owned synthetic fixture now explicitly forces
+the pinned SFU's ICE/TCP test mode. Encryption, codec, decoded-media and wrong-key
+assertions remain mandatory. UDP/TURN and real-network acceptance remain separate
+and unexecuted by this fixture.

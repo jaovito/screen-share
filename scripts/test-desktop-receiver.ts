@@ -23,9 +23,9 @@ if (process.argv.length > (publisherOnly ? 3 : 2))
   throw new Error('Only --publisher-only is supported by the desktop receiver fixture');
 
 const directory = await mkdtemp(join(tmpdir(), 'ss-desktop-receiver-'));
-const ports = await Promise.all(Array.from({ length: 5 }, () => freePort()));
-const [signaling, tcp, udp, debug, publisherPort] = ports;
-if (!signaling || !tcp || !udp || !debug || !publisherPort || new Set(ports).size !== ports.length)
+const ports = await Promise.all(Array.from({ length: 4 }, () => freePort()));
+const [signaling, tcp, debug, publisherPort] = ports;
+if (!signaling || !tcp || !debug || !publisherPort || new Set(ports).size !== ports.length)
   throw new Error('Distinct fixture ports required');
 const apiKey = randomBytes(18).toString('hex');
 const apiSecret = randomBytes(32).toString('hex');
@@ -61,7 +61,9 @@ try {
       'bind_addresses: ["127.0.0.1"]',
       'rtc:',
       `  tcp_port: ${tcp}`,
-      `  udp_port: ${udp}`,
+      // This local WebView fixture proves encrypted playback over ICE/TCP.
+      // UDP and restrictive-network/TURN acceptance remain separate real-network gates.
+      '  force_tcp: true',
       '  node_ip: "127.0.0.1"',
       '  use_external_ip: false',
       '  enable_loopback_candidate: true',
