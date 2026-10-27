@@ -1,84 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, jest, mock } from 'bun:test';
-import { EventEmitter } from 'node:events';
-
-const publisherId = '2be00d58-9715-4319-a747-725ac0735130';
-const participantId = 'e9128130-5c5a-43c1-a571-3146240e4ea5';
-const rtcRoom = 'm1-6cfb37ba-b89c-4406-8880-caa4973752d4';
-const rooms: FakeRoom[] = [];
-const workers: FakeWorker[] = [];
-const keys: FakeKeyProvider[] = [];
-const setLogLevel = mock((_level: string) => {});
-let supported = true;
-let constructionFails = false;
-let keyFails = false;
-let connectPending: Promise<void> | undefined;
-
-class FakeWorker {
-  onerror: (() => void) | null = null;
-  onmessageerror: (() => void) | null = null;
-  terminate = mock(() => {});
-  constructor() {
-    workers.push(this);
-  }
-}
-
-class FakeKeyProvider {
-  setKey = mock(async (_key: string) => {
-    if (keyFails) throw new Error('sensitive key provider error');
-  });
-  constructor() {
-    keys.push(this);
-  }
-}
-
-type Publication = ReturnType<typeof publication>;
-
-class FakeRoom extends EventEmitter {
-  name = rtcRoom;
-  localParticipant = { identity: participantId };
-  remoteParticipants = new Map<
-    string,
-    { identity: string; trackPublications: Map<string, Publication> }
-  >();
-  setE2EEEnabled = mock(async (_enabled: boolean) => {});
-  connect = mock(async (_url: string, _token: string, _options: unknown) => {
-    await connectPending;
-  });
-  disconnect = mock(async () => {});
-
-  constructor(
-    readonly options: {
-      encryption: { keyProvider: unknown; worker: unknown };
-      reconnectPolicy: { nextRetryDelayInMs: () => null };
-    },
-  ) {
-    super();
-    if (constructionFails) throw new Error('private construction failure');
-    rooms.push(this);
-  }
-}
-
-mock.module('livekit-client', () => ({
-  ExternalE2EEKeyProvider: FakeKeyProvider,
+import {
+  FakeWorker,
+  flush,
+  keys,
+  participantId,
+  publication,
+  publisherId,
+  room,
+  rooms,
+  rtcRoom,
+  sdkState,
   setLogLevel,
-  isE2EESupported: () => supported,
-  Room: FakeRoom,
-  RoomEvent: {
-    TrackPublished: 'trackPublished',
-    TrackSubscribed: 'trackSubscribed',
-    TrackUnsubscribed: 'trackUnsubscribed',
-    TrackSubscriptionFailed: 'trackSubscriptionFailed',
-    EncryptionError: 'encryptionError',
-    Reconnecting: 'reconnecting',
-    SignalReconnecting: 'signalReconnecting',
-    Disconnected: 'disconnected',
-    ParticipantDisconnected: 'participantDisconnected',
-    ParticipantEncryptionStatusChanged: 'participantEncryptionStatusChanged',
-  },
-  Track: { Kind: { Video: 'video' }, Source: { ScreenShare: 'screen_share' } },
-}));
+  track,
+  workers,
+} from './fake-sdk';
 
-const { receiveEncryptedSession } = await import('./encrypted-reception');
+const { receiveEncryptedSession } = await import('../src');
 const originalWorker = Object.getOwnPropertyDescriptor(globalThis, 'Worker');
 const originalSecure = Object.getOwnPropertyDescriptor(globalThis, 'isSecureContext');
 
@@ -107,40 +44,15 @@ function input(overrides: Partial<Parameters<typeof receiveEncryptedSession>[0]>
   };
 }
 
-function publication(overrides: Record<string, unknown> = {}) {
-  return {
-    trackSid: 'track-1',
-    kind: 'video',
-    source: 'screen_share',
-    isEncrypted: true,
-    setSubscribed: mock((_subscribed: boolean) => {}),
-    ...overrides,
-  };
-}
-
-function track() {
-  return { kind: 'video', attach: mock(() => {}), detach: mock(() => {}), stop: mock(() => {}) };
-}
-
-async function flush() {
-  for (let i = 0; i < 12; i++) await Promise.resolve();
-}
-
-function room() {
-  const value = rooms.at(-1);
-  if (!value) throw new Error('Expected an owned room');
-  return value;
-}
-
 beforeEach(() => {
   rooms.length = 0;
   workers.length = 0;
   keys.length = 0;
-  supported = true;
+  sdkState.supported = true;
   setLogLevel.mockClear();
-  constructionFails = false;
-  keyFails = false;
-  connectPending = undefined;
+  sdkState.constructionFails = false;
+  sdkState.keyFails = false;
+  sdkState.connectPending = undefined;
   Object.defineProperty(globalThis, 'Worker', { configurable: true, value: FakeWorker });
   Object.defineProperty(globalThis, 'isSecureContext', { configurable: true, value: true });
 });
@@ -172,10 +84,10 @@ describe('encrypted M1 reception', () => {
   });
 
   it('refuses unsupported encryption or an insecure browser context before network or worker startup', () => {
-    supported = false;
+    sdkState.supported = false;
     const settings = input();
     receiveEncryptedSession(settings);
-    supported = true;
+    sdkState.supported = true;
     Object.defineProperty(globalThis, 'isSecureContext', { configurable: true, value: false });
     receiveEncryptedSession(settings);
     expect(settings.onState).toHaveBeenNthCalledWith(1, 'unsupported');
@@ -289,7 +201,7 @@ describe('encrypted M1 reception', () => {
   it('times out, expires, and disconnects again when a cancelled connection resolves late', async () => {
     jest.useFakeTimers();
     let resolve: (() => void) | undefined;
-    connectPending = new Promise<void>((done) => {
+    sdkState.connectPending = new Promise<void>((done) => {
       resolve = done;
     });
     const settings = input();
@@ -301,7 +213,7 @@ describe('encrypted M1 reception', () => {
     await flush();
     expect(room().disconnect).toHaveBeenCalledTimes(2);
 
-    connectPending = undefined;
+    sdkState.connectPending = undefined;
     const expiring = input();
     receiveEncryptedSession(expiring);
     await flush();
@@ -310,18 +222,18 @@ describe('encrypted M1 reception', () => {
   });
 
   it('cleans construction/key failures and prevents room connection when cancelled during key preparation', async () => {
-    constructionFails = true;
+    sdkState.constructionFails = true;
     const settings = input();
     receiveEncryptedSession(settings);
     expect(settings.onState).toHaveBeenLastCalledWith('failed');
     expect(workers[0]?.terminate).toHaveBeenCalledTimes(1);
-    constructionFails = false;
-    keyFails = true;
+    sdkState.constructionFails = false;
+    sdkState.keyFails = true;
     receiveEncryptedSession(settings);
     await flush();
     expect(settings.onState).toHaveBeenLastCalledWith('failed');
     expect(room().connect).not.toHaveBeenCalled();
-    keyFails = false;
+    sdkState.keyFails = false;
     const handle = receiveEncryptedSession(settings);
     handle.stop();
     await flush();
@@ -330,7 +242,7 @@ describe('encrypted M1 reception', () => {
 
   it('never subscribes before verifying room and participant identity, and rejects unsolicited media', async () => {
     let resolve: (() => void) | undefined;
-    connectPending = new Promise<void>((done) => {
+    sdkState.connectPending = new Promise<void>((done) => {
       resolve = done;
     });
     const settings = input();

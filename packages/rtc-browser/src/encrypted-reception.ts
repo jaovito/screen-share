@@ -28,7 +28,7 @@ export type ReceptionState =
   | 'expired'
   | 'failed';
 
-type ReceptionInput = {
+export type ReceptionInput = {
   grant: unknown;
   mediaKey: string;
   video: HTMLVideoElement;

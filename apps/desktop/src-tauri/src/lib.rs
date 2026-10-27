@@ -1,6 +1,7 @@
 mod audio_sources;
 mod authorization;
 mod engine;
+mod media_policy;
 mod updater;
 
 use engine::Engine;
@@ -111,6 +112,13 @@ async fn control_request(
 }
 
 pub fn run() {
+    let mut context = tauri::generate_context!();
+    media_policy::configure(
+        context.config_mut(),
+        option_env!("SCREEN_SHARE_RTC_URL").unwrap_or("ws://127.0.0.1:7880"),
+    )
+    .expect("Desktop media transport configuration is invalid");
+
     tauri::Builder::default()
         .setup(|app| {
             let client = ControlClient::new(
@@ -144,7 +152,7 @@ pub fn run() {
             updater::check_updates,
             updater::install_update
         ])
-        .run(tauri::generate_context!())
+        .run(context)
         .expect("Desktop shell startup failed");
 }
 

@@ -93,3 +93,26 @@ The Windows job prepares the fixed sidecar before strict parent Clippy, IPC test
 Portable timing tests cover the external encoder's two-input bound, matched monotonic output timestamps, finite rolling observations and reset behavior. Pure recovery tests cover immutable source identity, three session-total attempts/backoff, pause/revocation/cancel gates, clock regression and strict recoverable DXGI HRESULTs. Windows-gated metadata tests exercise stale-generation, terminal source closure and the synchronized publication gate. Cross-target Clippy validates these Windows APIs but does not execute graphics recovery.
 
 The visible publisher advisor and DOM tests cover continuous evidence windows, processing latency versus GPU/codec attribution, transport pressure, missing source activity, pause/generation/gap resets, allowlisted native stop reasons and safe active-session key-loss recovery. Browser screenshots use an explicitly synthetic component fixture for visual inspection; these displayed values are not hardware measurements. Actual Windows device-loss/recovery and prolonged timing observations remain hardware acceptance.
+
+
+## Actual Windows application reception
+
+`bun scripts/test-desktop-receiver.ts` requires Windows and the already-built desktop
+UI/sidecar. CI runs it after producing the ordinary NSIS artifact. It rebuilds only
+the standalone parent with owned loopback API/RTC origins and Tauri's custom-protocol
+feature; the previously packaged installer retains its normal configuration.
+
+The harness verifies the SHA-256 of the official pinned LiveKit Windows archive,
+starts its own SFU, uses a unique WebView2 profile and test-only remote-debugging
+port, and drives the actual application through Playwright CDP. Synthetic canvas
+H264 and oscillator Opus feed the real E2EE worker. Assertions cover secure context,
+CSP rejection of an unrelated origin, decoded frames/audio, wrong-key rejection and
+detached sinks after stopping. Loopback ICE and autoplay flags apply only to these
+owned test processes; no source capture, microphone or user media is accessed.
+
+The metadata API is an explicitly controlled fixture with an HttpOnly cookie. It
+verifies native IPC/cookie routing, not production authentication or SQL, which are
+covered separately by the real product E2E suite. The test owns and cleans up its
+process trees, files and ports. It does not establish physical capture, restrictive
+network/TURN, two-PC connectivity or prolonged playback acceptance. See
+[validation.md](validation.md) for actual execution evidence.

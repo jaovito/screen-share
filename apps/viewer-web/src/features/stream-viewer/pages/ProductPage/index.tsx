@@ -1,7 +1,7 @@
 import { ProductWorkspace, type ReceiverAdapter } from '@screen-share/ui/product';
 
 const receive: ReceiverAdapter = async (input) => {
-  const { receiveEncryptedSession } = await import('../../services/encrypted-reception');
+  const { receiveEncryptedSession } = await import('@screen-share/rtc-browser');
   return receiveEncryptedSession(input);
 };
 

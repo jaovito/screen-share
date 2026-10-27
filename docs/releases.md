@@ -22,7 +22,7 @@ No signing credentials were created/configured by this implementation. Ordinary 
 
 Update/review matching versions in package/Tauri/Cargo metadata through a PR and pass required CI. Create a reviewed `vMAJOR.MINOR.PATCH` tag pointing to the exact `main` commit to build. The workflow rejects another branch; the build verifies that the existing tag points to its checked-out commit. It never creates/moves tags or changes version files automatically.
 
-The compiled control URL must be your configured public HTTPS origin from [deployment.md](deployment.md). Native cookies remain inside the Rust client. The updater endpoint is fixed to the package's GitHub repository:
+The compiled control URL (`SCREEN_SHARE_API_URL`) must be your configured public HTTPS origin from [deployment.md](deployment.md). Supply the matching public WSS SFU origin as `SCREEN_SHARE_RTC_URL`; desktop playback permits only that exact RTC origin and its HTTP counterpart. Both values are public build configuration. Native cookies remain inside the Rust client. The updater endpoint is fixed to the package's GitHub repository:
 
 ```text
 https://github.com/jaovito/screen-share/releases/latest/download/latest.json
@@ -40,13 +40,13 @@ This validates formats/version/configuration, not whether the private/public key
 
 ## Dispatch and inspect the draft
 
-From GitHub Actions, manually dispatch **Prepare signed Windows release** on `main`, providing the exact existing tag and public API origin. Protected-environment approval is required according to the configured policy. The first job has read-only repository permission; only the dependent draft-creation job receives `contents: write`.
+From GitHub Actions, manually dispatch **Prepare signed Windows release** on `main`, providing the exact existing tag, public API origin and public WSS RTC origin. Protected-environment approval is required according to the configured policy. The first job has read-only repository permission; only the dependent draft-creation job receives `contents: write`.
 
 The build produces fresh version-matching NSIS installers and `.sig` files, an updater `latest.json`, release notes with the exact Git revision, and `SHA256SUMS`. It refuses missing signatures/stale artifacts and exclusively stages `target/signed-release/<tag>/`. The workflow checks hashes after artifact transfer, then creates a **draft** release; an existing release causes an explicit failure rather than silently replacing its assets. No PR/push event triggers this workflow. No step publishes/promotes the draft.
 
 Before publishing manually:
 
-- Verify the embedded API origin, update public key/channel and version against the intended deployment.
+- Verify the embedded API and RTC origins, update public key/channel and version against the intended deployment.
 - Test installation and update from a previous signed test version using the matching trusted public key. A mismatched signer key must fail verification. Reject tampered artifact/signature combinations.
 - Complete Windows hardware/two-PC, scope preservation, audio consent, revocation/migration, restrictive-network and prolonged acceptance for the exact candidate. Review [PLAN.md](../PLAN.md) and [validation.md](validation.md).
 - Review private security findings, dependency/license notices and sanitized release notes. Ensure no credentials, personal media or raw support dumps are attached.

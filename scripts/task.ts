@@ -85,6 +85,10 @@ async function desktop(build: boolean) {
         ...desktopEnvironment(),
         SCREEN_SHARE_API_URL:
           process.env.SCREEN_SHARE_API_URL ?? process.env.VITE_API_URL ?? 'http://127.0.0.1:3000',
+        SCREEN_SHARE_RTC_URL:
+          process.env.SCREEN_SHARE_RTC_URL ??
+          process.env.LIVEKIT_PUBLIC_URL ??
+          'ws://127.0.0.1:7880',
         CARGO_BUILD_JOBS: '2',
       },
     },

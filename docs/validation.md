@@ -287,3 +287,26 @@ The first provider check of the new Windows-only recovery pipeline (`e1dca45`, r
 The downloaded Actions artifact SHA-256 matched GitHub's recorded digest (`1ff4ac20deb074933819a78e56a41bee0b241ab201a81a04a8b4b2308b81af27`). An official SHA-256-verified temporary 7-Zip inspector checked the NSIS CRC without executing Windows binaries. The installer contains both `screen-share-desktop.exe` (13,734,912 bytes) and `ss-media-proof.exe` (30,685,184 bytes). Both are PE32+ AMD64; the bundled publisher contains the private `--desktop-control` entrypoint. Import-table inspection found no external VCRUNTIME/MSVCP, WebView2Loader or WebRTC DLL dependency. This is artifact-content evidence, not a clean-machine installation or Authenticode claim.
 
 Final UI cleanup removes the prototype title from the helper window and hides the auxiliary picker owner after selection in the regular desktop flow, while retaining its STA message pump, selected item and lifetime. The standalone operator tool keeps its visible stop window. Windows-target strict Clippy passed; an additional Windows-only test creates the helper, hides it, verifies message-pump liveness and checks destruction. Its execution and the updated installer require the follow-up provider run. No browser/API behavior, authorization, source recovery or content key changes accompany this cleanup.
+
+
+## 2026-10-27 — Integrated Windows receiver
+
+Implemented ADR 0013: the desktop and web viewer load one public browser-safe E2EE
+receiver package. Desktop account/grant requests retain native IPC/cookie transport.
+The exact configured RTC origin and secure WebView scheme replace the previous
+publication-only renderer policy. See [security review](security-review-desktop-receiver.md).
+
+Local validation passed: `bun run check:ts` (strict types, architecture, unit/DOM,
+production builds), `bun run test:coverage` (84 runtime files inventoried; 99.24%
+lines, 96.95% functions overall, all per-file gates passed), all eight desktop/mobile
+`bun run test:e2e` cases (39.3 seconds), and `bun run test:media` (real E2EE worker,
+synthetic H264 decoding and wrong-key rejection; 5.0-second test). Native macOS
+validation passed 15 desktop library tests, strict desktop Clippy and workspace
+formatting with two Cargo jobs. Twelve synthetic release RTC-input cases passed.
+Independent static security review found no confirmed actionable issue in scope.
+
+Actual Windows WebView2 regression is configured with owned synthetic metadata,
+H264/Opus and a pinned real SFU. Its provider result remains pending at this entry;
+local browser playback and Mac compilation do not establish Windows execution.
+Physical GPU/capture, two-PC/TURN, prolonged operation and signed-install/update
+acceptance remain unexecuted gates.

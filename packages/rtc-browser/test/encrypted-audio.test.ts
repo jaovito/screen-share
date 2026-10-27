@@ -1,6 +1,6 @@
 import { expect, it, mock } from 'bun:test';
 import { Track } from 'livekit-client';
-import { createEncryptedAudio } from './encrypted-audio';
+import { createEncryptedAudio } from '../src/encrypted-audio';
 
 function publication(trackSid = 'audio') {
   return {

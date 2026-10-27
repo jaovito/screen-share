@@ -1,0 +1,22 @@
+{
+  "name": "@screen-share/rtc-browser",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "bun --bun ../../node_modules/typescript/bin/tsc -p tsconfig.json && bun --bun ../../node_modules/typescript/bin/tsc -p tsconfig.test.json"
+  },
+  "dependencies": {
+    "@screen-share/contracts": "workspace:*",
+    "@screen-share/diagnostics": "workspace:*",
+    "livekit-client": "2.23.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jaovito/screen-share.git"
+  }
+}

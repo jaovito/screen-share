@@ -51,7 +51,7 @@ jobs:
       - run: rustup toolchain install 1.99.1 --profile minimal --component rustfmt --component clippy
       - run: bun run check:rust
   windows-desktop:
-    timeout-minutes: 45
+    timeout-minutes: 60
     runs-on: windows-2025
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -110,6 +110,12 @@ jobs:
         env:
           CARGO_BUILD_JOBS: 2
       - run: bun run build:desktop
+      - name: Install the pinned browser for the actual WebView2 receiver fixture
+        run: bun --bun node_modules/@playwright/test/cli.js install chromium
+      - name: Test encrypted reception in the actual Windows application
+        run: bun scripts/test-desktop-receiver.ts
+        env:
+          CARGO_BUILD_JOBS: 2
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: desktop-windows-development-unsigned

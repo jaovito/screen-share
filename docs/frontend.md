@@ -71,3 +71,5 @@ import { App } from '@app/App';
 ```
 
 Local TypeScript imports omit .js/.ts/.tsx extensions; retain real asset extensions such as .css/.json. Workspaces use @screen-share public exports and expose TS source. Aliases are local to an application, not a replacement for workspace exports. Cross-feature imports still use the public index; @shared cannot depend on @features/@app. Architecture checks resolve aliases before checking direction and cycles. Do not create a shared directory merely because its alias exists.
+
+The concrete encrypted receiver shared by the web viewer and Windows application lives in `packages/rtc-browser`, exported only through `@screen-share/rtc-browser`. It owns LiveKit/E2EE/track cleanup and accepts DOM media sinks plus callbacks; it has no React, Tauri or server/runtime dependency. Apps load it lazily and supply the receiver adapter to `@screen-share/ui/product`. Its SDK/DOM tests run in the frontend suite.

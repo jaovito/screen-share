@@ -13,10 +13,9 @@
     "@screen-share/contracts": "workspace:*",
     "@screen-share/i18n": "workspace:*",
     "@screen-share/ui": "workspace:*",
-    "livekit-client": "2.23.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
-    "@screen-share/diagnostics": "workspace:*"
+    "@screen-share/rtc-browser": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "19.3.0",

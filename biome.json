@@ -66,6 +66,7 @@
       "includes": [
         "apps/viewer-web/src/**",
         "apps/desktop/src/**",
+        "packages/rtc-browser/src/**",
         "apps/control-api/src/**/domain/**",
         "apps/control-api/src/**/application/**",
         "!**/*.test.ts",
