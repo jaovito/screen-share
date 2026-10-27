@@ -40,7 +40,7 @@ The client verifies the room/local participant after connection, then requests o
 
 ## Disposable transport regression
 
-Prerequisites: pinned Bun, running Docker, installed Playwright Chromium (`bun run test:e2e:install`). Run:
+Prerequisites: pinned Bun, running Docker with a host-routable private container interface (validated on Linux hosts and macOS/OrbStack), installed Playwright Chromium (`bun run test:e2e:install`). Run:
 
 ```sh
 bun run test:media
@@ -80,6 +80,6 @@ Execute and validate the implemented hardware converter/encoder and native encry
 
 `bun run test:media:native` enables the optional `ss-rtc-livekit/native-proof` SDK and runs a Rust publisher against the actual browser encryption worker/decoder. A browser fixture generates bounded synthetic 854×480 H.264 Annex B samples through WebCodecs and downloads a temporary binary fixture; no frames pass through JSON or the product API. The Rust executable publishes those pre-encoded units with its independent media key. A correct-key browser must decode motion while a wrong-key browser decodes none. Its two-job compilation and one browser worker are serial; this does not use WGC, Media Foundation, or a hardware encoder.
 
-Executed on macOS arm64 with OrbStack. Native WebRTC ignores loopback interfaces by default, so this fixture lets its own SFU advertise the private container interface while all published ports/signaling stay bound to 127.0.0.1. A bounded preflight rejects runtimes without host-routable private container IPs. It does not open LAN listeners or patch the SDK. Standard Docker Desktop routing may not support this optional fixture. On macOS the test executable alone receives the SDK-required `-ObjC` linker flag. Windows SDK builds require its static CRT flag. See [SDK build guidance](https://github.com/livekit/rust-sdks#building) and [OrbStack private container access](https://docs.orbstack.dev/docker/network#direct-container-access).
+Executed on macOS arm64 with OrbStack. Native WebRTC ignores loopback interfaces by default, and forced-loopback browser RTC also failed intermittently/under Linux CI. Both fixtures therefore let their own SFU advertise the private container interface while all published ports/signaling stay bound to 127.0.0.1. A bounded preflight rejects runtimes without host-routable private container IPs. It does not open LAN listeners or patch the SDK. Standard Docker Desktop routing may not support this optional fixture. On macOS the test executable alone receives the SDK-required `-ObjC` linker flag. Windows SDK builds require its static CRT flag. See [SDK build guidance](https://github.com/livekit/rust-sdks#building) and [OrbStack private container access](https://docs.orbstack.dev/docker/network#direct-container-access).
 
 The test establishes interoperability of the selected native/browser SDKs with synthetic pre-encoded H.264 and matching string-key derivation. It is not two-PC proof, a malicious-SFU assessment, native GPU encoding evidence, or a performance benchmark. Actual hardware and prolonged tests remain mandatory.

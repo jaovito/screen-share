@@ -63,11 +63,6 @@ jobs:
       - run: rustup toolchain install 1.99.1 --profile minimal --component rustfmt --component clippy
       - run: bun install --frozen-lockfile
       - run: bun run check:rust
-      - run: bun run --filter @screen-share/contracts typecheck
-      - run: bun run --filter @screen-share/desktop build
-      - run: cargo check --locked -p screen-share-desktop --all-targets
-      - run: cargo test --locked -p screen-share-desktop --lib
-      - run: bun run build:desktop
       - name: Check the opt-in Windows media proof and SDK
         run: cargo clippy --locked -p ss-media-proof --features native-proof --all-targets -- -D warnings
         env:
@@ -82,6 +77,11 @@ jobs:
         env:
           CARGO_BUILD_JOBS: 2
           RUSTFLAGS: -C target-feature=+crt-static
+      - run: bun run --filter @screen-share/contracts typecheck
+      - run: bun run --filter @screen-share/desktop build
+      - run: cargo check --locked -p screen-share-desktop --all-targets
+      - run: cargo test --locked -p screen-share-desktop --lib
+      - run: bun run build:desktop
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: desktop-windows-development-unsigned

@@ -31,9 +31,8 @@ try {
       'rtc:',
       `  tcp_port: ${tcp}`,
       `  udp_port: ${udp}`,
-      ...(native ? [] : ['  node_ip: "127.0.0.1"']),
       '  use_external_ip: false',
-      '  enable_loopback_candidate: true',
+      '  enable_loopback_candidate: false',
       'keys:',
       `  ${apiKey}: ${apiSecret}`,
       'logging:',
@@ -82,7 +81,7 @@ try {
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
   if (!ready) throw new Error('Disposable media server did not start.');
-  if (native) {
+  {
     const inspection = spawnSync(
       'docker',
       ['inspect', '--format', '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}', name],
@@ -99,7 +98,7 @@ try {
       if (!response.ok) throw new Error('Private media interface unavailable.');
     } catch {
       throw new Error(
-        'Native WebRTC needs a host-routable private container interface (validated with macOS/OrbStack). This Docker runtime does not provide it; no LAN ports were opened.',
+        'The media proof needs a host-routable private container interface (validated with macOS/OrbStack). This Docker runtime does not provide it; no LAN ports were opened.',
       );
     }
   }
