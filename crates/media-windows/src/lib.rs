@@ -1,3 +1,6 @@
+#[cfg(any(target_os = "windows", test))]
+mod recovery;
+
 #[cfg(all(target_os = "windows", feature = "probe-ui"))]
 mod probe_window;
 
@@ -5,6 +8,11 @@ mod probe_window;
 pub use probe_window::{ProbeWindow, terminate_probe};
 
 mod encoder_error;
+#[cfg(any(target_os = "windows", test))]
+mod encoder_timing;
+
+#[cfg(target_os = "windows")]
+pub use encoder_timing::EncoderDiagnostics;
 
 pub use encoder_error::EncoderError;
 

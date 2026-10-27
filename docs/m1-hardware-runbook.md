@@ -35,3 +35,9 @@ Store a voluntary sanitized English report with hardware/profile/topology, exact
 ## Advance or revise
 
 M1 passes only after the Windows/GPU and two-PC evidence supports the chosen capture/conversion/encoder/transport/key path and feedback/recovery assumptions. If a stage is unsupported, stalls, changes the source, decodes with a wrong key, or cannot provide the required evidence, revise that stage and rerun its gate. Keep M1 open; do not advance M2–M5 or advertise production readiness merely because CI is green.
+
+## Product resource recovery and diagnostics acceptance
+
+Use the normal authenticated Windows desktop for this additional gate. In a controlled test session, exercise a supported display-mode/device-reset case for the selected item and confirm that resource recovery retains the same item/session, never opens a picker, publishes no stale-generation output and resumes with new parameter-set IDR data. Record successful recovery count and the three session-total attempt bound; repeat with user pause, session revocation and source closure to confirm those gates prevent recovery. Cleanup failure must stop publication rather than claiming successful recovery. Do not substitute the pure retry-policy or generation tests for this device exercise.
+
+Inspect the once-per-second diagnostics and five-second evidence window. Record conversion submission CPU wall time, input-to-output latency, actual captured/encoded cadence and fresh transport targets. These are different quantities: input-to-output latency includes asynchronous MFT/driver/GPU queues, conversion submission is not GPU execution time, transport target is not measured upload throughput and RTT is not visual latency. Sparse updates from a static or minimized source must remain inconclusive without independently observed rendering activity. Validate source-closed, authorization and encoder/capture error explanations in all supported UI locales.

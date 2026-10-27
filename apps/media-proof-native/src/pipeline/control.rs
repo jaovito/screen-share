@@ -15,6 +15,7 @@ pub(super) struct Control {
     quality: AdaptiveQuality,
     clock: Instant,
     quality_reason: Option<QualityReason>,
+    observed_send_bitrate: Option<(u64, u64)>,
 }
 
 impl Control {
@@ -36,6 +37,7 @@ impl Control {
             quality,
             clock: Instant::now(),
             quality_reason: None,
+            observed_send_bitrate: None,
         })
     }
 
@@ -45,6 +47,22 @@ impl Control {
 
     pub fn bitrate(&self) -> u32 {
         self.target_bitrate
+    }
+
+    pub fn bitrate_cap(&self) -> u32 {
+        self.bitrate_cap
+    }
+
+    pub fn available_send_bitrate(&self) -> Option<u64> {
+        self.available_send_bitrate_at(
+            self.clock.elapsed().as_millis().min(u128::from(u64::MAX)) as u64
+        )
+    }
+
+    fn available_send_bitrate_at(&self, now_ms: u64) -> Option<u64> {
+        self.observed_send_bitrate
+            .filter(|(_, at)| now_ms.checked_sub(*at).is_some_and(|age| age <= 2500))
+            .map(|(value, _)| value)
     }
 
     pub fn profile(&self) -> VideoProfile {
@@ -57,6 +75,7 @@ impl Control {
 
     pub fn suspend(&mut self) {
         self.quality.suspend();
+        self.observed_send_bitrate = None;
     }
 
     pub fn interval_100ns(&self) -> i64 {
@@ -88,6 +107,7 @@ impl Control {
                     "RTC bitrate is below the hardware encoder minimum; publication stopped",
                 );
             }
+            self.observed_send_bitrate = Some((bitrate.min(1_000_000_000_000), now_ms));
             self.target_bitrate = bitrate.min(u64::from(self.bitrate_cap)) as u32;
         }
         if let Some(fps) = feedback.target_fps {
@@ -211,6 +231,35 @@ impl Pacer {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn send_target_evidence_expires_and_pause_discards_it_without_inventing_capacity() {
+        let mut control = Control::new(
+            10_000_000,
+            VideoProfile::new(1080, 60).unwrap(),
+            QualityMode::Motion,
+        )
+        .unwrap();
+        let mut report = PipelineReport::default();
+        assert_eq!(control.available_send_bitrate_at(0), None);
+        control
+            .feedback_at(
+                EncoderFeedback {
+                    request_keyframe: false,
+                    target_bitrate_bps: Some(4_000_000),
+                    target_fps: None,
+                },
+                &mut report,
+                1000,
+            )
+            .unwrap();
+        assert_eq!(control.available_send_bitrate_at(3500), Some(4_000_000));
+        assert_eq!(control.available_send_bitrate_at(3501), None);
+        assert_eq!(control.available_send_bitrate_at(999), None);
+        control.suspend();
+        assert_eq!(control.available_send_bitrate_at(1000), None);
+        assert_eq!(control.bitrate_cap(), 10_000_000);
+    }
 
     #[test]
     fn sdk_bitrate_feedback_drives_slow_profile_change_and_preserves_keyframe_requests() {

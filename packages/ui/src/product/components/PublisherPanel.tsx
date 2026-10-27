@@ -5,6 +5,7 @@ import type { ProductApi } from '../services/product-api';
 import type { NativeSharingStatus, PublisherAdapter } from '../types';
 import { AudioControls, type AudioSelection } from './AudioControls';
 import { PeerReportsPanel } from './PeerReportsPanel';
+import { PublisherDiagnostics } from './PublisherDiagnostics';
 
 export function PublisherPanel({
   api,
@@ -306,22 +307,7 @@ export function PublisherPanel({
           )}
         </p>
       )}
-      {status && (
-        <details className="diagnostics">
-          <summary>{t('diagnostics')}</summary>
-          <dl>
-            <dt>{t('framesCaptured')}</dt>
-            <dd>{status.framesCaptured}</dd>
-            <dt>{t('framesEncoded')}</dt>
-            <dd>{status.framesEncoded}</dd>
-            <dt>{t('encodedBytes')}</dt>
-            <dd>{status.encodedBytes}</dd>
-            <dt>{t('elapsed')}</dt>
-            <dd>{Math.floor(status.elapsedMs / 1000)}</dd>
-          </dl>
-          <p className="notice">{t('metricNotice')}</p>
-        </details>
-      )}
+      {status && <PublisherDiagnostics status={status} />}
     </section>
   );
 }

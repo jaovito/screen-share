@@ -133,3 +133,43 @@ fn process_audio_requires_an_explicit_pid_and_exact_creation_time_without_fallba
     assert_eq!(request.audio_mode, AudioMode::Off);
     assert_eq!(request.audio_process().unwrap(), None);
 }
+
+#[test]
+fn processing_diagnostic_bounds_and_legacy_compatibility_are_explicit() {
+    let mut status = SharingStatus::idle();
+    status.capture_recoveries = 4;
+    assert!(status.validate().is_err());
+    status.capture_recoveries = 3;
+    status.diagnostics_generation = 2;
+    status.diagnostics_elapsed_ms = 5000;
+    status.conversion_submission_ms = Some(0.5);
+    status.encoder_output_latency_ms = Some(8.0);
+    status.available_send_bitrate_bps = Some(2_000_000);
+    status.manual_bitrate_bps = Some(4_000_000);
+    assert!(status.validate().is_ok());
+    for invalid in [f64::NAN, f64::INFINITY, -1.0, 60_001.0] {
+        status.encoder_output_latency_ms = Some(invalid);
+        assert!(status.validate().is_err());
+    }
+    status.encoder_output_latency_ms = None;
+    status.available_send_bitrate_bps = Some(1_000_000_000_001);
+    assert!(status.validate().is_err());
+    status.available_send_bitrate_bps = None;
+    status.manual_bitrate_bps = Some(0);
+    assert!(status.validate().is_err());
+    let mut legacy = serde_json::to_value(SharingStatus::idle()).unwrap();
+    for field in [
+        "captureRecoveries",
+        "diagnosticsGeneration",
+        "diagnosticsElapsedMs",
+        "conversionSubmissionMs",
+        "encoderOutputLatencyMs",
+        "availableSendBitrateBps",
+        "manualBitrateBps",
+    ] {
+        legacy.as_object_mut().unwrap().remove(field);
+    }
+    let decoded: SharingStatus = serde_json::from_value(legacy).unwrap();
+    assert_eq!(decoded.diagnostics_generation, 0);
+    assert_eq!(decoded.encoder_output_latency_ms, None);
+}

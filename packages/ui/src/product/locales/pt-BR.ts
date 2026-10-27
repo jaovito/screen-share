@@ -168,4 +168,60 @@ export const ptBR = {
     'Não há relatórios recentes. A ausência deles não comprova falha na reprodução.',
   peerPossiblyLimited:
     'Várias observações recentes sugerem possível limite de decodificação ou download deste espectador enquanto o transmissor codificava no ritmo previsto. É uma indicação, não um diagnóstico confirmado.',
+  missingSessionKey:
+    'A chave de conteúdo foi apagada ao recarregar esta página. Encerre esta sessão, prepare outra e distribua a nova chave em particular antes de reiniciar.',
+  reason_source_closed:
+    'A fonte selecionada foi fechada. O compartilhamento parou; escolha uma fonte explicitamente para iniciar novamente.',
+  reason_selection_canceled: 'A seleção da fonte foi cancelada. Nada está sendo capturado.',
+  reason_authorization_failed:
+    'O compartilhamento parou porque o acesso atual não pôde ser confirmado. Atualize a sala antes de reiniciar.',
+  reason_capture_failed:
+    'A fonte selecionada ficou indisponível. O compartilhamento parou sem trocar de fonte. Escolha uma fonte explicitamente para tentar novamente.',
+  reason_encoder_failed:
+    'O processamento de vídeo falhou. O compartilhamento parou; confira o perfil e tente novamente.',
+  reason_transport_failed:
+    'A conexão de mídia criptografada falhou. O compartilhamento parou; confira a conexão antes de reiniciar.',
+  reason_cleanup_failed:
+    'A liberação da mídia não terminou normalmente. Feche e abra o aplicativo antes de compartilhar novamente.',
+  reason_lease_expired:
+    'A autorização de compartilhamento expirou. Atualize a sala e inicie novamente explicitamente.',
+  reason_invalid_request:
+    'A solicitação de compartilhamento é inválida. Escolha configurações compatíveis antes de tentar novamente.',
+  reason_worker_failed:
+    'O mecanismo de mídia nativo parou. Reinicie o compartilhamento explicitamente.',
+  reason_engine_missing:
+    'O mecanismo de mídia incluído está ausente. Reinstale o aplicativo desktop.',
+  reason_child_unresponsive:
+    'O mecanismo de mídia nativo deixou de responder e foi encerrado. Reinicie o compartilhamento explicitamente.',
+  reason_stopped_by_user:
+    'O compartilhamento foi encerrado explicitamente. Nenhuma fonte está sendo publicada.',
+  reason_unsupported_platform: 'A captura nativa está indisponível neste sistema operacional.',
+  reason_unknown:
+    'O compartilhamento parou por um motivo indisponível. Atualize a sala antes de tentar novamente.',
+  advice_insufficientEvidence:
+    'Ainda não há evidência contínua suficiente para identificar um gargalo. Conteúdo estático pode produzir poucos quadros legitimamente.',
+  advice_sourceInactive:
+    'A fonte está confirmadamente inativa. A cadência de captura sozinha não confirma essa condição.',
+  advice_captureLimited:
+    'A atividade verificada da fonte supera a cadência de captura observada. Investigue a disponibilidade da captura.',
+  advice_encoderLimited:
+    'O trabalho medido do codificador excede o tempo por quadro enquanto a captura acompanha a meta. Isso não confirma saturação da GPU.',
+  advice_processingLimited:
+    'A captura acompanha a meta, mas a saída codificada fica para trás e a latência medida entre entrada e saída supera o tempo por quadro. Ela inclui atrasos de MFT, driver, GPU e filas; não identifica um gargalo do codec ou da GPU.',
+  advice_uploadLimited:
+    'A meta recente de bitrate do transporte permanece abaixo do teto solicitado. Investigue o caminho de envio; essa meta não é uma medição da capacidade de upload.',
+  advice_receiverLimited:
+    'A saída do publicador acompanha a meta, mas este espectador apresenta pressão na decodificação ou recepção. Investigue sua reprodução e rede.',
+  advice_healthy:
+    'As observações fornecidas de fonte, processamento e reprodução acompanham suas metas.',
+  sourceActivityUnknown:
+    'A atividade de renderização da fonte está indisponível. FPS baixo na captura pode refletir conteúdo estático, janela minimizada ou fonte lenta; isso sozinho não identifica falha de captura.',
+  captureFps: 'Quadros capturados por segundo',
+  encodedFps: 'Quadros codificados por segundo',
+  targetFps: 'Meta atual de quadros por segundo',
+  conversionSubmission: 'Tempo de CPU na submissão da conversão',
+  encoderOutputLatency: 'Latência entre entrada e saída do codificador',
+  availableSendTarget: 'Meta recente de bitrate do transporte',
+  processingMetricNotice:
+    'Os tempos são médias móveis limitadas à geração atual de processamento. A submissão da conversão mede a chamada na CPU, não a execução na GPU. A latência de saída inclui filas de MFT/driver/GPU. Pausas, reconexões, mudanças de perfil e recuperação reiniciam a janela de evidências.',
 } as const;

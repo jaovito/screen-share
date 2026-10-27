@@ -130,6 +130,7 @@ export function SessionPanel({
             <p className="notice">{t('keyNotice')}</p>
           </div>
         )}
+        {owner && active && !key && <p role="status">{t('missingSessionKey')}</p>}
         {keyError && <p role="alert">{t('keyUnavailable')}</p>}
       </section>
       {owner && active && (

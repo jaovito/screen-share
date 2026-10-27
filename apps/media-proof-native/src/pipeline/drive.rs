@@ -1,3 +1,6 @@
+mod recovery;
+mod video;
+
 use super::{
     PipelineReport, Renewal, Signals, WorkerPhase,
     control::{Control, Pacer},
@@ -6,7 +9,8 @@ use ss_audio_windows::SystemLoopback;
 use ss_domain::{QualityMode, QualityReason, VideoProfile};
 use ss_media_proof::protocol::{AudioMode, QualityMode as RequestedQuality};
 use ss_media_windows::{
-    CaptureReader, CaptureStatus, EncoderPoll, HardwareEncoder, NativeFrame, SubmitOutcome,
+    CaptureError, CaptureReader, CaptureStatus, EncoderPoll, HardwareEncoder, NativeFrame,
+    SubmitOutcome,
 };
 use ss_rtc_livekit::native_proof::{NativePublisher, NativeTransportError};
 use std::{
@@ -14,7 +18,7 @@ use std::{
         atomic::Ordering,
         mpsc::{Receiver, TryRecvError},
     },
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 pub(super) struct Pipeline {
@@ -32,6 +36,10 @@ pub(super) struct Pipeline {
     audio: Option<SystemLoopback>,
     quality_mode: QualityMode,
     adaptation_reason: Option<QualityReason>,
+    diagnostics_generation: u64,
+    diagnostics_started: Instant,
+    capture_generation: Option<u64>,
+    capture_recovering: bool,
 }
 
 impl Pipeline {
@@ -61,6 +69,10 @@ impl Pipeline {
             audio: None,
             quality_mode,
             adaptation_reason: None,
+            diagnostics_generation: 1,
+            diagnostics_started: Instant::now(),
+            capture_generation: None,
+            capture_recovering: false,
         })
     }
 
@@ -109,7 +121,11 @@ impl Pipeline {
             .map_err(|_| "Publication authorization or transport became unavailable")?;
         self.control.feedback(feedback, &mut self.report)?;
         if let Some(encoder) = self.encoder.as_mut() {
-            self.control.apply(encoder, &mut self.report)?;
+            if let Err(error) = self.control.apply(encoder, &mut self.report) {
+                if !encoder.device_lost() {
+                    return Err(error);
+                }
+            }
         }
         Ok(())
     }
@@ -122,6 +138,25 @@ impl Pipeline {
             snapshot.target_bitrate_bps = Some(self.control.bitrate());
             snapshot.adaptation_reason = self.adaptation_reason;
             snapshot.report = self.report.clone();
+            let timings = self
+                .encoder
+                .as_ref()
+                .map(|encoder| encoder.diagnostics())
+                .unwrap_or_default();
+            snapshot.diagnostics_generation = self.diagnostics_generation;
+            snapshot.diagnostics_elapsed_ms = self
+                .diagnostics_started
+                .elapsed()
+                .as_millis()
+                .min(u128::from(u64::MAX)) as u64;
+            snapshot.conversion_submission_ms = timings.conversion_submission_ms;
+            snapshot.encoder_output_latency_ms = timings.encoder_output_latency_ms;
+            snapshot.available_send_bitrate_bps = if phase == WorkerPhase::Sharing {
+                self.control.available_send_bitrate()
+            } else {
+                None
+            };
+            snapshot.manual_bitrate_bps = Some(self.control.bitrate_cap());
         }
     }
 
@@ -133,6 +168,11 @@ impl Pipeline {
                 .map_err(|_| "Hardware encoder cleanup failed")?;
         }
         self.encoder = None;
+        self.diagnostics_generation = self
+            .diagnostics_generation
+            .checked_add(1)
+            .ok_or("Diagnostic generation overflowed")?;
+        self.diagnostics_started = Instant::now();
         self.pacing = Pacer::new();
         self.control.recover(true);
         Ok(())
@@ -187,11 +227,11 @@ impl Pipeline {
                 .map_err(|_| "Fresh publication grant was rejected")?,
         }
         publisher
-            .set_paused(self.paused)
+            .set_paused(self.paused || self.capture_recovering)
             .map_err(|_| "Publication state after renewal failed")?;
         if let Some(audio) = self.audio.as_mut() {
             audio
-                .set_paused(self.paused)
+                .set_paused(self.paused || self.capture_recovering)
                 .map_err(|_| "Audio state after renewal failed")?;
         }
         self.publish_snapshot(
@@ -212,11 +252,23 @@ impl Pipeline {
         renewals: &Receiver<Renewal>,
         signals: &Signals,
     ) -> Result<(), &'static str> {
-        'media: while !signals.stop.load(Ordering::Acquire) {
+        while !signals.stop.load(Ordering::Acquire) {
             self.feedback(publisher)?;
-            self.adapt_profile(publisher)?;
-            if !capture_active(&reader)? {
-                break;
+            let generation = reader.generation();
+            if self
+                .encoder
+                .as_ref()
+                .is_some_and(|encoder| encoder.device_lost())
+            {
+                let _ = reader.report_device_loss(self.capture_generation.unwrap_or(generation));
+            }
+            if self.capture_generation != Some(generation) {
+                self.stop_encoder()?;
+                self.capture_generation = Some(generation);
+                self.control.suspend();
+                publisher
+                    .require_keyframe()
+                    .map_err(|_| "Recovery keyframe gate failed")?;
             }
             match renewals.try_recv() {
                 Ok(renewal) => {
@@ -236,15 +288,47 @@ impl Pipeline {
                 self.paused = paused;
                 if let Some(audio) = self.audio.as_mut() {
                     audio
-                        .set_paused(paused)
+                        .set_paused(paused || self.capture_recovering)
                         .map_err(|_| "Audio pause or resume failed")?;
                 }
-                if !paused {
+                if !paused && !self.capture_recovering {
                     publisher
                         .set_paused(false)
                         .map_err(|_| "Publication resume failed")?;
                 }
             }
+            if matches!(
+                reader.status().map_err(|_| "Capture status unavailable")?,
+                CaptureStatus::Failed(CaptureError::DeviceLost)
+            ) {
+                self.pause_for_recovery(publisher)?;
+                // The STA retains the exact selected item while rebuilding only
+                // its invalidated hardware resources. Keep checking the lease.
+                self.publish_snapshot(
+                    signals,
+                    if self.paused {
+                        WorkerPhase::Paused
+                    } else {
+                        WorkerPhase::Sharing
+                    },
+                );
+                tokio::time::sleep(Duration::from_millis(5)).await;
+                continue;
+            }
+            self.adapt_profile(publisher)?;
+            if reader.generation() != generation {
+                continue;
+            }
+            if !capture_active(&reader, generation)? {
+                if matches!(
+                    reader.status().map_err(|_| "Capture status unavailable")?,
+                    CaptureStatus::Failed(CaptureError::DeviceLost)
+                ) {
+                    continue;
+                }
+                break;
+            }
+            self.resume_after_recovery(publisher)?;
             self.publish_snapshot(
                 signals,
                 if self.paused {
@@ -285,6 +369,9 @@ impl Pipeline {
                 .take_frame()
                 .map_err(|_| "Native capture frame unavailable")?
             {
+                if frame.generation() != generation {
+                    continue;
+                }
                 self.report.frames_consumed = self.report.frames_consumed.saturating_add(1);
                 self.pending = Some(frame);
             }
@@ -299,106 +386,33 @@ impl Pipeline {
                     .checked_sub(origin)
                     .ok_or("Capture clock changed")?
                     / 10;
-                self.encoder = Some(HardwareEncoder::new(frame, self.profile, self.control.bitrate()).map_err(|_| "Hardware encoder initialization failed or capabilities are unsupported")?);
+                match HardwareEncoder::new(frame, self.profile, self.control.bitrate()) {
+                    Ok(encoder) => self.encoder = Some(encoder),
+                    Err(_) if HardwareEncoder::device_lost_for(frame) => {
+                        let _ = reader.report_device_loss(generation);
+                        self.pause_for_recovery(publisher)?;
+                        continue;
+                    }
+                    Err(_) => {
+                        return Err(
+                            "Hardware encoder initialization failed or capabilities are unsupported",
+                        );
+                    }
+                }
                 self.control.initialized();
             }
-            tokio::task::yield_now().await;
-            if signals.stop.load(Ordering::Acquire)
-                || signals.paused.load(Ordering::Acquire)
-                || !capture_active(&reader)?
-            {
-                continue;
-            }
-            self.feedback(publisher)?;
-            for _ in 0..8 {
-                if signals.stop.load(Ordering::Acquire)
-                    || signals.paused.load(Ordering::Acquire)
-                    || !capture_active(&reader)?
-                {
-                    continue 'media;
-                }
-                self.feedback(publisher)?;
-                let Some(encoder) = self.encoder.as_mut() else {
-                    break;
-                };
-                let event = encoder
-                    .poll()
-                    .map_err(|_| "Asynchronous hardware encoding failed")?;
-                tokio::task::yield_now().await;
-                self.feedback(publisher)?;
-                match event {
-                    EncoderPoll::Pending => break,
-                    EncoderPoll::NeedInput => {}
-                    EncoderPoll::Output(unit) => {
-                        let unit = unit
-                            .offset_timestamp_us(self.encoder_offset_us)
-                            .map_err(|_| "Publication clock overflowed")?;
-                        self.report.access_units = self.report.access_units.saturating_add(1);
-                        tokio::task::yield_now().await;
-                        self.feedback(publisher)?;
-                        if signals.stop.load(Ordering::Acquire)
-                            || signals.paused.load(Ordering::Acquire)
-                            || !capture_active(&reader)?
-                        {
-                            continue 'media;
-                        }
-                        match publisher.push(&unit) {
-                            Ok(feedback) => {
-                                self.report.bytes_sent = self
-                                    .report
-                                    .bytes_sent
-                                    .saturating_add(unit.payload().len() as u64);
-                                self.control.accepted(unit.is_keyframe());
-                                self.control.feedback(feedback, &mut self.report)?;
-                            }
-                            Err(NativeTransportError::KeyframeRequired) => {
-                                self.control.recover(false)
-                            }
-                            Err(NativeTransportError::FrameRejected) => self.control.recover(true),
-                            Err(_) => {
-                                return Err(
-                                    "Encoded publication failed or its lease became invalid",
-                                );
-                            }
-                        }
-                    }
-                }
-            }
-            self.feedback(publisher)?;
-            if signals.stop.load(Ordering::Acquire)
-                || signals.paused.load(Ordering::Acquire)
-                || !capture_active(&reader)?
-            {
-                continue;
-            }
-            if let Some(encoder) = self.encoder.as_mut()
-                && let Some(frame) = self.pending.as_ref()
-                && self
-                    .pacing
-                    .due(frame.timestamp_100ns(), self.control.interval_100ns())?
-            {
-                match encoder
-                    .submit(frame)
-                    .map_err(|_| "GPU conversion or hardware encoder input failed")?
-                {
-                    SubmitOutcome::Accepted => {
-                        self.pacing.accepted(frame.timestamp_100ns())?;
-                        self.report.samples_submitted =
-                            self.report.samples_submitted.saturating_add(1);
-                        self.pending = None;
-                    }
-                    SubmitOutcome::Backpressure => {}
-                }
-            }
+            self.encode_pending(publisher, &reader, generation, signals)
+                .await?;
             tokio::time::sleep(Duration::from_millis(3)).await;
         }
         Ok(())
     }
 }
 
-fn capture_active(reader: &CaptureReader) -> Result<bool, &'static str> {
+fn capture_active(reader: &CaptureReader, expected_generation: u64) -> Result<bool, &'static str> {
     match reader.status().map_err(|_| "Capture status unavailable")? {
-        CaptureStatus::Capturing => Ok(true),
+        CaptureStatus::Capturing => Ok(reader.generation() == expected_generation),
+        CaptureStatus::Failed(CaptureError::DeviceLost) => Ok(false),
         CaptureStatus::SourceClosed | CaptureStatus::Stopped => Ok(false),
         CaptureStatus::Failed(_) => Err("Native capture failed; no fallback source was selected"),
     }

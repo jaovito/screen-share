@@ -78,3 +78,31 @@ it('validates native metadata compatibility and rejects invalid audio counters',
   expect(nativeSharingStatusSchema.parse(fixture).audioSamples).toBe(0);
   expect(nativeSharingStatusSchema.safeParse({ ...fixture, audioSamples: -1 }).success).toBe(false);
 });
+
+it('accepts measured processing metadata while rejecting invalid or unbounded diagnostic evidence', async () => {
+  const fixture = await Bun.file(
+    new URL('../fixtures/native-sharing-status.json', import.meta.url),
+  ).json();
+  const valid = {
+    ...fixture,
+    diagnosticsGeneration: 2,
+    diagnosticsElapsedMs: 5000,
+    conversionSubmissionMs: 0.5,
+    encoderOutputLatencyMs: 8,
+    availableSendBitrateBps: 2_000_000,
+    manualBitrateBps: 4_000_000,
+  };
+  expect(nativeSharingStatusSchema.parse(valid).encoderOutputLatencyMs).toBe(8);
+  for (const patch of [
+    { captureRecoveries: 4 },
+    { diagnosticsGeneration: -1 },
+    { diagnosticsElapsedMs: Infinity },
+    { conversionSubmissionMs: NaN },
+    { conversionSubmissionMs: -1 },
+    { encoderOutputLatencyMs: 60_001 },
+    { availableSendBitrateBps: 1_000_000_000_001 },
+    { manualBitrateBps: 63_999 },
+  ]) {
+    expect(nativeSharingStatusSchema.safeParse({ ...valid, ...patch }).success).toBe(false);
+  }
+});

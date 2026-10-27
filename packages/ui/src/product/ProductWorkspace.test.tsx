@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, it, mock } from 'bun:test';
 import { localeStorageKey } from '@screen-share/i18n';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { ProductServer, roomId } from './fixtures.test';
+import { ProductServer, roomId, sessionId } from './fixtures.test';
 import { ProductWorkspace } from './ProductWorkspace';
 
 const secureDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'isSecureContext');
@@ -202,4 +202,35 @@ it('lists persisted invitation metadata after reload and revokes older invitatio
   await openRoom();
   await screen.findByText('1 of 2 requests used · Revoked');
   expect(screen.queryByRole('button', { name: 'Revoke invitation' })).toBeNull();
+});
+
+it('explains a lost active-session key after reload and recovers only through a new explicitly prepared session', async () => {
+  const server = new ProductServer();
+  server.current.room.state = 'active';
+  server.current.session = {
+    id: sessionId,
+    epoch: 1,
+    membershipRevision: 1,
+    publisherId: server.current.room.ownerId,
+    state: 'active',
+    createdAt: server.current.room.createdAt,
+  };
+  render(<ProductWorkspace apiUrl="https://control.example.test" control={server.control} />);
+  await openRoom();
+  await screen.findByText(/The content key was cleared when this page was reloaded/);
+  expect(screen.queryByLabelText('Content key')).toBeNull();
+  expect(
+    screen.getByRole('button', { name: 'Choose window and start' }).hasAttribute('disabled'),
+  ).toBe(true);
+  expect(server.calls.some((call) => call.path.endsWith('/grants'))).toBe(false);
+  fireEvent.click(screen.getByRole('button', { name: 'End session' }));
+  await waitFor(() => expect(screen.queryByText(/The content key was cleared/)).toBeNull());
+  fireEvent.click(screen.getByRole('button', { name: 'Prepare sharing' }));
+  const key = await screen.findByLabelText('Content key');
+  expect((key as HTMLInputElement).value).toMatch(/^[A-Za-z0-9_-]{43}$/);
+  expect(
+    screen
+      .getByRole('button', { name: 'Open session to approved viewers' })
+      .hasAttribute('disabled'),
+  ).toBe(true);
 });

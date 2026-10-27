@@ -26,9 +26,14 @@ pub struct NativeFrame {
     height: u32,
     sequence: u64,
     timestamp_100ns: i64,
+    generation: u64,
 }
 
 impl NativeFrame {
+    pub fn generation(&self) -> u64 {
+        self.generation
+    }
+
     pub fn texture(&self) -> &ID3D11Texture2D {
         &self.texture
     }
@@ -55,6 +60,7 @@ pub(super) struct FrameProcessor {
     pub device: Device,
     pub pool_size: SizeInt32,
     pub sequence: u64,
+    pub generation: u64,
 }
 
 impl FrameProcessor {
@@ -68,12 +74,16 @@ impl FrameProcessor {
             Err(error) if [0x8000000A_u32, 0x80004003_u32].contains(&(error.code().0 as u32)) => {
                 return Ok(None);
             }
-            Err(_) => return Err(CaptureError::FrameFailed),
+            Err(error) => return Err(classify(error, CaptureError::FrameFailed)),
         };
-        let content_size = frame.ContentSize().map_err(|_| CaptureError::FrameFailed);
+        let content_size = frame
+            .ContentSize()
+            .map_err(|error| classify(error, CaptureError::FrameFailed));
         let result = content_size.and_then(|size| self.copy(&frame, size));
         // Always return the WGC frame before resizing/recreating its pool.
-        let closed = frame.Close().map_err(|_| CaptureError::FrameFailed);
+        let closed = frame
+            .Close()
+            .map_err(|error| classify(error, CaptureError::FrameFailed));
         let result = result?;
         closed?;
 
@@ -85,7 +95,7 @@ impl FrameProcessor {
             validate_size(size)?;
             let device = self.device.projected()?;
             pool.Recreate(&device, DirectXPixelFormat::B8G8R8A8UIntNormalized, 2, size)
-                .map_err(|_| CaptureError::FrameFailed)?;
+                .map_err(|error| classify(error, CaptureError::FrameFailed))?;
             self.pool_size = size;
         }
 
@@ -102,11 +112,14 @@ impl FrameProcessor {
             return Ok(None);
         }
         validate_size(size)?;
-        let surface = frame.Surface().map_err(|_| CaptureError::FrameFailed)?;
-        let access: IDirect3DDxgiInterfaceAccess =
-            surface.cast().map_err(|_| CaptureError::FrameFailed)?;
-        let source: ID3D11Texture2D =
-            unsafe { access.GetInterface() }.map_err(|_| CaptureError::FrameFailed)?;
+        let surface = frame
+            .Surface()
+            .map_err(|error| classify(error, CaptureError::FrameFailed))?;
+        let access: IDirect3DDxgiInterfaceAccess = surface
+            .cast()
+            .map_err(|error| classify(error, CaptureError::FrameFailed))?;
+        let source: ID3D11Texture2D = unsafe { access.GetInterface() }
+            .map_err(|error| classify(error, CaptureError::FrameFailed))?;
         let mut description = D3D11_TEXTURE2D_DESC::default();
         unsafe { source.GetDesc(&mut description) };
         if description.Format != DXGI_FORMAT_B8G8R8A8_UNORM || description.SampleDesc.Count != 1 {
@@ -134,7 +147,7 @@ impl FrameProcessor {
                 .native
                 .CreateTexture2D(&description, None, Some(&mut destination))
         }
-        .map_err(|_| CaptureError::DeviceUnavailable)?;
+        .map_err(|error| classify(error, CaptureError::DeviceUnavailable))?;
         let destination = destination.ok_or(CaptureError::DeviceUnavailable)?;
         let bounds = D3D11_BOX {
             left: 0,
@@ -156,13 +169,15 @@ impl FrameProcessor {
                 Some(&bounds),
             );
         }
+        unsafe { self.device.native.GetDeviceRemovedReason() }
+            .map_err(|error| classify(error, CaptureError::FrameFailed))?;
         self.sequence = self
             .sequence
             .checked_add(1)
             .ok_or(CaptureError::FrameFailed)?;
         let timestamp_100ns = frame
             .SystemRelativeTime()
-            .map_err(|_| CaptureError::FrameFailed)?
+            .map_err(|error| classify(error, CaptureError::FrameFailed))?
             .Duration;
 
         Ok(Some(NativeFrame {
@@ -171,6 +186,7 @@ impl FrameProcessor {
             height,
             sequence: self.sequence,
             timestamp_100ns,
+            generation: self.generation,
         }))
     }
 }
@@ -186,6 +202,14 @@ pub(super) fn validate_size(size: SizeInt32) -> Result<(), CaptureError> {
     }
 
     Ok(())
+}
+
+pub(super) fn classify(error: windows::core::Error, fallback: CaptureError) -> CaptureError {
+    if crate::recovery::device_lost_hresult(error.code().0) {
+        CaptureError::DeviceLost
+    } else {
+        fallback
+    }
 }
 
 #[cfg(test)]

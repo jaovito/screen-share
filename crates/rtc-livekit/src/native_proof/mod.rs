@@ -81,6 +81,14 @@ pub struct NativePublisher {
 }
 
 impl NativePublisher {
+    /// Require a fresh parameter-set IDR after external hardware resources reset.
+    /// This does not renew authorization or change the selected capture source.
+    pub fn require_keyframe(&mut self) -> Result<(), NativeTransportError> {
+        self.ensure_live()?;
+        self.needs_keyframe = true;
+        Ok(())
+    }
+
     /// The caller must filter credential-bearing SDK diagnostics at its logging
     /// boundary. This library never installs a logger or disables application audits.
     pub async fn connect(

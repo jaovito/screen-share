@@ -166,4 +166,60 @@ export const es = {
   peerReportsEmpty: 'No hay informes recientes. Su ausencia no demuestra un fallo de reproducción.',
   peerPossiblyLimited:
     'Varias observaciones recientes sugieren un posible límite de decodificación o descarga para este espectador mientras el emisor codificaba al ritmo objetivo. Es una orientación, no un diagnóstico confirmado.',
+  missingSessionKey:
+    'La clave de contenido se borró al recargar esta página. Finaliza esta sesión, prepara otra y distribuye su nueva clave en privado antes de reiniciar.',
+  reason_source_closed:
+    'La fuente seleccionada se cerró. La transmisión se detuvo; elige una fuente explícitamente para volver a empezar.',
+  reason_selection_canceled: 'Se canceló la selección de fuente. No se está capturando nada.',
+  reason_authorization_failed:
+    'La transmisión se detuvo porque no se pudo verificar el acceso actual. Actualiza la sala antes de reiniciar.',
+  reason_capture_failed:
+    'La fuente seleccionada dejó de estar disponible. La transmisión se detuvo sin cambiar de fuente. Elige una fuente explícitamente para reintentar.',
+  reason_encoder_failed:
+    'Falló el procesamiento de vídeo. La transmisión se detuvo; revisa el perfil y vuelve a intentarlo.',
+  reason_transport_failed:
+    'Falló la conexión de medios cifrada. La transmisión se detuvo; revisa la conexión antes de reiniciar.',
+  reason_cleanup_failed:
+    'La liberación de medios no terminó normalmente. Cierra y vuelve a abrir la aplicación antes de compartir de nuevo.',
+  reason_lease_expired:
+    'La autorización de transmisión caducó. Actualiza la sala e inicia de nuevo explícitamente.',
+  reason_invalid_request:
+    'La solicitud de transmisión no es válida. Elige ajustes compatibles antes de reintentar.',
+  reason_worker_failed:
+    'El motor de medios nativo se detuvo. Reinicia la transmisión explícitamente.',
+  reason_engine_missing:
+    'Falta el motor de medios incluido. Reinstala la aplicación de escritorio.',
+  reason_child_unresponsive:
+    'El motor de medios nativo dejó de responder y se cerró. Reinicia la transmisión explícitamente.',
+  reason_stopped_by_user:
+    'La transmisión se detuvo explícitamente. No se está publicando ninguna fuente.',
+  reason_unsupported_platform: 'La captura nativa no está disponible en este sistema operativo.',
+  reason_unknown:
+    'La transmisión se detuvo por un motivo no disponible. Actualiza la sala antes de reintentar.',
+  advice_insufficientEvidence:
+    'Aún no hay evidencia continua suficiente para identificar un cuello de botella. El contenido estático puede producir pocos fotogramas legítimamente.',
+  advice_sourceInactive:
+    'Se ha confirmado que la fuente está inactiva. La cadencia de captura por sí sola no confirma esta condición.',
+  advice_captureLimited:
+    'La actividad verificada de la fuente supera la cadencia de captura observada. Investiga la disponibilidad de captura.',
+  advice_encoderLimited:
+    'El trabajo medido del codificador supera el tiempo por fotograma mientras la captura alcanza el objetivo. Esto no confirma saturación de la GPU.',
+  advice_processingLimited:
+    'La captura alcanza el objetivo, pero la salida codificada se retrasa y la latencia medida entre entrada y salida supera el tiempo por fotograma. Incluye demoras de MFT, controlador, GPU y colas; no identifica un cuello de botella del códec o de la GPU.',
+  advice_uploadLimited:
+    'El objetivo reciente de bitrate del transporte permanece por debajo del máximo solicitado. Investiga la ruta de envío; este objetivo no mide la capacidad de subida.',
+  advice_receiverLimited:
+    'La salida del emisor alcanza el objetivo, pero este espectador presenta presión de decodificación o recepción. Investiga su reproducción y red.',
+  advice_healthy:
+    'Las observaciones proporcionadas de fuente, procesamiento y reproducción alcanzan sus objetivos.',
+  sourceActivityUnknown:
+    'La actividad de renderizado de la fuente no está disponible. Una captura con pocos FPS puede reflejar contenido estático, una ventana minimizada o una fuente lenta; por sí sola no identifica un fallo de captura.',
+  captureFps: 'Fotogramas capturados por segundo',
+  encodedFps: 'Fotogramas codificados por segundo',
+  targetFps: 'Objetivo actual de fotogramas por segundo',
+  conversionSubmission: 'Tiempo de CPU al enviar la conversión',
+  encoderOutputLatency: 'Latencia entre entrada y salida del codificador',
+  availableSendTarget: 'Objetivo reciente de bitrate del transporte',
+  processingMetricNotice:
+    'Los tiempos son medias móviles acotadas a la generación actual. El envío de conversión mide la llamada de CPU, no la ejecución de GPU. La latencia de salida incluye colas de MFT/controlador/GPU. Pausas, reconexiones, cambios de perfil y recuperación reinician la ventana de evidencia.',
 } as const;

@@ -95,6 +95,7 @@ mod probe {
         Stop,
         Renew(PublisherGrant),
         Profile(u16),
+        KeyframeGate,
     }
 
     async fn run(
@@ -128,6 +129,12 @@ mod probe {
                 if input.read_exact(&mut command).is_err() || command == *b"stop" {
                     let _ = send.send(Command::Stop);
                     break;
+                }
+                if command == *b"keyf" {
+                    if send.send(Command::KeyframeGate).is_err() {
+                        break;
+                    }
+                    continue;
                 }
                 if command == *b"lowr" || command == *b"high" {
                     let height = if command == *b"lowr" { 480 } else { 720 };
@@ -183,6 +190,7 @@ mod probe {
                         }
                     }
                 }
+                let mut reset_gate = false;
                 match commands.try_recv() {
                     Ok(Command::Stop) => break,
                     Ok(Command::Renew(grant)) => {
@@ -202,6 +210,7 @@ mod probe {
                         packet_index = 0;
                         println!("Native synthetic profile target: {height}.");
                     }
+                    Ok(Command::KeyframeGate) => { reset_gate = true; }
                     Err(_) => {}
                 }
                 let selected = if profile.height == 720 {
@@ -209,17 +218,32 @@ mod probe {
                 } else {
                     &packets
                 };
+                if reset_gate {
+                    publisher.require_keyframe().map_err(|error| transport_error(error, "Same-profile recovery gate failed"))?;
+                    let rejected = selected.iter().find_map(|packet| {
+                        let unit = EncodedAccessUnit::h264(packet.clone(), profile, (sequence as i64) * 200_000).ok()?;
+                        (!unit.is_keyframe()).then_some(unit)
+                    }).ok_or("A real non-IDR fixture packet is required")?;
+                    if publisher.push(&rejected) != Err(NativeTransportError::KeyframeRequired) {
+                        return Err("Same-profile recovery incorrectly accepted a delta frame");
+                    }
+                    packet_index = 0;
+                }
                 let packet = &selected[packet_index % selected.len()];
                 packet_index += 1;
                 let frame =
                     EncodedAccessUnit::h264(packet.clone(), profile, (sequence as i64) * 200_000)
                         .map_err(|_| "Invalid synthetic H.264 access unit")?;
+                if reset_gate && !frame.is_keyframe() { return Err("Recovery fixture must restart with parameter-set IDR"); }
                 match publisher.push(&frame) {
-                    Ok(_) => sent += 1,
+                    Ok(_) => {
+                        sent += 1;
+                        if reset_gate { println!("Native same-profile keyframe gate resumed."); }
+                    },
                     Err(
                         NativeTransportError::FrameRejected
                         | NativeTransportError::KeyframeRequired,
-                    ) => {}
+                    ) if !reset_gate => {}
                     Err(error) => return Err(transport_error(error, "Native publication stopped by transport policy")),
                 }
             }

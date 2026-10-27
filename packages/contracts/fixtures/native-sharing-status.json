@@ -15,5 +15,12 @@
   "audioSamples": 0,
   "adaptationReason": null,
   "qualityChanges": 0,
-  "targetBitrateBps": null
+  "targetBitrateBps": null,
+  "diagnosticsGeneration": 0,
+  "diagnosticsElapsedMs": 0,
+  "conversionSubmissionMs": null,
+  "encoderOutputLatencyMs": null,
+  "availableSendBitrateBps": null,
+  "manualBitrateBps": null,
+  "captureRecoveries": 0
 }

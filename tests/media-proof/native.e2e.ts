@@ -185,6 +185,27 @@ test('Rust pre-encoded H264 interoperates with the browser worker and rejects a 
       await renewed;
       child.stdin?.write('high');
       await expect.poll(() => dimensions(receiver), { timeout: 15000 }).toBe(720);
+      const beforeGate = await decoded(receiver);
+      const gateResumed = new Promise<void>((resolve, reject) => {
+        let output = '';
+        const timer = setTimeout(() => {
+          child.stdout?.off('data', observed);
+          reject(new Error('Same-profile keyframe recovery timed out'));
+        }, 10000);
+        function observed(chunk: Buffer) {
+          output = (output + chunk.toString('utf8')).slice(-256);
+          if (output.includes('Native same-profile keyframe gate resumed.')) {
+            clearTimeout(timer);
+            child.stdout?.off('data', observed);
+            resolve();
+          }
+        }
+        child.stdout?.on('data', observed);
+      });
+      child.stdin?.write('keyf');
+      await gateResumed;
+      await expect.poll(() => decoded(receiver)).toBeGreaterThan(beforeGate);
+      expect(await dimensions(receiver)).toBe(720);
     }
     const audioEnergy = (page: Page) =>
       page.locator('audio').evaluate(async (audio) => {

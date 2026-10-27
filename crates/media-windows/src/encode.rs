@@ -6,12 +6,12 @@ mod h264;
 mod output;
 mod setup;
 
-use crate::{EncoderError, NativeFrame};
+use crate::{EncoderDiagnostics, EncoderError, NativeFrame, encoder_timing::EncoderTiming};
 use convert::Converter;
 use h264::H264Normalizer;
 use setup::{ConfiguredTransform, Runtime};
 use ss_domain::{EncodedAccessUnit, VideoProfile};
-use std::{collections::VecDeque, marker::PhantomData, rc::Rc};
+use std::{marker::PhantomData, rc::Rc, time::Instant};
 use windows::{Win32::Media::MediaFoundation::*, core::Interface};
 
 const MAX_IN_FLIGHT: usize = 2;
@@ -38,7 +38,8 @@ pub struct HardwareEncoder {
     normalizer: Option<H264Normalizer>,
     profile: VideoProfile,
     input_credits: usize,
-    in_flight: VecDeque<i64>,
+    timing: EncoderTiming,
+    diagnostic_clock: Instant,
     timestamp_origin: Option<i64>,
     last_timestamp: Option<i64>,
     _apartment: PhantomData<Rc<()>>,
@@ -67,7 +68,8 @@ impl HardwareEncoder {
             normalizer: Some(normalizer),
             profile,
             input_credits: 0,
-            in_flight: VecDeque::new(),
+            timing: EncoderTiming::default(),
+            diagnostic_clock: Instant::now(),
             timestamp_origin: None,
             last_timestamp: None,
             _apartment: PhantomData,
@@ -79,7 +81,7 @@ impl HardwareEncoder {
     /// may replace its pending frame rather than enqueueing older native frames.
     pub fn submit(&mut self, frame: &NativeFrame) -> Result<SubmitOutcome, EncoderError> {
         let configured = self.configured.as_ref().ok_or(EncoderError::Closed)?;
-        if self.input_credits == 0 || self.in_flight.len() >= MAX_IN_FLIGHT {
+        if self.input_credits == 0 || self.timing.pending() >= MAX_IN_FLIGHT {
             return Ok(SubmitOutcome::Backpressure);
         }
         if frame.timestamp_100ns() < 0
@@ -89,11 +91,16 @@ impl HardwareEncoder {
         {
             return Err(EncoderError::InvalidInput);
         }
+        let conversion_started = Instant::now();
         let frame = self
             .converter
             .as_mut()
             .ok_or(EncoderError::Closed)?
             .convert(frame)?;
+        let conversion_us = conversion_started
+            .elapsed()
+            .as_micros()
+            .min(u128::from(u64::MAX)) as u64;
         let origin = *self.timestamp_origin.get_or_insert(frame.timestamp_100ns);
         let timestamp = frame
             .timestamp_100ns
@@ -123,6 +130,9 @@ impl HardwareEncoder {
             sample
                 .SetSampleDuration(10_000_000 / i64::from(self.profile.fps))
                 .map_err(|_| EncoderError::EncoderFailed)?;
+        }
+        let submitted_us = self.elapsed_us();
+        unsafe {
             configured
                 .transform
                 .value
@@ -130,7 +140,9 @@ impl HardwareEncoder {
                 .map_err(|_| EncoderError::EncoderFailed)?;
         }
         self.input_credits -= 1;
-        self.in_flight.push_back(timestamp);
+        self.timing
+            .submitted(timestamp, submitted_us, conversion_us)
+            .map_err(|_| EncoderError::InvalidInput)?;
         self.last_timestamp = Some(frame.timestamp_100ns);
 
         Ok(SubmitOutcome::Accepted)
@@ -166,9 +178,9 @@ impl HardwareEncoder {
                 self.profile,
                 self.normalizer.as_mut().ok_or(EncoderError::Closed)?,
             )?;
-            if self.in_flight.pop_front() != Some(output.timestamp_100ns) {
-                return Err(EncoderError::InvalidOutput);
-            }
+            self.timing
+                .completed(output.timestamp_100ns, self.elapsed_us())
+                .map_err(|_| EncoderError::InvalidOutput)?;
             let unit =
                 EncodedAccessUnit::h264(output.bytes, self.profile, output.timestamp_100ns / 10)
                     .map_err(|_| EncoderError::InvalidOutput)?;
@@ -176,6 +188,39 @@ impl HardwareEncoder {
         }
 
         Ok(EncoderPoll::Pending)
+    }
+
+    /// Only an actual DXGI invalidation authorizes rebuilding the retained
+    /// capture device. Unsupported codecs and ordinary MFT errors remain fatal.
+    pub fn device_lost(&self) -> bool {
+        self.converter.as_ref().is_some_and(|converter| {
+            unsafe { converter.device().GetDeviceRemovedReason() }
+                .err()
+                .is_some_and(|error| crate::recovery::device_lost_hresult(error.code().0))
+        })
+    }
+
+    pub fn device_lost_for(frame: &NativeFrame) -> bool {
+        unsafe { frame.texture().GetDevice() }
+            .ok()
+            .is_some_and(|device| {
+                unsafe { device.GetDeviceRemovedReason() }
+                    .err()
+                    .is_some_and(|error| crate::recovery::device_lost_hresult(error.code().0))
+            })
+    }
+
+    /// Five-second rolling observations. Output latency includes driver/MFT
+    /// scheduling and GPU completion, rather than isolated codec execution.
+    pub fn diagnostics(&self) -> EncoderDiagnostics {
+        self.timing.snapshot(self.elapsed_us())
+    }
+
+    fn elapsed_us(&self) -> u64 {
+        self.diagnostic_clock
+            .elapsed()
+            .as_micros()
+            .min(u128::from(u64::MAX)) as u64
     }
 
     pub fn set_bitrate(&mut self, bitrate: u32) -> Result<(), EncoderError> {
@@ -196,7 +241,7 @@ impl HardwareEncoder {
         if let Some(configured) = self.configured.as_mut() {
             configured.transform.shutdown()?;
         }
-        self.in_flight.clear();
+        self.timing = EncoderTiming::default();
         self.input_credits = 0;
         self.normalizer = None;
         self.configured = None;

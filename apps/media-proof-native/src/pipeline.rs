@@ -47,6 +47,12 @@ pub struct Snapshot {
     pub heartbeat: Instant,
     pub adaptation_reason: Option<QualityReason>,
     pub target_bitrate_bps: Option<u32>,
+    pub diagnostics_generation: u64,
+    pub diagnostics_elapsed_ms: u64,
+    pub conversion_submission_ms: Option<f64>,
+    pub encoder_output_latency_ms: Option<f64>,
+    pub available_send_bitrate_bps: Option<u64>,
+    pub manual_bitrate_bps: Option<u32>,
 }
 
 pub struct Renewal {
@@ -132,6 +138,12 @@ pub fn spawn_with_audio(
         heartbeat: Instant::now(),
         adaptation_reason: None,
         target_bitrate_bps: None,
+        diagnostics_generation: 0,
+        diagnostics_elapsed_ms: 0,
+        conversion_submission_ms: None,
+        encoder_output_latency_ms: None,
+        available_send_bitrate_bps: None,
+        manual_bitrate_bps: None,
     }));
     let signals = Signals {
         stop: stop.clone(),

@@ -4,7 +4,9 @@ use ss_media_proof::protocol::{
     AdaptationReason, Command, EncryptionState, GrantPacket, SharingReason, SharingState,
     SharingStatus, StartRequest,
 };
-use ss_media_windows::{CaptureStatus, NativeCapture, PickedSource, ProbeWindow, pick_source};
+use ss_media_windows::{
+    CaptureError, CaptureStatus, NativeCapture, PickedSource, ProbeWindow, pick_source,
+};
 use ss_rtc_livekit::native_proof::{MediaKey, PublisherGrant};
 use std::{
     future::Future,
@@ -235,6 +237,12 @@ impl Session {
                 } else {
                     EncryptionState::Pending
                 };
+            status.diagnostics_generation = snapshot.diagnostics_generation;
+            status.diagnostics_elapsed_ms = snapshot.diagnostics_elapsed_ms;
+            status.conversion_submission_ms = snapshot.conversion_submission_ms;
+            status.encoder_output_latency_ms = snapshot.encoder_output_latency_ms;
+            status.available_send_bitrate_bps = snapshot.available_send_bitrate_bps;
+            status.manual_bitrate_bps = snapshot.manual_bitrate_bps;
             status.frames_encoded = snapshot.report.access_units;
             status.encoded_bytes = snapshot.report.bytes_sent;
             status.audio_samples = snapshot.report.audio_samples;
@@ -252,7 +260,14 @@ impl Session {
             status.elapsed_ms = self.started.map_or(0, |started| {
                 started.elapsed().as_millis().min(u128::from(u64::MAX)) as u64
             });
-            if let Some(capture) = &self.capture {
+            if let Some(capture) = &mut self.capture {
+                capture
+                    .service_recovery(
+                        matches!(snapshot.phase, WorkerPhase::Sharing)
+                            && !self.worker.stop.load(Ordering::Acquire)
+                            && !self.worker.paused.load(Ordering::Acquire),
+                    )
+                    .map_err(|_| SharingReason::CaptureFailed)?;
                 match capture.status().map_err(|_| SharingReason::CaptureFailed)? {
                     CaptureStatus::Capturing => {}
                     CaptureStatus::SourceClosed => {
@@ -260,6 +275,7 @@ impl Session {
                         break;
                     }
                     CaptureStatus::Stopped => break,
+                    CaptureStatus::Failed(CaptureError::DeviceLost) => {}
                     CaptureStatus::Failed(_) => return Err(SharingReason::CaptureFailed),
                 }
                 let paused = self.worker.paused.load(Ordering::Acquire)
@@ -270,6 +286,7 @@ impl Session {
                         .map_err(|_| SharingReason::CaptureFailed)?;
                     self.output_paused = paused;
                 }
+                status.capture_recoveries = capture.reader().generation();
                 let counters = capture
                     .queue_counters()
                     .map_err(|_| SharingReason::CaptureFailed)?;

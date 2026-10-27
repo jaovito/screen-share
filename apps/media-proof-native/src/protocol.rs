@@ -247,6 +247,22 @@ pub struct SharingStatus {
     pub quality_changes: u64,
     #[serde(default)]
     pub target_bitrate_bps: Option<u32>,
+    #[serde(default)]
+    pub diagnostics_generation: u64,
+    #[serde(default)]
+    pub capture_recoveries: u64,
+    #[serde(default)]
+    pub diagnostics_elapsed_ms: u64,
+    /// CPU time spent submitting conversion commands, not GPU execution time.
+    #[serde(default)]
+    pub conversion_submission_ms: Option<f64>,
+    /// Accepted MF input to matching output: includes driver/GPU/MFT waiting.
+    #[serde(default)]
+    pub encoder_output_latency_ms: Option<f64>,
+    #[serde(default)]
+    pub available_send_bitrate_bps: Option<u64>,
+    #[serde(default)]
+    pub manual_bitrate_bps: Option<u32>,
 }
 
 impl SharingStatus {
@@ -269,13 +285,36 @@ impl SharingStatus {
             adaptation_reason: None,
             quality_changes: 0,
             target_bitrate_bps: None,
+            diagnostics_generation: 0,
+            capture_recoveries: 0,
+            diagnostics_elapsed_ms: 0,
+            conversion_submission_ms: None,
+            encoder_output_latency_ms: None,
+            available_send_bitrate_bps: None,
+            manual_bitrate_bps: None,
         }
     }
 
     pub fn validate(&self) -> Result<(), &'static str> {
-        if self
-            .target_bitrate_bps
-            .is_some_and(|bitrate| !(64_000..=50_000_000).contains(&bitrate))
+        if self.capture_recoveries > 3
+            || self.diagnostics_generation > 9_007_199_254_740_991
+            || self.diagnostics_elapsed_ms > 9_007_199_254_740_991
+            || self
+                .available_send_bitrate_bps
+                .is_some_and(|value| value > 1_000_000_000_000)
+            || self
+                .manual_bitrate_bps
+                .is_some_and(|value| !(64_000..=50_000_000).contains(&value))
+            || [
+                self.conversion_submission_ms,
+                self.encoder_output_latency_ms,
+            ]
+            .into_iter()
+            .flatten()
+            .any(|value| !value.is_finite() || !(0.0..=60_000.0).contains(&value))
+            || self
+                .target_bitrate_bps
+                .is_some_and(|bitrate| !(64_000..=50_000_000).contains(&bitrate))
             || self
                 .profile_id
                 .as_ref()

@@ -112,6 +112,13 @@ export const nativeSharingStatusSchema = z.object({
   adaptationReason: z.enum(['network_pressure', 'network_headroom']).nullable().optional(),
   qualityChanges: z.number().int().nonnegative().optional(),
   targetBitrateBps: z.number().int().min(64_000).max(50_000_000).nullable().optional(),
+  captureRecoveries: z.number().int().min(0).max(3).optional(),
+  diagnosticsGeneration: z.number().int().nonnegative().optional(),
+  diagnosticsElapsedMs: z.number().int().nonnegative().optional(),
+  conversionSubmissionMs: z.number().min(0).max(60_000).nullable().optional(),
+  encoderOutputLatencyMs: z.number().min(0).max(60_000).nullable().optional(),
+  availableSendBitrateBps: z.number().int().min(0).max(1_000_000_000_000).nullable().optional(),
+  manualBitrateBps: z.number().int().min(64_000).max(50_000_000).nullable().optional(),
   reason: z.string().nullable(),
   encryption: z.enum(['pending', 'configured']),
 });

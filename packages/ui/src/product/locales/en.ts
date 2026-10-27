@@ -163,4 +163,56 @@ export const en = {
   peerReportsEmpty: 'No fresh viewer reports. Missing reports do not prove a playback failure.',
   peerPossiblyLimited:
     'Several recent client observations suggest a possible decoder or download limit for this viewer while the publisher was encoding at its target. This is advisory, not a confirmed diagnosis.',
+  missingSessionKey:
+    'The content key was cleared when this page was reloaded. End this session, prepare a new one and privately distribute its fresh key before restarting.',
+  reason_source_closed:
+    'The selected source was closed. Sharing stopped; choose a source explicitly to start again.',
+  reason_selection_canceled: 'Source selection was canceled. Nothing is being captured.',
+  reason_authorization_failed:
+    'Sharing stopped because current access could not be verified. Refresh the room before starting again.',
+  reason_capture_failed:
+    'The selected source became unavailable. Sharing stopped without switching sources. Choose a source explicitly to retry.',
+  reason_encoder_failed:
+    'Video processing failed. Sharing stopped; check the selected profile and retry.',
+  reason_transport_failed:
+    'The encrypted media connection failed. Sharing stopped; check connectivity before restarting.',
+  reason_cleanup_failed:
+    'Media cleanup did not complete normally. Close and reopen the app before sharing again.',
+  reason_lease_expired:
+    'Sharing authorization expired. Refresh the room and start again explicitly.',
+  reason_invalid_request:
+    'The sharing request was invalid. Choose supported settings before retrying.',
+  reason_worker_failed: 'The native media engine stopped. Restart sharing explicitly.',
+  reason_engine_missing: 'The bundled media engine is missing. Reinstall the desktop app.',
+  reason_child_unresponsive:
+    'The native media engine stopped responding and was terminated. Restart sharing explicitly.',
+  reason_stopped_by_user: 'Sharing was stopped explicitly. No source is being published.',
+  reason_unsupported_platform: 'Native capture is unavailable on this operating system.',
+  reason_unknown: 'Sharing stopped for an unavailable reason. Refresh the room before retrying.',
+  advice_insufficientEvidence:
+    'There is not enough continuous evidence to identify a bottleneck. Static content may legitimately produce few frames.',
+  advice_sourceInactive:
+    'The source is confirmed inactive. Capture cadence alone does not establish this condition.',
+  advice_captureLimited:
+    'Verified source activity exceeds the observed capture cadence. Investigate capture availability.',
+  advice_encoderLimited:
+    'Measured encoder work exceeds the frame budget while capture keeps up. This does not establish GPU saturation.',
+  advice_processingLimited:
+    'Captured frames keep up, but encoded output falls behind and measured input-to-output latency exceeds the frame budget. This includes MFT, driver, GPU and queue delays; it does not identify a codec or GPU bottleneck.',
+  advice_uploadLimited:
+    'The fresh media transport bitrate target remains below the requested ceiling. Investigate the sending network path; this target is not a measured upload capacity.',
+  advice_receiverLimited:
+    'Publisher output keeps up while this viewer shows decode or reception pressure. Investigate this viewer’s playback and network.',
+  advice_healthy:
+    'The supplied source, processing and playback observations keep up with their target.',
+  sourceActivityUnknown:
+    'Source rendering activity is unavailable. Low capture FPS can reflect static content, a minimized window or a slow source; it cannot identify a capture failure by itself.',
+  captureFps: 'Captured frames per second',
+  encodedFps: 'Encoded output frames per second',
+  targetFps: 'Current frame-rate target',
+  conversionSubmission: 'Conversion submission CPU wall time',
+  encoderOutputLatency: 'Encoder input-to-output latency',
+  availableSendTarget: 'Fresh transport bitrate target',
+  processingMetricNotice:
+    'Timing values are bounded rolling averages for the current processing generation. Conversion submission measures the CPU call, not GPU execution. Output latency includes MFT/driver/GPU queues. Pauses, reconnects, profile changes and recovery reset the evidence window.',
 } as const;

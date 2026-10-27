@@ -21,3 +21,7 @@ Invite, audit and authentication-rate records require an operator retention poli
 ## Second independent pass
 
 The read-only second pass reviewed the native authorization supervisor, cancellation/nonces, logout suspension, fixed cookie proxy, private report authorization/cache and receiver transmission. It confirmed no new actionable issue. Report reads/writes remain bound to the current approved roster/session under the room lock; client values are explicitly advisory and do not grant access or drive publisher adaptation. No build, real credential, shared/external service or proof artifact was used by this pass. Physical platform/network timing and end-to-end revocation remain separate acceptance work.
+
+## Same-source recovery pass
+
+The final targeted independent static review found no actionable issue in the new recovery boundary. It checked immutable picker-item/session ownership, session-total retry limits, source-close/pause/revocation gates, generation-scoped fault reports, synchronized video enqueue, old-resource retirement and the required fresh parameter-set IDR. Recovery neither extends authorization nor changes epoch/key/source. Cleanup errors remain terminal. No builds, test execution, hardware, credentials or external/shared services were used by the reviewer; real driver/resource behavior and two-PC revocation timing remain separate acceptance evidence.
