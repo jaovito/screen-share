@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { networkInterfaces, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { type Browser, chromium, expect, type Page } from '@playwright/test';
 import { build, type PreviewServer, preview } from 'vite';
@@ -14,6 +14,7 @@ import {
 } from '../tests/desktop-receiver/resources';
 import { ensureWebViewRuntime } from '../tests/desktop-receiver/webview-runtime';
 import { finalizeFixture } from '../tooling/desktop-receiver/cleanup';
+import { fixtureRtcAddress } from '../tooling/desktop-receiver/network';
 import { root, run } from './lib';
 import { freePort } from './ports';
 
@@ -30,6 +31,10 @@ if (!signaling || !tcp || !debug || !publisherPort || new Set(ports).size !== po
 const apiKey = randomBytes(18).toString('hex');
 const apiSecret = randomBytes(32).toString('hex');
 const serverUrl = `ws://127.0.0.1:${signaling}`;
+const rtcAddress = fixtureRtcAddress(
+  networkInterfaces(),
+  process.env.GITHUB_ACTIONS === 'true' && process.env.RUNNER_OS === 'Windows',
+);
 let fixture: ReturnType<typeof fixtureApi> | undefined;
 let sfu: ReturnType<typeof ownedProcess> | undefined;
 let application: ReturnType<typeof ownedProcess> | undefined;
@@ -47,11 +52,9 @@ function progress(next: string) {
 }
 
 try {
-  if (!publisherOnly) {
-    progress('verify Windows WebView2 runtime prerequisite');
-    await ensureWebViewRuntime(directory);
-    progress('download verified SFU');
-  }
+  progress('verify Windows WebView2 runtime prerequisite');
+  await ensureWebViewRuntime(directory);
+  progress('download verified SFU');
   const executable = await downloadSfu(directory);
   const config = join(directory, 'livekit.yaml');
   await writeFile(
@@ -64,9 +67,11 @@ try {
       // This local WebView fixture proves encrypted playback over ICE/TCP.
       // UDP and restrictive-network/TURN acceptance remain separate real-network gates.
       '  force_tcp: true',
-      '  node_ip: "127.0.0.1"',
+      `  node_ip: "${rtcAddress}"`,
       '  use_external_ip: false',
-      '  enable_loopback_candidate: true',
+      `  enable_loopback_candidate: ${rtcAddress === '127.0.0.1'}`,
+      '  ips:',
+      `    includes: ["${rtcAddress}/32"]`,
       'keys:',
       `  ${apiKey}: ${apiSecret}`,
       'logging:',
@@ -119,9 +124,12 @@ try {
     build: { outDir },
     preview: { host: '127.0.0.1', port: Number(publisherPort), strictPort: true },
   });
-  // Loopback ICE is test-only; no camera, microphone, screen capture or production flags.
+  // Test-only autoplay; no camera, microphone, screen capture or production flags.
   publisherBrowser = await chromium.launch({
-    args: ['--allow-loopback-in-peer-connection', '--autoplay-policy=no-user-gesture-required'],
+    args: [
+      ...(rtcAddress === '127.0.0.1' ? ['--allow-loopback-in-peer-connection'] : []),
+      '--autoplay-policy=no-user-gesture-required',
+    ],
   });
   const publisher = await publisherBrowser.newPage();
   await publisher.goto(`http://127.0.0.1:${publisherPort}`);
@@ -140,7 +148,7 @@ try {
     application = ownedProcess(join(root, 'target/release/screen-share-desktop.exe'), [], {
       ...process.env,
       WEBVIEW2_USER_DATA_FOLDER: join(directory, 'webview-profile'),
-      WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${debug} --allow-loopback-in-peer-connection --autoplay-policy=no-user-gesture-required`,
+      WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${debug} ${rtcAddress === '127.0.0.1' ? '--allow-loopback-in-peer-connection ' : ''}--autoplay-policy=no-user-gesture-required`,
     });
     // Compilation/download are outside this bounded actual media execution window.
     watchdog = setTimeout(() => {

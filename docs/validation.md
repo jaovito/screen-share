@@ -354,3 +354,13 @@ run. To isolate WebView playback, this owned synthetic fixture now explicitly fo
 the pinned SFU's ICE/TCP test mode. Encryption, codec, decoded-media and wrong-key
 assertions remain mandatory. UDP/TURN and real-network acceptance remain separate
 and unexecuted by this fixture.
+
+
+Run 40564818047 demonstrated that forcing TCP alone did not repair the hosted
+loopback ICE negotiation. The next fixture revision advertises only the hosted
+runner's own enumerated RFC1918 IPv4 with an exact /32 filter, while HTTP/signaling
+remain loopback. It does not contact LAN peers or external infrastructure. Three
+address-selection regressions passed, including rejection of public/malformed/absent
+interfaces. Runtime detection/installation now happens in the preliminary probe so
+missing prerequisites fail before native compilation. No application security or
+media assertion was relaxed.

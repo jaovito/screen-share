@@ -21,7 +21,7 @@ $version = Read-RuntimeVersion
 if (-not $version) {
   Write-Output 'WebView2 runtime absent; installing verified Microsoft Evergreen bootstrapper.'
   $installer = Join-Path $Directory 'MicrosoftEdgeWebview2Setup.exe'
-  Invoke-WebRequest -Uri 'https://go.microsoft.com/fwlink/p/?LinkId=2124703' -OutFile $installer -TimeoutSec 60
+  Invoke-WebRequest -UseBasicParsing -Uri 'https://go.microsoft.com/fwlink/p/?LinkId=2124703' -OutFile $installer -TimeoutSec 60
   $signature = Get-AuthenticodeSignature -LiteralPath $installer
   if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'O=Microsoft Corporation(?:,|$)') {
     throw 'WebView2 bootstrapper does not have a valid Microsoft publisher signature'
