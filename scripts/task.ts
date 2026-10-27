@@ -52,7 +52,7 @@ async function dev() {
 
             stop();
 
-            if (code && !expected) reject(new Error('Servidor de desenvolvimento falhou'));
+            if (code && !expected) reject(new Error('Development server failed'));
             else resolvePromise();
           });
         }),
@@ -63,7 +63,7 @@ async function dev() {
 async function desktop(build: boolean) {
   if (process.platform !== 'win32')
     throw new Error(
-      'O fluxo desktop de M0 requer Windows 11 x64, MSVC e WebView2. Use check:rust/check:ts neste SO.',
+      'The desktop workflow requires Windows 11 x64, MSVC and WebView2. Use check:rust/check:ts on this OS.',
     );
 
   await contracts();

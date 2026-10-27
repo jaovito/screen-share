@@ -125,6 +125,7 @@ UI supports **Português (Brasil)**, **Español**, and **English**. pt-BR is def
 - **Port 3000 busy:** stop the previous host/container API mode before switching.
 - **PostgreSQL password mismatch:** changing .env does not update a password in an initialized volume. Coordinate credential changes with the database; do not erase data.
 - **LiveKit credentials mismatch:** align the generated local file with an intentional credential rotation; bootstrap preserves existing files.
+- **Native SDK ICE fails locally:** loopback-only Compose is the control/development baseline. Native WebRTC ignores loopback interfaces and needs an explicitly routable private SFU address for same-machine testing. The disposable media test checks this prerequisite and fails when the Docker runtime cannot route its private interface. Use the documented HTTPS/WSS/TURN deployment for other computers; changing only a frontend URL does not provide connectivity.
 
 More details: [development guide](docs/development.md), [explicit self-hosted deployment](docs/deployment.md), and [signed release preparation](docs/releases.md). These production workflows require operator DNS/TLS/signing configuration and are separate from the local stack.
 

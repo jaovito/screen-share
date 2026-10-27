@@ -35,7 +35,7 @@ export function createDatabase(connectionString: string) {
         expected.some((hash, i) => rows.rows[i]?.hash !== hash) ||
         rows.rowCount !== expected.length
       )
-        throw new Error('Migrations pendentes ou divergentes');
+        throw new Error('Pending or divergent migrations');
 
       await pool.query('SELECT id, owner_id, state, created_at, updated_at FROM rooms LIMIT 0');
       await pool.query(`SELECT id,name,owner_id,epoch,membership_revision,state FROM private_rooms LIMIT 0;
@@ -65,7 +65,7 @@ export async function retryDatabase(check: () => Promise<void>, attempts = 5) {
 
       return;
     } catch {
-      if (attempt >= attempts) throw new Error('Banco indisponível após tentativas limitadas');
+      if (attempt >= attempts) throw new Error('Database unavailable after bounded retries');
 
       await new Promise((resolve) => setTimeout(resolve, attempt * 300));
     }

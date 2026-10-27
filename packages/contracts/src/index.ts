@@ -16,7 +16,7 @@ export const videoProfileSchema = z
   .refine(
     (profile) =>
       widths[profile.height] === profile.width && profile.id === `${profile.height}p${profile.fps}`,
-    { message: 'Perfil fora do catálogo' },
+    { message: 'Profile is not in the catalog' },
   );
 export const profilesResponseSchema = z.object({
   profiles: z

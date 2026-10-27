@@ -59,7 +59,7 @@ export function writeCoverageReport(root: string, suites: string[]) {
     .join('');
   writeFileSync(
     resolve(root, 'coverage/index.html'),
-    `<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Cobertura Bun Test</title><style>body{font:16px system-ui;margin:32px;background:#0c1018;color:#e6e9ef}table{border-collapse:collapse;width:100%;font-size:14px}td,th{padding:12px;text-align:left;border-bottom:1px solid #344053}h1{font-size:28px}</style><h1>Cobertura Bun Test</h1><p>Linhas: ${totals.lines.pct}% · Funções: ${totals.functions.pct}% · Mínimo por arquivo: 80%</p><p>Contadores nativos LCOV. Arquivos sem funções próprias aparecem como —.</p><table><thead><tr><th>Arquivo</th><th>Linhas</th><th>Funções</th><th>Linhas não cobertas</th></tr></thead><tbody>${rows}</tbody></table></html>`,
+    `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Bun Test coverage</title><style>body{font:16px system-ui;margin:32px;background:#0c1018;color:#e6e9ef}table{border-collapse:collapse;width:100%;font-size:14px}td,th{padding:12px;text-align:left;border-bottom:1px solid #344053}h1{font-size:28px}</style><h1>Bun Test coverage</h1><p>Lines: ${totals.lines.pct}% · Functions: ${totals.functions.pct}% · Minimum per file: 80%</p><p>Native LCOV counters. Files without their own functions appear as —.</p><table><thead><tr><th>File</th><th>Lines</th><th>Functions</th><th>Uncovered lines</th></tr></thead><tbody>${rows}</tbody></table></html>`,
   );
 
   const count = verifyCoverageInventory(root);

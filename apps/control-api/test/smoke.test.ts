@@ -57,6 +57,6 @@ it('checks health/readiness/catalog and performs only a read in LiveKit', async 
 it('fails on HTTP unavailability before calling LiveKit', async () => {
   listRooms.mockClear();
   spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 503 }));
-  await expect(checkControlPlane(config)).rejects.toThrow('HTTP indisponível');
+  await expect(checkControlPlane(config)).rejects.toThrow('HTTP unavailable');
   expect(listRooms).not.toHaveBeenCalled();
 });

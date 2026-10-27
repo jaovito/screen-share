@@ -10,7 +10,7 @@ import { readConfig } from '../src/config';
 
 // Contract: an empty DISPOSABLE database from the runner/CI, never development .env.
 if (process.env.INTEGRATION_DATABASE !== 'disposable')
-  throw new Error('Exige banco descartável explícito');
+  throw new Error('An explicit disposable database is required');
 
 const originalConfig = readConfig();
 const testName = `legacy_${randomUUID().replaceAll('-', '')}`;

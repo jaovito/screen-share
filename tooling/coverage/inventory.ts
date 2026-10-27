@@ -9,7 +9,7 @@ export function verifyCoverageInventory(
   report = resolve(root, 'coverage/coverage-summary.json'),
 ) {
   const summary: unknown = JSON.parse(readFileSync(report, 'utf8'));
-  if (!summary || typeof summary !== 'object') throw new Error('Relatório de cobertura inválido');
+  if (!summary || typeof summary !== 'object') throw new Error('Invalid coverage report');
 
   const measured = new Set(Object.keys(summary).map((file) => resolve(file)));
   const runtimeFiles: string[] = [];
@@ -31,7 +31,7 @@ export function verifyCoverageInventory(
 
       const file = resolve(root, path);
       const { program, errors } = parseSync(file, readFileSync(file, 'utf8'));
-      if (errors.length) throw new Error(`Fonte inválida: ${path}`);
+      if (errors.length) throw new Error(`Invalid source: ${path}`);
 
       const executable = program.body.some((node) => {
         if (node.type.startsWith('TS')) return false;
@@ -50,7 +50,7 @@ export function verifyCoverageInventory(
   const missing = runtimeFiles
     .filter((file) => !measured.has(file))
     .map((file) => relative(root, file));
-  if (missing.length) throw new Error(`Fontes sem relatório de cobertura: ${missing.join(', ')}`);
+  if (missing.length) throw new Error(`Sources missing coverage reports: ${missing.join(', ')}`);
 
   return runtimeFiles.length;
 }

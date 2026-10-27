@@ -34,7 +34,7 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env) {
 
   if (!result.success)
     throw new Error(
-      `Configuração inválida: ${[...new Set(result.error.issues.map((i) => i.path.join('.')))].join(', ')}`,
+      `Invalid configuration: ${[...new Set(result.error.issues.map((i) => i.path.join('.')))].join(', ')}`,
     );
 
   return result.data;

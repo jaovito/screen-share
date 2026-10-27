@@ -46,7 +46,7 @@ describe('control HTTP', () => {
     }
   });
   it('invalid configuration never exposes secret values', () => {
-    expect(() => readConfig({ DATABASE_URL: 'private-secret' })).toThrow('Configuração inválida:');
+    expect(() => readConfig({ DATABASE_URL: 'private-secret' })).toThrow('Invalid configuration:');
 
     try {
       readConfig({ DATABASE_URL: 'private-secret' });

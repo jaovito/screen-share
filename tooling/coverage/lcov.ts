@@ -16,7 +16,7 @@ export function metric(total: number, covered: number): CoverageMetric {
     covered < 0 ||
     covered > total
   )
-    throw new Error('Contadores LCOV inválidos');
+    throw new Error('Invalid LCOV counters');
 
   return { total, covered, pct: total === 0 ? 100 : Math.round((covered / total) * 10000) / 100 };
 }
@@ -35,13 +35,13 @@ export function parseLcov(source: string, root: string): FileCoverage[] {
     if (line.startsWith('DA:')) {
       const [number, hits] = line.slice(3).split(',').map(Number);
       if (!number || hits === undefined || !Number.isInteger(hits) || hits < 0)
-        throw new Error('Linha LCOV inválida');
+        throw new Error('Invalid LCOV line');
       lines.set(number, Math.max(lines.get(number) ?? 0, hits));
     }
 
     if (line === 'end_of_record') {
       if (!filename || functionTotal === undefined || functionHits === undefined)
-        throw new Error('Registro LCOV incompleto');
+        throw new Error('Incomplete LCOV record');
       const missing = [...lines].filter(([, hits]) => hits === 0).map(([number]) => number);
       files.push({
         file: filename,
@@ -56,7 +56,7 @@ export function parseLcov(source: string, root: string): FileCoverage[] {
     }
   }
 
-  if (filename || files.length === 0) throw new Error('Relatório LCOV ausente ou incompleto');
+  if (filename || files.length === 0) throw new Error('Missing or incomplete LCOV report');
   return files;
 }
 
@@ -68,6 +68,6 @@ export function enforceCoverage(files: FileCoverage[], minimum = 80) {
   );
   if (failed.length)
     throw new Error(
-      `Cobertura abaixo de ${minimum}% por arquivo: ${failed.map((file) => file.file).join(', ')}`,
+      `Coverage below ${minimum}% per file: ${failed.map((file) => file.file).join(', ')}`,
     );
 }
