@@ -120,12 +120,11 @@ impl Pipeline {
             .feedback()
             .map_err(|_| "Publication authorization or transport became unavailable")?;
         self.control.feedback(feedback, &mut self.report)?;
-        if let Some(encoder) = self.encoder.as_mut() {
-            if let Err(error) = self.control.apply(encoder, &mut self.report) {
-                if !encoder.device_lost() {
-                    return Err(error);
-                }
-            }
+        if let Some(encoder) = self.encoder.as_mut()
+            && let Err(error) = self.control.apply(encoder, &mut self.report)
+            && !encoder.device_lost()
+        {
+            return Err(error);
         }
         Ok(())
     }
