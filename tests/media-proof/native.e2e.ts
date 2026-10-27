@@ -88,6 +88,7 @@ test('Rust pre-encoded H264 interoperates with the browser worker and rejects a 
     const child = processHandle;
     let failure = 'no sanitized stage';
     let nativeProfile: string | undefined;
+    const feedbackObservations: string[] = [];
     child.stderr?.on('data', (data: Buffer) => {
       const stage = data.toString('utf8').match(/Native transport code: ([A-Za-z]+)/)?.[1];
       if (stage) failure = stage;
@@ -127,6 +128,12 @@ test('Rust pre-encoded H264 interoperates with the browser worker and rejects a 
           .toString('utf8')
           .match(/Native synthetic profile target: (480|720)\./)?.[1];
         if (profile) nativeProfile = profile;
+        for (const observation of chunk
+          .toString('utf8')
+          .matchAll(
+            /Native (?:paused|resumed) feedback: zero_fps=(?:true|false); zero_bitrate=(?:true|false); target_seen=(?:true|false)/g,
+          ))
+          feedbackObservations.push(observation[0]);
         output = (output + chunk.toString('utf8')).slice(-1024);
         if (output.includes('Native encrypted publication prepared.')) {
           clearTimeout(timer);
@@ -135,6 +142,26 @@ test('Rust pre-encoded H264 interoperates with the browser worker and rejects a 
       });
     });
     await ready;
+    const commandStage = (command: string, stage: string) => {
+      const completed = new Promise<void>((resolve, reject) => {
+        let output = '';
+        const timer = setTimeout(() => {
+          child.stdout?.off('data', observed);
+          reject(new Error('Native control command timed out'));
+        }, 10000);
+        function observed(chunk: Buffer) {
+          output = (output + chunk.toString('utf8')).slice(-256);
+          if (output.includes(stage)) {
+            clearTimeout(timer);
+            child.stdout?.off('data', observed);
+            resolve();
+          }
+        }
+        child.stdout?.on('data', observed);
+      });
+      child.stdin?.write(command);
+      return completed;
+    };
     const open = async (page: Page, grant: MediaProofGrant, mediaKey: string) => {
       await page.goto(`http://127.0.0.1:${process.env.MEDIA_PROOF_VIEWER_PORT}/?mode=experiment`);
       await page.getByRole('combobox').selectOption('en');
@@ -186,24 +213,7 @@ test('Rust pre-encoded H264 interoperates with the browser worker and rejects a 
       child.stdin?.write('high');
       await expect.poll(() => dimensions(receiver), { timeout: 15000 }).toBe(720);
       const beforeGate = await decoded(receiver);
-      const gateResumed = new Promise<void>((resolve, reject) => {
-        let output = '';
-        const timer = setTimeout(() => {
-          child.stdout?.off('data', observed);
-          reject(new Error('Same-profile keyframe recovery timed out'));
-        }, 10000);
-        function observed(chunk: Buffer) {
-          output = (output + chunk.toString('utf8')).slice(-256);
-          if (output.includes('Native same-profile keyframe gate resumed.')) {
-            clearTimeout(timer);
-            child.stdout?.off('data', observed);
-            resolve();
-          }
-        }
-        child.stdout?.on('data', observed);
-      });
-      child.stdin?.write('keyf');
-      await gateResumed;
+      await commandStage('keyf', 'Native same-profile keyframe gate resumed.');
       await expect.poll(() => decoded(receiver)).toBeGreaterThan(beforeGate);
       expect(await dimensions(receiver)).toBe(720);
     }
@@ -229,8 +239,20 @@ test('Rust pre-encoded H264 interoperates with the browser worker and rejects a 
           await context.close();
         }
       });
-    if (productControl)
+    if (productControl) {
       await expect.poll(() => audioEnergy(receiver), { timeout: 10000 }).toBeGreaterThan(0.005);
+      await commandStage('paus', 'Native publisher paused.');
+      // Drain already accepted network/playout data before observing a full second.
+      await receiver.waitForTimeout(750);
+      const pausedFrames = await decoded(receiver);
+      expect(await audioEnergy(receiver)).toBeLessThan(0.00001);
+      await receiver.waitForTimeout(1100);
+      expect(await decoded(receiver)).toBe(pausedFrames);
+      expect(await audioEnergy(receiver)).toBeLessThan(0.00001);
+      await commandStage('resu', 'Native publisher resumed.');
+      await expect.poll(() => decoded(receiver)).toBeGreaterThan(pausedFrames);
+      await expect.poll(() => audioEnergy(receiver), { timeout: 10000 }).toBeGreaterThan(0.005);
+    }
     await open(wrong, wrongViewer, (key[0] === 'A' ? 'B' : 'A') + key.slice(1));
     const before = await decoded(receiver);
     await wrong.waitForTimeout(2500);
@@ -240,6 +262,10 @@ test('Rust pre-encoded H264 interoperates with the browser worker and rejects a 
     await expect(wrong.locator('.proof-content [role=status]')).not.toContainText('Configuring');
     child.stdin?.end('stop');
     expect(await exited).toBe(0);
+    if (productControl) {
+      expect(feedbackObservations).toHaveLength(2);
+      for (const observation of feedbackObservations) console.info(observation);
+    }
   } finally {
     if (processHandle?.stdin?.writable && !processHandle.stdin.writableEnded)
       processHandle.stdin.end('stop');

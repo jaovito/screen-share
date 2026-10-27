@@ -7,7 +7,7 @@
 mod probe {
     use ss_domain::{EncodedAccessUnit, MAX_ACCESS_UNIT_BYTES, VideoProfile};
     use ss_rtc_livekit::native_proof::{
-        MediaKey, NativePublisher, NativeTransportError, PublisherGrant,
+        EncoderFeedback, MediaKey, NativePublisher, NativeTransportError, PublisherGrant,
     };
     use std::{fs, io::Read, sync::mpsc, time::Duration};
 
@@ -91,11 +91,36 @@ mod probe {
         Ok(packets)
     }
 
+    #[derive(Default)]
+    struct RateObservation {
+        zero_fps: bool,
+        zero_bitrate: bool,
+        target_seen: bool,
+    }
+
+    impl RateObservation {
+        fn observe(&mut self, feedback: EncoderFeedback) {
+            self.zero_fps |= feedback.target_fps.is_some_and(|value| value == 0.0);
+            self.zero_bitrate |= feedback.target_bitrate_bps == Some(0);
+            self.target_seen |=
+                feedback.target_fps.is_some() || feedback.target_bitrate_bps.is_some();
+        }
+
+        fn report(&self, phase: &'static str) {
+            println!(
+                "Native {phase} feedback: zero_fps={}; zero_bitrate={}; target_seen={}",
+                self.zero_fps, self.zero_bitrate, self.target_seen
+            );
+        }
+    }
+
     enum Command {
         Stop,
         Renew(PublisherGrant),
         Profile(u16),
         KeyframeGate,
+        Pause,
+        Resume,
     }
 
     async fn run(
@@ -129,6 +154,17 @@ mod probe {
                 if input.read_exact(&mut command).is_err() || command == *b"stop" {
                     let _ = send.send(Command::Stop);
                     break;
+                }
+                if command == *b"paus" || command == *b"resu" {
+                    let change = if command == *b"paus" {
+                        Command::Pause
+                    } else {
+                        Command::Resume
+                    };
+                    if send.send(change).is_err() {
+                        break;
+                    }
+                    continue;
                 }
                 if command == *b"keyf" {
                     if send.send(Command::KeyframeGate).is_err() {
@@ -173,13 +209,17 @@ mod probe {
         audio_tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
         let mut audio_cursor = 0_u64;
         let mut packet_index = 0;
+        let mut paused = false;
+        let mut resumed = false;
+        let mut paused_rates = RateObservation::default();
+        let mut resumed_rates = RateObservation::default();
         let result = async {
             // Test-owned process: finite 45-second ceiling even if the browser disappears.
             for sequence in 0..225 {
                 loop {
                     tokio::select! {
                         _ = ticker.tick() => break,
-                        _ = audio_tick.tick(), if audio => {
+                        _ = audio_tick.tick(), if audio && !paused => {
                             let samples: Vec<i16> = (0..960).flat_map(|sample| {
                                 let time = (audio_cursor + sample) as f64 / 48000.0;
                                 let value = (f64::sin(time * 440.0 * std::f64::consts::TAU) * 3000.0) as i16;
@@ -191,6 +231,7 @@ mod probe {
                     }
                 }
                 let mut reset_gate = false;
+                let mut resume_gate = false;
                 match commands.try_recv() {
                     Ok(Command::Stop) => break,
                     Ok(Command::Renew(grant)) => {
@@ -211,8 +252,28 @@ mod probe {
                         println!("Native synthetic profile target: {height}.");
                     }
                     Ok(Command::KeyframeGate) => { reset_gate = true; }
+                    Ok(Command::Pause) => {
+                        publisher.set_paused(true).map_err(|error| transport_error(error, "Synthetic pause failed"))?;
+                        paused = true;
+                        println!("Native publisher paused.");
+                    }
+                    Ok(Command::Resume) => {
+                        paused_rates.observe(publisher.feedback().map_err(|error| transport_error(error, "Paused authorization failed"))?);
+                        paused_rates.report("paused");
+                        publisher.set_paused(false).map_err(|error| transport_error(error, "Synthetic resume failed"))?;
+                        paused = false;
+                        resumed = true;
+                        resume_gate = true;
+                        packet_index = 0;
+                    }
                     Err(_) => {}
                 }
+                let feedback = publisher.feedback().map_err(|error| transport_error(error, "Synthetic lease check failed"))?;
+                if paused {
+                    paused_rates.observe(feedback);
+                    continue;
+                }
+                if resumed { resumed_rates.observe(feedback); }
                 let selected = if profile.height == 720 {
                     higher.as_ref().unwrap_or(&packets)
                 } else {
@@ -234,16 +295,17 @@ mod probe {
                 let frame =
                     EncodedAccessUnit::h264(packet.clone(), profile, (sequence as i64) * 200_000)
                         .map_err(|_| "Invalid synthetic H.264 access unit")?;
-                if reset_gate && !frame.is_keyframe() { return Err("Recovery fixture must restart with parameter-set IDR"); }
+                if (reset_gate || resume_gate) && !frame.is_keyframe() { return Err("Recovery fixture must restart with parameter-set IDR"); }
                 match publisher.push(&frame) {
                     Ok(_) => {
                         sent += 1;
                         if reset_gate { println!("Native same-profile keyframe gate resumed."); }
+                        if resume_gate { println!("Native publisher resumed."); }
                     },
                     Err(
                         NativeTransportError::FrameRejected
                         | NativeTransportError::KeyframeRequired,
-                    ) if !reset_gate => {}
+                    ) if !reset_gate && !resume_gate => {}
                     Err(error) => return Err(transport_error(error, "Native publication stopped by transport policy")),
                 }
             }
@@ -255,6 +317,9 @@ mod probe {
             .await
             .map_err(|_| "Native transport cleanup failed")?;
         result?;
+        if resumed {
+            resumed_rates.report("resumed");
+        }
         println!(
             "Native synthetic access units accepted: {sent}. No capture or hardware encoder was used."
         );
