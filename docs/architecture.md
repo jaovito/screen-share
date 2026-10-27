@@ -1,57 +1,47 @@
 # Architecture
 
-M0 separates HTTP control, UI, and media boundaries. The API is a modular monolith: `profiles` owns pure rules; `system` provides a readiness port and PostgreSQL adapter; `rooms` contains only the initial persistence schema. `src/index.ts` invokes `src/runtime/command.ts`, which dispatches to `src/runtime/server.ts`, which connects the pool, application, and server. Migrations/smoke use measured services in src/runtime; one minimal CLI entry dispatches serve/migrate/smoke/ready. Bun.serve provides native HTTP with graceful drain and an eight-second forced shutdown deadline. There are no room mutation or identity routes.
+The product separates authenticated control from native media. Bun/Hono manages identities and private rooms in PostgreSQL. Windows publishes selected content through an isolated Rust process; browser clients receive encrypted LiveKit tracks. Frames and PCM never cross HTTP, JSON, React state or Tauri IPC.
 
-```mermaid
-flowchart LR
-  WEB[React viewer] --> HTTP[Hono HTTP]
-  HTTP --> PROFILE[Profile domain]
-  HTTP --> READY[Readiness application]
-  PG[PostgreSQL/Drizzle adapter] -. implements .-> READY
-  PG --> DB[(PostgreSQL)]
-  UI[Desktop React] --> IPC[Tauri IPC]
-  IPC --> APP[Rust application]
-  APP --> DOMAIN[Rust domain]
-  WGC[Unavailable Windows adapter] -. implements .-> APP
-  RTC[Unavailable LiveKit adapter] -. implements .-> APP
-```
+## Control service
 
-Code dependencies point toward inner contracts. The Rust domain has no external dependencies; the API domain imports neither Zod, Hono, Drizzle, nor RTC. Tauri instantiates adapters and the use case; no frame travels through IPC/JSON. The server LiveKit SDK appears only in backend smoke. Native RTC SDK/Win32 dependencies enter in M1, using `cfg(target_os = "windows")` where required.
+`profiles` owns the static eight-profile catalog. `system` owns readiness and database lifetime. The original M0 `rooms` table remains migration history; the product uses the separate `identity` and `private-rooms` modules. Application services depend on small transactional persistence and RTC-control ports. Drizzle, Better Auth, Hono and the administrative LiveKit SDK are adapters.
 
-## Contracts
+Better Auth 1.7.14 provides password authentication and persistent HttpOnly SameSite=Lax cookies. The server discards token/session JSON equivalents from browser responses. Exact trusted origins, a bounded JSON body, persistent atomic request limits and sanitized errors protect the routes; CORS itself does not grant access. Technical user IDs are random UUIDs. Email is an account identifier, not proof of ownership or room access.
 
-`packages/contracts/src/index.ts` exports TypeScript source and is the source of truth for HTTP DTOs/validation and the TypeScript IPC representation. The API's pure catalog is converted/validated at the HTTP boundary. Drizzle entities never leave the adapter. Rust `AppInfo` serializes `version`, `platform`, and `mediaStatus`; its test compares names/values against a versioned fixture also validated by TS. The Rust IPC test runs in the Windows job. M0 has no broad binding-generation pipeline; changes must update both contracts and the fixture.
+Rooms contain an owner, at most eight approved/pending members and a monotonically increasing membership revision. Invitations store a hash of a random expiring, bounded-use secret. Acceptance creates a pending request; only the owner approves it. Pending clients receive their own request status, without the approved roster or media session. Owners may list invitation metadata and revoke old invitations after reloading; secrets are never reconstructed.
 
-## Data and availability
+A room lock serializes memberships, candidates, epochs and grant issuance. Each media epoch uses a new random RTC name. Approved membership changes retire the candidate/session and enqueue durable cleanup in the same transaction. The outbox claims work with a bounded lease, releases database locks before administrative RTC I/O, and acknowledges under room-first locking. Replacement activation/grants remain blocked until pending cleanup is complete. Revocation is an explicit closing transition, not instantaneous JWT invalidation. Concurrent preparations cannot replace an already preparing/active candidate; owner-row locking enforces the twenty-room quota.
 
-`rooms` has an opaque UUID supplied by the future application, a required nonempty owner, `idle|closed` state, and timestamps. Owner has no identity FK yet; no endpoint treats this ID as authorization. Future updates must explicitly maintain `updated_at`. Generated Drizzle migrations live in `apps/control-api/drizzle`, including journal/snapshot.
+All product routes are authenticated; the original health/readiness/catalog routes remain public. Migrations are explicit and immutable. Readiness checks migration hashes and actual legacy/product/auth/session/outbox columns. The API ships as a standalone Bun executable with embedded SQL/meta assets. Shutdown drains requests and the cleanup processor before closing the bounded pool.
 
-Readiness compares expected history hashes with `drizzle.__drizzle_migrations` and queries required `rooms` columns using real database credentials. Missing/divergent migrations, absent schema, and unavailable connection produce 503. The pool has at most five connections, 1.5s connection timeout, 2s query timeout, and 1.5s statement timeout. Startup retries connection five times; the pool/readiness can recover after database return. Migrations use an advisory lock to coordinate this project's runner. Do not run concurrent external migrators.
+## Shared UI and native control
 
-The API generates request IDs; logs contain event, duration, method, and status, without parameters, headers, bodies, or raw driver errors. SIGINT/SIGTERM stop the server, drain connections, and close the pool within an eight-second deadline.
+`app` mounts feature public APIs. The viewer and desktop share the concrete account/room workflow through `@screen-share/ui/product`, with adapters supplied by each app. Three bundled locale catalogs support pt-BR, es and en. Workspace subpaths must be explicitly declared in package exports. The architecture checker reads those exports and preserves feature/layer/cycle restrictions.
 
-## Limits
+The room controller polls authenticated snapshots without overlapping requests. Unknown authorization, logout, room changes, epochs and membership revisions unmount media owners. Keys and RTC grants stay in component/native memory. An owner generates an independent content key, delivers it through an established authenticated encrypted channel, then explicitly confirms distribution and activates the session. No API/database receives that key.
 
-The profile list is static and does not advertise GPU support. Adapters fail with `NotImplemented` on Windows and `UnsupportedPlatform` elsewhere. Engine inspection does not open capture or simulate a session. Media, authentication, invitations, and E2EE remain future milestones.
+Browser clients use same-site credentialed fetch. A Tauri WebView origin cannot rely on those browser cookies, so `ss-control-client` owns a private native cookie jar. It exposes only bounded JSON requests to a compile-configured HTTPS API (loopback HTTP in development), a fixed route/method allowlist, fixed Origin and no redirects. Renderer input cannot choose URLs or headers. Auth cookie/bearer equivalents never return through IPC.
 
-## Feature-based frontend
+## Native publication
 
-Both interfaces follow [frontend.md](frontend.md): mounting/composition in app, exclusive responsibilities in features, public feature APIs, and sharing only with actual reuse. Unit/DOM tests stay near behavior; E2E tests are grouped by feature in tests/e2e. Coverage policy and measured limits are in [testing.md](testing.md).
+The desktop controls exactly one fixed bundled sidecar through private bounded pipes. Credentials/keys are not command arguments or logs. A Windows job object contains only the owned child; driver deadlines terminate that child, never an unrelated process or the desktop shell. No shell/filesystem/HTTP plugin is exposed to JavaScript. Source selection uses the Windows picker only after an explicit start.
 
+The child owns the selected WGC item on its STA thread. A hardware D3D11 device and small frame pool feed one pending owned GPU texture; replacement reclaims the old frame. The MTA worker performs GPU SDR conversion/scaling, asynchronous hardware H.264 and encrypted pre-encoded LiveKit publication. No software encoder or silent source fallback exists. Pause drains/suspends output; resume retains the same item and starts with an IDR. Errors remain explicit and clean up independent resources.
 
-## Resolution and deployment
+Sixty-second product grants require fresh authenticated renewal. The native adapter validates exact session/epoch/room/identity/server/audio binding, closes the prior RTC connection, has the SFU verify the new signed grant, and resumes the retained source with encrypted publication. This can introduce a brief interruption. The SDK's internal token refresh or a locally decoded expiry does not authorize extending the application lease. A changed epoch requires an independent key and explicit new start.
 
-App-local aliases are defined in each tsconfig and local TS specifiers are extensionless. TypeScript uses Preserve/Bundler with noEmit; Bun resolves API/test aliases and Vite resolves frontend paths from tsconfig. The architecture checker resolves aliases too, preserving boundaries/cycle checks. Cross-workspace consumers still use public package exports.
+Slow adaptive quality consumes actual SDK transport targets: eight seconds of pressure and twenty-five seconds of headroom, with stale/clock/pause resets. Motion prioritizes frame cadence; Text prioritizes detail. Changes stay within the explicit user profile/bitrate ceiling, rebuild the external encoder and require new parameter sets/IDR. Transport pacing/bitrate remains bounded independently. These are policy rules, not measured network capacity or hardware capability claims.
 
-The API runs source TypeScript on Bun by default. Optional Bun compile produces a single host executable with embedded SQL/meta assets and Bun runtime. Source migration lookup remains relative to its adapter; standalone lookup uses embedded assets under import.meta.dir. Drizzle history/hash/constraints/readiness semantics remain unchanged. Docker ships the standalone binary without JS bundles, Node, or node_modules. Runtime-specific Bun APIs stay outside pure domain/application rules.
+Audio is off by default. Explicit system loopback includes the complete selected output mix; application mode targets the separately selected process tree. Process identity is checked against creation time and retained by an OS handle. Failure/exit never falls back to another process or system scope. Native 48 kHz stereo PCM packets feed encrypted Opus through the SDK with bounded buffering. The original audio client is retained across pause and renewal.
 
+## Reception, diagnostics and updates
 
-## M1 implementation slice
+The browser creates its real E2EE worker/key provider before joining and verifies acknowledged room/local identity before subscribing. Only the designated encrypted screen-share video and an explicitly rendered encrypted screen-audio sink are accepted. Expected publisher replacement in the same authorized epoch may wait for a new track, within the current lease; transport/encryption failures stop the owned connection. Renewals acquire fresh authorization. Autoplay audio may require the viewer to unmute/play.
 
-The product API still exposes only the M0 control endpoints. Offline operator tooling creates allowlisted five-minute room-scoped proof grants in new private files; it is not mounted as an HTTP route. Client grant schemas live in contracts; the operator-only allowlist schema stays with the tooling boundary. See ADR 0011 and media-proof.md.
+`@screen-share/diagnostics` computes counter deltas on the same stream and resets missing/changed/nonmonotonic samples. Decode cadence, received bitrate, average decode time, packet loss, jitter and transport RTT remain distinct. RTT is not visual latency; source inactivity or GPU saturation is not invented from unrelated counters. Native counters describe actual consumed/encoded/SDK-accepted data, not wire bitrate or verified viewing.
 
-The viewer's opt-in receiver dynamically loads its SDK only after explicit consent/submission, configures the actual encryption worker before connection, and manually subscribes to one encrypted designated publisher track only after validating connected identity/room. No browser publishing or automatic reconnect exists. Native sharing remains disabled in IPC.
+The fixed updater is unavailable until a real public key and HTTPS release endpoint are compiled in. A user explicitly checks and confirms installation. Manifest/artifact downloads are bounded, the official SDK verifies a version-bound signature, and the owned publisher must stop before installation/restart. No renderer-chosen installer/key/endpoint exists. Development NSIS artifacts remain unsigned; updater signing and Windows Authenticode are separate properties.
 
-The portable Rust session controller uses a trusted monotonic clock and verified authorization port, guards every blocking transition with fresh deadlines, and keeps one immutable selected source/session/epoch. It reports cleanup failures and requires release before reuse. A one-pending-frame queue drops/reclaims replaced native buffers. EncodedAccessUnit bounds H.264 Annex B framing with SPS/PPS before IDR; it does not decode or prove codec compatibility.
+## Evidence and operation
 
-The target-specific Windows acquisition module preserves the exact system-picker GraphicsCaptureItem, uses a hardware D3D11 device and two-frame WGC pool, copies selected content into owned GPU textures, and recreates the same pool/item on resize. It is compile-checked and unwired, with per-frame allocation/copy and no hardware-performance claim. D3D11 conversion, asynchronous hardware Media Foundation encoding and an optional native encrypted LiveKit adapter now have implementation. The explicit apps/media-proof-native utility composes them on STA/MTA owner threads; full Windows runtime/hardware validation and regular product-shell integration remain pending M1 work.
+See [validation.md](validation.md), [security-review-product.md](security-review-product.md), [deployment.md](deployment.md), [releases.md](releases.md), and ADRs 0011–0012. Synthetic local interoperability, compilation and automated filesystem/authorization tests do not establish physical Windows GPU compatibility, prolonged stability, real game recovery or a production deployment.

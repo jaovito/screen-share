@@ -3,7 +3,7 @@
 ## Start with the scope
 
 - `PLAN.md` defines goals and milestone gates; `docs/architecture.md` describes implementation; `docs/adr` records decisions; `docs/validation.md` records dated evidence. Read only what the task requires. Resolve discrepancies against code and update the right source; planned behavior is not an implemented feature.
-- Reference state: portable M0 and provider CI (including Windows build/IPC) validated. M1 implementation is in progress; native hardware/two-PC evidence and M2–M5 remain pending. Recheck evidence before changing this status.
+- Reference state: portable M0 and provider CI (including Windows build/IPC) validated; M1 native SDK interoperability, Windows compilation and non-interactive guards validated. The user explicitly authorized implementing all M1–M5 behavior on 2026-10-27. Hardware/two-PC/prolonged-test gates remain acceptance/release criteria and must not be reported as passed, but do not block later milestone code. Recheck evidence before changing this status.
 - Write all documentation, agent/skill instructions, code identifiers, code comments, and developer-facing test descriptions in English. UI supports pt-BR (default/fallback), es, and en through feature-local catalogs and @screen-share/i18n; keep translation keys in English and avoid hardcoded UI sentences. User-facing conversations retain the user's language. Do not translate protocol values, public identifiers, or runtime messages merely to translate prose.
 - Preserve existing changes and task scope. Inspect `git status`/diff before editing; do not revert another contributor's work or perform destructive cleanup.
 
@@ -17,7 +17,7 @@
 
 ## Scope and architecture
 
-- PLAN.md is the milestone source of truth. The current setup covers M0; healthy shells/SFU do not prove working media.
+- PLAN.md is the milestone source of truth. M0–M5 product code is present; consult dated validation for executed evidence. Healthy shells/SFU do not prove working capture or hardware acceptance.
 - One Bun workspace and one Cargo workspace at root. Use `workspace:` for local TS dependencies; Rust `default-members` preserve checks without desktop dependencies.
 - API: modular hexagonal monolith. Pure domain; application depends on ports; Hono/Drizzle/LiveKit stay at the edges. `src/index.ts` composes adapters.
 - Rust: domain excludes Tauri/Win32/RTC/serde; application depends on domain. The shell composes adapters. Future native dependencies must be conditional by platform.
@@ -28,7 +28,7 @@
 
 - Secrets belong only in backend/ignored local configuration, never `VITE_*`, diagnostic IPC, logs, or images. Do not print resolved Compose configuration.
 - No permissive login/token endpoints or client identity treated as authorization. Unimplemented boundaries must fail explicitly.
-- No silent source replacement or automatic capture. Capture/RTC return `NotImplemented` or `UnsupportedPlatform`; do not use `todo!()` on reachable paths.
+- No silent source replacement or automatic capture. Unsupported platform/capability paths return explicit typed errors; do not use `todo!()` on reachable paths.
 - Do not claim measured FPS, encoder support, active E2EE, or network capacity without implementation and real evidence. A preset catalog is not detected hardware support.
 - Preserve application validation/auditing. Use explicit versioned migrations, never db push or HTTP-triggered schema changes.
 - Normal workflows preserve volumes. Disposable tests remove only their own identified resources.

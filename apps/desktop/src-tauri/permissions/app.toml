@@ -2,3 +2,23 @@
 identifier = "allow-get-app-info"
 description = "Allow reading version, platform, and engine availability only."
 commands.allow = ["get_app_info"]
+
+[[permission]]
+identifier = "allow-sharing-control"
+description = "Control one isolated bundled publisher through a private pipe."
+commands.allow = ["start_sharing", "stop_sharing", "pause_sharing", "resume_sharing", "renew_sharing", "get_sharing_status"]
+
+[[permission]]
+identifier = "allow-control-request"
+description = "Use the fixed native control API transport with private memory-only cookies."
+commands.allow = ["control_request"]
+
+[[permission]]
+identifier = "allow-signed-updates"
+description = "Check a compile-configured HTTPS feed and install only after explicit confirmation."
+commands.allow = ["check_updates", "install_update"]
+
+[[permission]]
+identifier = "allow-list-audio-sources"
+description = "List at most 128 visible local application choices only after an explicit user action."
+commands.allow = ["list_audio_sources"]

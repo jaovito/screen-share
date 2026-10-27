@@ -7,12 +7,16 @@ license.workspace = true
 
 [features]
 default = []
-native-proof = ["dep:ss-media-windows", "dep:ss-rtc-livekit", "dep:ss-domain", "dep:tokio", "dep:windows", "dep:base64"]
+native-proof = ["dep:ss-media-windows", "dep:ss-audio-windows", "dep:ss-rtc-livekit", "dep:ss-domain", "dep:tokio", "dep:windows", "dep:base64"]
 
 [dependencies]
+serde.workspace = true
+serde_json.workspace = true
+zeroize = "=1.9.1"
 ss-domain = { workspace = true, optional = true }
 
 [target.'cfg(target_os = "windows")'.dependencies]
+ss-audio-windows = { workspace = true, optional = true }
 ss-media-windows = { workspace = true, optional = true, features = ["probe-ui"] }
 ss-rtc-livekit = { workspace = true, optional = true, features = ["native-proof"] }
 tokio = { version = "=1.54.1", optional = true, features = ["rt", "sync", "time", "macros"] }

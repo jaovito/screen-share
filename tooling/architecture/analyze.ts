@@ -38,20 +38,23 @@ export function resolveSourceImport(filename: string, specifier: string): string
   return posix.normalize(`${workspace}/src/${alias[1]}/${alias[2]}`);
 }
 
-export function analyzeSource(filename: string, code: string): string[] {
+const defaultExports = new Map([['ui', new Set(['./styles.css', './theme.css'])]]);
+
+export function analyzeSource(
+  filename: string,
+  code: string,
+  publicExports: ReadonlyMap<string, ReadonlySet<string>> = defaultExports,
+): string[] {
   const path = filename.replaceAll('\\', '/');
   const issues: string[] = [];
-  const browser = /^apps\/(viewer-web|desktop)\/src\//.test(path);
+  const browser = /^(apps\/(viewer-web|desktop)|packages\/(ui|i18n))\/src\//.test(path);
   const feature = path.match(/^(apps\/[^/]+\/src)\/features\/([^/]+)\//);
 
   for (const specifier of importsOf(path, code)) {
     const workspaceEntry = specifier.match(/^@screen-share\/([^/]+)(\/.*)?$/);
     if (
       workspaceEntry?.[2] &&
-      !(
-        workspaceEntry[1] === 'ui' &&
-        ['./styles.css', './theme.css'].includes(`.${workspaceEntry[2]}`)
-      )
+      !publicExports.get(workspaceEntry[1] ?? '')?.has(`.${workspaceEntry[2]}`)
     ) {
       issues.push('Workspaces must be imported through public exports.');
     }

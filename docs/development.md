@@ -8,17 +8,17 @@
 4. Start Docker Desktop with WSL2 backend for Linux Compose. Windows desktop runs natively, outside WSL/container.
 5. Follow README setup in PowerShell/native terminal; main commands do not require Bash.
 6. Run bun run dev:desktop. Tauri owns beforeDevCommand, port 1420, and frontendDist relative to src-tauri; do not start Vite manually.
-7. Run bun run build:desktop for NSIS. Development executable/installer is unsigned; signing/updates belong to M5.
+7. Run bun run build:desktop for NSIS. Normal development installers are unsigned; see [signed release preparation](releases.md) for the separately configured signing/update workflow.
 
 The Windows job checks crates/adapters, builds/tests the shell IPC DTO, and builds a development bundle. Configured CI is not execution evidence until the workflow runs.
 
 ## macOS and Linux
 
-bun run dev, check:ts, check:rust, SQL integration, and Compose are the supported partial workflow. `bun run --filter @screen-share/desktop dev` opens only a UI preview that shows missing IPC and starts no engine. dev:desktop/build:desktop fail explicitly outside Windows at this milestone. Manual compilation elsewhere does not establish capture support.
+bun run dev, check:ts, check:rust, SQL integration, and Compose are the supported partial workflow. `bun run --filter @screen-share/desktop dev` opens the authenticated product UI in browser preview; publication remains unavailable without native IPC. dev:desktop/build:desktop fail explicitly outside Windows at this milestone. Manual compilation elsewhere does not establish capture support.
 
 ## Migrations
 
-After changing src/modules/rooms/adapters/schema.ts:
+After changing a versioned module schema configured in apps/control-api/drizzle.config.ts:
 
 ```sh
 bun run --filter @screen-share/control-api db:generate
@@ -39,7 +39,7 @@ Validate Compose without printing secrets using `docker compose --env-file .env 
 
 ## RTC limits
 
-SFU listens on 0.0.0.0 inside its container; host publication is loopback only. rtc.node_ip is the advertised candidate, not a bind address. Configuration uses use_external_ip: false, UDP mux 7882, ICE/TCP 7881, and no concurrent UDP range. This prevents assuming remote access and must be explicitly revisited for M1. Docker Desktop/WSL/NAT may block a route that looks correct in signaling. Authenticated TURN, domain, TLS, LAN, and firewall require later network evidence.
+SFU listens on 0.0.0.0 inside its container; host publication is loopback only. rtc.node_ip is the advertised candidate, not a bind address. Configuration uses use_external_ip: false, UDP mux 7882, ICE/TCP 7881, and no concurrent UDP range. These development bindings do not provide remote access. Docker Desktop/WSL/NAT may block a route that looks correct in signaling. The separate [production configuration](deployment.md) supplies HTTPS/WSS and authenticated TURN configuration. Actual domain/TLS/UDP/TCP/TURN connectivity still requires operator execution and network evidence.
 
 ## Shared styling
 
@@ -47,7 +47,7 @@ Viewer/desktop use Tailwind CSS 4.3.3 and official @tailwindcss/vite in both Vit
 
 packages/ui/src/theme.css defines semantic variables and exposes them through @theme inline: bg-background, text-foreground, bg-card, border-border, bg-primary, text-primary-foreground, etc. Edit tokens there to update both interfaces. packages/ui/src/styles.css preserves layout in the components layer so utilities can override consumers. Biome enables css.parser.tailwindDirectives.
 
-Existing viewer example: className="panel mt-6". Prefer complete utility strings in JSX rather than partial interpolation so detection works. UI exports CSS directly without its own build.
+Existing viewer example: className="panel mt-6". Prefer complete utility strings in JSX rather than partial interpolation so detection works. The UI workspace exports CSS and the shared authenticated React workspace directly from TypeScript. Consumers build it through Vite; the package has its own strict source/test typechecks.
 
 shadcn/ui is not installed; shared components can be added when needed. See [official Vite integration](https://tailwindcss.com/docs/installation/using-vite).
 
@@ -62,6 +62,15 @@ Run `bun run dev` for watch-mode API/viewer, or `bun run --filter @screen-share/
 
 `bun run --filter @screen-share/control-api build` invokes Bun build --compile for the current host, producing apps/control-api/dist/control-api (control-api.exe on Windows). The executable supports serve (default), migrate, smoke, and ready. All versioned drizzle SQL/meta files are embedded with --asset; configuration/credentials remain runtime environment variables. The binary disables automatic .env/bunfig loading and does not inline environment secrets. No JS output or node_modules is needed at runtime. Provide the same validated environment for every command.
 
-The Docker build compiles inside its Linux build environment and copies only the executable into a digest-pinned Debian runtime with CA certificates/libstdc++. It runs as unprivileged app, uses the binary ready command as healthcheck, and invokes migrate before starting. Build native to the target image architecture; do not copy a macOS executable into Linux or claim an untested cross-target binary works.
+The Docker build compiles inside its Linux build environment and copies only the executable into a digest-pinned Debian runtime with CA certificates/libstdc++. It runs as unprivileged app, uses the binary ready command as healthcheck, while Compose runs a fresh one-shot migrator before API startup. Build native to the target image architecture; do not copy a macOS executable into Linux or claim an untested cross-target binary works.
 
 Use bun run test:binary for disposable standalone validation. The build intentionally embeds a snapshot of migration history; rebuild after adding migrations. Normal startup and readiness never apply schema changes. Compile-time typechecking remains a separate check. See ADR 0010.
+
+
+## Connected product and packaging boundaries
+
+The default web/desktop interface uses real account sessions, private rooms, owner-approved membership and scoped RTC grants. The viewer receives encrypted media; the Windows native publisher selects its video source explicitly. Audio starts off. Application audio is selected separately from video, includes the chosen process tree, and pins the process identity; system audio is a separate explicit choice. Local source labels/PIDs stay out of control API requests, logs and storage. The explicit `?mode=experiment` route preserves earlier operator-proof workflows.
+
+The production viewer/API intentionally share one HTTPS origin. Native authentication cookies remain in the Rust HTTP client. Client media keys stay in memory and are distributed independently through an authenticated encrypted channel. Session/member changes stop old media and require a fresh epoch/key; continuous authorization uses signed leases and current server state. See [security](security.md) and [deployment](deployment.md).
+
+Windows bundles automatically merge `src-tauri/tauri.windows.conf.json` with the base Tauri configuration, including the fixed sidecar. The optional release override adds updater configuration without replacing that platform overlay. No fake Windows executable is generated for macOS checks.

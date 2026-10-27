@@ -11,3 +11,8 @@ coverage
 .playwright-mcp/
 playwright-report/
 test-results/
+
+.media-proof/
+infra/production/.generated/
+
+apps/desktop/src-tauri/binaries/

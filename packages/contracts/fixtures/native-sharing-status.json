@@ -1,0 +1,19 @@
+{
+  "state": "idle",
+  "profileId": null,
+  "elapsedMs": 0,
+  "framesCaptured": 0,
+  "framesEncoded": 0,
+  "encodedBytes": 0,
+  "queueReplacements": 0,
+  "captureFps": null,
+  "encodedFps": null,
+  "targetFps": null,
+  "reason": null,
+  "encryption": "pending",
+  "audioSupported": false,
+  "audioSamples": 0,
+  "adaptationReason": null,
+  "qualityChanges": 0,
+  "targetBitrateBps": null
+}

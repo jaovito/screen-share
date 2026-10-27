@@ -23,12 +23,12 @@ export function run(command: string, args: string[], options: SpawnOptions = {})
     const child = start(command, args, options);
 
     child.on('error', () =>
-      reject(new Error(`Não foi possível executar ${command}. Verifique a instalação.`)),
+      reject(new Error(`Could not execute ${command}. Check its installation.`)),
     );
     child.on('exit', (code) =>
       code === 0
         ? resolvePromise()
-        : reject(new Error(`${command} falhou (código ${code ?? 'interrompido'}).`)),
+        : reject(new Error(`${command} failed (code ${code ?? 'interrupted'}).`)),
     );
   });
 }
@@ -55,6 +55,7 @@ export async function buildWorkspaces(
 }
 
 export async function typecheckWorkspaces() {
+  await run('bun', ['run', '--filter', '@screen-share/ui', 'typecheck']);
   await run('bun', ['run', '--filter', '@screen-share/contracts', 'typecheck']);
   await Promise.all(
     workspaceApps.map((name) =>

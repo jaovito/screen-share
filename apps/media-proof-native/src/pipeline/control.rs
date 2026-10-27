@@ -1,6 +1,8 @@
 use super::PipelineReport;
+use ss_domain::{AdaptiveQuality, QualityMode, QualityReason, VideoProfile};
 use ss_media_windows::HardwareEncoder;
 use ss_rtc_livekit::native_proof::EncoderFeedback;
+use std::time::Instant;
 
 pub(super) struct Control {
     bitrate_cap: u32,
@@ -10,26 +12,51 @@ pub(super) struct Control {
     target_fps: f64,
     needs_keyframe: bool,
     keyframe_requested: bool,
+    quality: AdaptiveQuality,
+    clock: Instant,
+    quality_reason: Option<QualityReason>,
 }
 
 impl Control {
-    pub fn new(bitrate: u32, fps: u8) -> Result<Self, &'static str> {
-        if !(64_000..=50_000_000).contains(&bitrate) || ![30, 60].contains(&fps) {
-            return Err("Invalid native publication limits");
-        }
+    pub fn new(
+        bitrate: u32,
+        profile: VideoProfile,
+        mode: QualityMode,
+    ) -> Result<Self, &'static str> {
+        let quality = AdaptiveQuality::new(profile, bitrate, mode)
+            .map_err(|_| "Invalid native publication limits")?;
         Ok(Self {
             bitrate_cap: bitrate,
             target_bitrate: bitrate,
             applied_bitrate: bitrate,
-            fps_cap: f64::from(fps),
-            target_fps: f64::from(fps),
+            fps_cap: f64::from(profile.fps),
+            target_fps: f64::from(profile.fps),
             needs_keyframe: true,
             keyframe_requested: false,
+            quality,
+            clock: Instant::now(),
+            quality_reason: None,
         })
+    }
+
+    pub fn target_fps(&self) -> f64 {
+        self.target_fps
     }
 
     pub fn bitrate(&self) -> u32 {
         self.target_bitrate
+    }
+
+    pub fn profile(&self) -> VideoProfile {
+        self.quality.profile()
+    }
+
+    pub fn quality_reason(&self) -> Option<QualityReason> {
+        self.quality_reason
+    }
+
+    pub fn suspend(&mut self) {
+        self.quality.suspend();
     }
 
     pub fn interval_100ns(&self) -> i64 {
@@ -40,6 +67,19 @@ impl Control {
         &mut self,
         feedback: EncoderFeedback,
         report: &mut PipelineReport,
+    ) -> Result<(), &'static str> {
+        self.feedback_at(
+            feedback,
+            report,
+            self.clock.elapsed().as_millis().min(u128::from(u64::MAX)) as u64,
+        )
+    }
+
+    fn feedback_at(
+        &mut self,
+        feedback: EncoderFeedback,
+        report: &mut PipelineReport,
+        now_ms: u64,
     ) -> Result<(), &'static str> {
         self.needs_keyframe |= feedback.request_keyframe;
         if let Some(bitrate) = feedback.target_bitrate_bps {
@@ -54,7 +94,16 @@ impl Control {
             if !fps.is_finite() || fps < 1.0 {
                 return Err("RTC frame rate is unavailable or stopped; publication stopped");
             }
-            let target = fps.min(self.fps_cap);
+            self.fps_cap = fps.min(60.0);
+        }
+        if let Some(update) = self.quality.observe(now_ms, feedback.target_bitrate_bps) {
+            self.needs_keyframe = true;
+            self.quality_reason = Some(update.reason);
+        }
+        {
+            // SDK frame-rate requests remain hard pacing bounds. Slow quality
+            // policy chooses the encoded resolution/cadence below that bound.
+            let target = self.fps_cap.min(f64::from(self.quality.profile().fps));
             if (self.target_fps - target).abs() > f64::EPSILON {
                 self.target_fps = target;
                 report.rate_updates = report.rate_updates.saturating_add(1);
@@ -164,6 +213,52 @@ mod tests {
     use super::*;
 
     #[test]
+    fn sdk_bitrate_feedback_drives_slow_profile_change_and_preserves_keyframe_requests() {
+        let mut control = Control::new(
+            10_000_000,
+            VideoProfile::new(1080, 60).unwrap(),
+            QualityMode::Motion,
+        )
+        .unwrap();
+        let mut report = PipelineReport::default();
+        control.accepted(true);
+        for now_ms in (0..=8_000).step_by(1_000) {
+            control
+                .feedback_at(
+                    EncoderFeedback {
+                        request_keyframe: now_ms == 4_000,
+                        target_bitrate_bps: Some(1_000_000),
+                        target_fps: Some(60.0),
+                    },
+                    &mut report,
+                    now_ms,
+                )
+                .unwrap();
+        }
+        assert_eq!(control.profile(), VideoProfile::new(720, 60).unwrap());
+        assert_eq!(control.target_fps(), 60.0);
+        assert_eq!(control.bitrate(), 1_000_000);
+        assert!(control.needs_keyframe);
+        assert_eq!(
+            control.quality_reason(),
+            Some(QualityReason::SustainedNetworkPressure)
+        );
+        control.suspend();
+        control
+            .feedback_at(
+                EncoderFeedback {
+                    request_keyframe: false,
+                    target_bitrate_bps: Some(1_000_000),
+                    target_fps: None,
+                },
+                &mut report,
+                100_000,
+            )
+            .unwrap();
+        assert_eq!(control.profile(), VideoProfile::new(720, 60).unwrap());
+    }
+
+    #[test]
     fn pacing_preserves_cadence_without_bursting_after_inactivity() {
         let mut pacer = Pacer::new();
         let mut accepted = 0;
@@ -186,7 +281,12 @@ mod tests {
 
     #[test]
     fn receiver_targets_cannot_raise_operator_limits_or_enable_zero_rate() {
-        let mut control = Control::new(8_000_000, 60).expect("valid limits");
+        let mut control = Control::new(
+            8_000_000,
+            VideoProfile::new(1080, 60).unwrap(),
+            QualityMode::Motion,
+        )
+        .expect("valid limits");
         let mut report = PipelineReport::default();
         control
             .feedback(

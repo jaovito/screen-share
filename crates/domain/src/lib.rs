@@ -1,4 +1,7 @@
 mod encoded_video;
+mod quality;
+
+pub use quality::{AdaptiveQuality, QualityMode, QualityReason, QualityUpdate};
 
 pub use encoded_video::{EncodedAccessUnit, EncodedVideoError, MAX_ACCESS_UNIT_BYTES};
 

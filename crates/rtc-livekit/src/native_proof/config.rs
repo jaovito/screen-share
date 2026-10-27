@@ -16,6 +16,35 @@ pub struct PublisherGrant {
     pub(super) server_url: String,
     pub(super) access_token: String,
     pub(super) deadline: Instant,
+    pub(super) audio_allowed: bool,
+}
+
+#[derive(Clone, PartialEq, Eq)]
+pub(super) struct GrantBinding {
+    session_id: String,
+    epoch: u64,
+    room: String,
+    identity: String,
+    server_url: String,
+}
+
+#[cfg(test)]
+impl GrantBinding {
+    pub(super) fn from_test_parts(
+        session_id: &str,
+        epoch: u64,
+        room: &str,
+        identity: &str,
+        server_url: &str,
+    ) -> Self {
+        Self {
+            session_id: session_id.into(),
+            epoch,
+            room: room.into(),
+            identity: identity.into(),
+            server_url: server_url.into(),
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -85,7 +114,11 @@ impl PublisherGrant {
         let deadline = observed_at
             .checked_add(remaining)
             .ok_or(NativeTransportError::InvalidGrant)?;
-        let room_id = envelope.rtc_room.strip_prefix("m1-").unwrap_or("");
+        let room_id = envelope
+            .rtc_room
+            .strip_prefix("m1-")
+            .or_else(|| envelope.rtc_room.strip_prefix("ss-"))
+            .unwrap_or("");
         if envelope.version != 1
             || envelope.role != "publisher"
             || envelope.participant_id != envelope.publisher_id
@@ -98,7 +131,7 @@ impl PublisherGrant {
         {
             return Err(NativeTransportError::InvalidGrant);
         }
-        validate_claims(&envelope, now)?;
+        let audio_allowed = validate_claims(&envelope, now)?;
         if Instant::now() >= deadline {
             return Err(NativeTransportError::InvalidGrant);
         }
@@ -111,7 +144,22 @@ impl PublisherGrant {
             server_url: envelope.server_url,
             access_token: envelope.access_token,
             deadline,
+            audio_allowed,
         })
+    }
+
+    pub(super) fn binding(&self) -> GrantBinding {
+        GrantBinding {
+            session_id: self.session_id.clone(),
+            epoch: self.epoch,
+            room: self.room.clone(),
+            identity: self.identity.clone(),
+            server_url: self.server_url.clone(),
+        }
+    }
+
+    pub fn audio_allowed(&self) -> bool {
+        self.audio_allowed
     }
 
     pub fn session_id(&self) -> &str {
@@ -159,7 +207,7 @@ fn valid_server(value: &str) -> bool {
         && url.fragment().is_none()
 }
 
-fn validate_claims(envelope: &Envelope, now: u64) -> Result<(), NativeTransportError> {
+fn validate_claims(envelope: &Envelope, now: u64) -> Result<bool, NativeTransportError> {
     let token = &envelope.access_token;
     if token.len() > 8192 {
         return Err(NativeTransportError::InvalidGrant);
@@ -194,7 +242,8 @@ fn validate_claims(envelope: &Envelope, now: u64) -> Result<(), NativeTransportE
         || video.room != envelope.rtc_room
         || !video.room_join
         || !video.can_publish
-        || sources.as_slice() != ["screen_share"]
+        || !(sources.as_slice() == ["screen_share"]
+            || sources.as_slice() == ["screen_share", "screen_share_audio"])
         || video.can_subscribe
         || video.can_publish_data
         || video.can_update_own_metadata
@@ -210,9 +259,11 @@ fn validate_claims(envelope: &Envelope, now: u64) -> Result<(), NativeTransportE
         return Err(NativeTransportError::InvalidGrant);
     }
 
+    let audio_allowed = sources.as_slice() == ["screen_share", "screen_share_audio"];
+
     // Signature verification intentionally remains at the SFU; no signing secret
     // belongs in a publisher. Successful connection alone is checked again by scope.
-    Ok(())
+    Ok(audio_allowed)
 }
 
 /// Media material is supplied independently; never deserialize it with the grant.

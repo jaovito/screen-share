@@ -38,6 +38,9 @@ services:
       HOST: 0.0.0.0
       PORT: 3000
       CORS_ORIGINS: ${CORS_ORIGINS}
+      AUTH_SECRET: ${AUTH_SECRET:?Execute bun run bootstrap}
+      AUTH_BASE_URL: ${AUTH_BASE_URL}
+      LIVEKIT_PUBLIC_URL: ${LIVEKIT_PUBLIC_URL}
       LIVEKIT_URL: http://livekit:7880
       LIVEKIT_API_KEY: ${LIVEKIT_API_KEY}
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}

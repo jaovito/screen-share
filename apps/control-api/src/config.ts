@@ -1,3 +1,4 @@
+import { mediaProofServerSchema } from '@screen-share/contracts';
 import { z } from 'zod';
 
 function hasProtocol(value: string, protocols: string[]) {
@@ -10,6 +11,12 @@ function hasProtocol(value: string, protocols: string[]) {
 
 const httpUrl = z.url().refine((value) => hasProtocol(value, ['http:', 'https:']));
 const schema = z.object({
+  AUTH_SECRET: z.string().min(32),
+  AUTH_BASE_URL: httpUrl.refine((value) => {
+    const url = new URL(value);
+    return url.protocol === 'https:' || ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+  }),
+  LIVEKIT_PUBLIC_URL: mediaProofServerSchema,
   DATABASE_URL: z.url().refine((value) => hasProtocol(value, ['postgres:', 'postgresql:'])),
   HOST: z.enum(['127.0.0.1', '0.0.0.0']).default('127.0.0.1'),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),

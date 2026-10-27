@@ -1,25 +1,22 @@
 mod control;
+mod drive;
+mod runtime;
 
-use control::{Control, Pacer};
-use ss_domain::VideoProfile;
-use ss_media_windows::{
-    CaptureReader, CaptureStatus, EncoderPoll, HardwareEncoder, NativeFrame, SubmitOutcome,
-};
-use ss_rtc_livekit::native_proof::{
-    MediaKey, NativePublisher, NativeTransportError, PublisherGrant,
-};
+use ss_domain::{QualityReason, VideoProfile};
+use ss_media_proof::protocol::{AudioMode, QualityMode};
+use ss_media_windows::CaptureReader;
+use ss_rtc_livekit::native_proof::{MediaKey, PublisherGrant};
 use std::{
     sync::{
-        Arc,
+        Arc, Mutex,
         atomic::{AtomicBool, Ordering},
-        mpsc::{self, Receiver, SyncSender, TryRecvError},
+        mpsc::{self, Receiver, SyncSender},
     },
     thread::{self, JoinHandle},
-    time::{Duration, Instant},
+    time::Instant,
 };
-use windows::Win32::System::Com::{COINIT_MULTITHREADED, CoInitializeEx, CoUninitialize};
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct PipelineReport {
     pub frames_consumed: u64,
     pub samples_submitted: u64,
@@ -28,6 +25,33 @@ pub struct PipelineReport {
     pub bytes_sent: u64,
     pub rate_updates: u64,
     pub keyframe_requests: u64,
+    pub audio_samples: u64,
+    pub quality_changes: u64,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum WorkerPhase {
+    Connecting,
+    Sharing,
+    Paused,
+    Stopped,
+    Failed,
+}
+
+#[derive(Clone)]
+pub struct Snapshot {
+    pub phase: WorkerPhase,
+    pub report: PipelineReport,
+    pub profile: VideoProfile,
+    pub target_fps: f64,
+    pub heartbeat: Instant,
+    pub adaptation_reason: Option<QualityReason>,
+    pub target_bitrate_bps: Option<u32>,
+}
+
+pub struct Renewal {
+    pub grant: PublisherGrant,
+    pub profile: Option<(VideoProfile, u32)>,
 }
 
 pub struct Worker {
@@ -35,6 +59,9 @@ pub struct Worker {
     pub result: Receiver<Result<PipelineReport, &'static str>>,
     pub frames: SyncSender<CaptureReader>,
     pub stop: Arc<AtomicBool>,
+    pub paused: Arc<AtomicBool>,
+    pub renew: SyncSender<Renewal>,
+    pub snapshot: Arc<Mutex<Snapshot>>,
     pub handle: Option<JoinHandle<()>>,
 }
 
@@ -49,21 +76,20 @@ struct PublicationSetup {
     key: MediaKey,
     profile: VideoProfile,
     bitrate: u32,
+    audio: AudioMode,
+    audio_process: Option<(u32, u64)>,
+    quality: QualityMode,
 }
 
-struct Mta;
-impl Mta {
-    fn open() -> Result<Self, &'static str> {
-        unsafe { CoInitializeEx(None, COINIT_MULTITHREADED) }
-            .ok()
-            .map_err(|_| "Media worker MTA initialization failed")?;
-        Ok(Self)
-    }
+struct Signals {
+    stop: Arc<AtomicBool>,
+    paused: Arc<AtomicBool>,
+    snapshot: Arc<Mutex<Snapshot>>,
 }
-impl Drop for Mta {
-    fn drop(&mut self) {
-        unsafe { CoUninitialize() };
-    }
+
+struct Input {
+    frames: Receiver<CaptureReader>,
+    renew: Receiver<Renewal>,
 }
 
 pub fn spawn(
@@ -72,35 +98,76 @@ pub fn spawn(
     profile: VideoProfile,
     bitrate: u32,
 ) -> Result<Worker, &'static str> {
+    spawn_with_audio(
+        grant,
+        key,
+        profile,
+        bitrate,
+        AudioMode::Off,
+        None,
+        QualityMode::Motion,
+    )
+}
+
+pub fn spawn_with_audio(
+    grant: PublisherGrant,
+    key: MediaKey,
+    profile: VideoProfile,
+    bitrate: u32,
+    audio: AudioMode,
+    audio_process: Option<(u32, u64)>,
+    quality: QualityMode,
+) -> Result<Worker, &'static str> {
     let (ready_tx, ready) = mpsc::sync_channel(1);
     let (result_tx, result) = mpsc::sync_channel(1);
     let (frames, frames_rx) = mpsc::sync_channel(1);
+    let (renew, renew_rx) = mpsc::sync_channel(1);
     let stop = Arc::new(AtomicBool::new(false));
-    let worker_stop = stop.clone();
+    let paused = Arc::new(AtomicBool::new(false));
+    let snapshot = Arc::new(Mutex::new(Snapshot {
+        phase: WorkerPhase::Connecting,
+        report: PipelineReport::default(),
+        profile,
+        target_fps: f64::from(profile.fps),
+        heartbeat: Instant::now(),
+        adaptation_reason: None,
+        target_bitrate_bps: None,
+    }));
+    let signals = Signals {
+        stop: stop.clone(),
+        paused: paused.clone(),
+        snapshot: snapshot.clone(),
+    };
     let handle = thread::Builder::new()
-        .name("m1-native-publisher".into())
+        .name("native-publisher".into())
         .spawn(move || {
             let mut ready_sent = false;
-            let outcome = (|| {
-                let _mta = Mta::open()?;
-                let runtime = tokio::runtime::Builder::new_current_thread()
-                    .enable_all()
-                    .build()
-                    .map_err(|_| "Media worker runtime failed")?;
-                runtime.block_on(run(
-                    PublicationSetup {
-                        grant,
-                        key,
-                        profile,
-                        bitrate,
-                    },
-                    &frames_rx,
-                    &worker_stop,
-                    &ready_tx,
-                    &mut ready_sent,
-                ))
-            })();
-            worker_stop.store(true, Ordering::Release);
+            let outcome = runtime::execute(
+                PublicationSetup {
+                    grant,
+                    key,
+                    profile,
+                    bitrate,
+                    audio,
+                    audio_process,
+                    quality,
+                },
+                Input {
+                    frames: frames_rx,
+                    renew: renew_rx,
+                },
+                &signals,
+                &ready_tx,
+                &mut ready_sent,
+            );
+            signals.stop.store(true, Ordering::Release);
+            if let Ok(mut snapshot) = signals.snapshot.lock() {
+                snapshot.phase = if outcome.is_ok() {
+                    WorkerPhase::Stopped
+                } else {
+                    WorkerPhase::Failed
+                };
+            }
             if !ready_sent {
                 let failure = outcome
                     .as_ref()
@@ -118,224 +185,9 @@ pub fn spawn(
         result,
         frames,
         stop,
+        paused,
+        renew,
+        snapshot,
         handle: Some(handle),
     })
-}
-
-struct Pipeline {
-    encoder: Option<HardwareEncoder>,
-    pending: Option<NativeFrame>,
-    control: Control,
-    profile: VideoProfile,
-    report: PipelineReport,
-    pacing: Pacer,
-}
-
-impl Pipeline {
-    fn feedback(&mut self, publisher: &mut NativePublisher) -> Result<(), &'static str> {
-        // This is also the current lease, acknowledged permission and E2EE gate.
-        let feedback = publisher
-            .feedback()
-            .map_err(|_| "Publication authorization or transport became unavailable")?;
-        self.control.feedback(feedback, &mut self.report)?;
-        if let Some(encoder) = self.encoder.as_mut() {
-            self.control.apply(encoder, &mut self.report)?;
-        }
-        Ok(())
-    }
-
-    async fn drive(
-        &mut self,
-        publisher: &mut NativePublisher,
-        reader: CaptureReader,
-        stop: &AtomicBool,
-    ) -> Result<(), &'static str> {
-        'media: while !stop.load(Ordering::Acquire) {
-            self.feedback(publisher)?;
-            if !capture_active(&reader)? {
-                break;
-            }
-            if let Some(frame) = reader
-                .take_frame()
-                .map_err(|_| "Native capture frame unavailable")?
-            {
-                self.report.frames_consumed = self.report.frames_consumed.saturating_add(1);
-                self.pending = Some(frame);
-            }
-            if self.encoder.is_none()
-                && let Some(frame) = self.pending.as_ref()
-            {
-                let encoder = HardwareEncoder::new(frame, self.profile, self.control.bitrate()).map_err(|_| "Hardware encoder initialization failed or capabilities are unsupported")?;
-                self.encoder = Some(encoder);
-                self.control.initialized();
-            }
-            // Native initialization/encoding may block. Let the current-thread
-            // runtime process queued SDK/supervisor events before the fresh gate.
-            tokio::task::yield_now().await;
-            if stop.load(Ordering::Acquire) || !capture_active(&reader)? {
-                break;
-            }
-            self.feedback(publisher)?;
-            for _ in 0..8 {
-                if stop.load(Ordering::Acquire) || !capture_active(&reader)? {
-                    break 'media;
-                }
-                self.feedback(publisher)?;
-                let Some(encoder) = self.encoder.as_mut() else {
-                    break;
-                };
-                let event = encoder
-                    .poll()
-                    .map_err(|_| "Asynchronous hardware encoding failed")?;
-                tokio::task::yield_now().await;
-                self.feedback(publisher)?;
-                match event {
-                    EncoderPoll::Pending => break,
-                    EncoderPoll::NeedInput => {}
-                    EncoderPoll::Output(unit) => {
-                        self.report.access_units = self.report.access_units.saturating_add(1);
-                        self.feedback(publisher)?;
-                        tokio::task::yield_now().await;
-                        let current = publisher.feedback().map_err(
-                            |_| "Publication authorization or transport became unavailable",
-                        )?;
-                        self.control.feedback(current, &mut self.report)?;
-                        if stop.load(Ordering::Acquire) || !capture_active(&reader)? {
-                            break 'media;
-                        }
-                        match publisher.push(&unit) {
-                            Ok(feedback) => {
-                                self.report.bytes_sent = self
-                                    .report
-                                    .bytes_sent
-                                    .saturating_add(unit.payload().len() as u64);
-                                self.control.accepted(unit.is_keyframe());
-                                self.control.feedback(feedback, &mut self.report)?;
-                            }
-                            Err(NativeTransportError::KeyframeRequired) => {
-                                self.control.recover(false)
-                            }
-                            Err(NativeTransportError::FrameRejected) => self.control.recover(true),
-                            Err(_) => {
-                                return Err(
-                                    "Encoded publication failed or its lease became invalid",
-                                );
-                            }
-                        }
-                    }
-                }
-            }
-            if stop.load(Ordering::Acquire) || !capture_active(&reader)? {
-                break;
-            }
-            self.feedback(publisher)?;
-            if let Some(encoder) = self.encoder.as_mut()
-                && let Some(frame) = self.pending.as_ref()
-            {
-                let due = self
-                    .pacing
-                    .due(frame.timestamp_100ns(), self.control.interval_100ns())?;
-                if due {
-                    match encoder
-                        .submit(frame)
-                        .map_err(|_| "GPU conversion or hardware encoder input failed")?
-                    {
-                        SubmitOutcome::Accepted => {
-                            self.pacing.accepted(frame.timestamp_100ns())?;
-                            self.report.samples_submitted =
-                                self.report.samples_submitted.saturating_add(1);
-                            self.pending = None;
-                        }
-                        SubmitOutcome::Backpressure => {}
-                    }
-                }
-            }
-            tokio::time::sleep(Duration::from_millis(3)).await;
-        }
-        Ok(())
-    }
-}
-
-async fn run(
-    setup: PublicationSetup,
-    frames: &Receiver<CaptureReader>,
-    stop: &AtomicBool,
-    ready: &SyncSender<Result<(), &'static str>>,
-    ready_sent: &mut bool,
-) -> Result<PipelineReport, &'static str> {
-    let PublicationSetup {
-        grant,
-        key,
-        profile,
-        bitrate,
-    } = setup;
-    let mut pipeline = Pipeline {
-        encoder: None,
-        pending: None,
-        control: Control::new(bitrate, profile.fps)?,
-        profile,
-        report: PipelineReport::default(),
-        pacing: Pacer::new(),
-    };
-    let mut publisher = NativePublisher::connect(grant, key, profile, bitrate)
-        .await
-        .map_err(|_| "Scoped encrypted publication setup failed")?;
-    let work = async {
-        if stop.load(Ordering::Acquire) {
-            return Err("Publication stopped before capture");
-        }
-        pipeline.feedback(&mut publisher)?;
-        ready
-            .send(Ok(()))
-            .map_err(|_| "Capture owner closed before publication was ready")?;
-        *ready_sent = true;
-        let waiting = Instant::now();
-        let reader = loop {
-            if stop.load(Ordering::Acquire) {
-                return Err("Publication stopped before capture");
-            }
-            pipeline.feedback(&mut publisher)?;
-            match frames.try_recv() {
-                Ok(reader) => break reader,
-                Err(TryRecvError::Disconnected) => return Err("Capture owner disconnected"),
-                Err(TryRecvError::Empty) => {}
-            }
-            if waiting.elapsed() >= Duration::from_secs(5) {
-                return Err(
-                    "Authorized capture did not become available before its startup deadline",
-                );
-            }
-            tokio::time::sleep(Duration::from_millis(3)).await;
-        };
-        pipeline.drive(&mut publisher, reader, stop).await
-    }
-    .await;
-    // Signal the STA before potentially blocking hardware cleanup. It owns and
-    // stops WGC independently and keeps its explicit own-process watchdog active.
-    stop.store(true, Ordering::Release);
-    pipeline.pending = None;
-    let encoder_stopped = if let Some(encoder) = pipeline.encoder.as_mut() {
-        encoder
-            .stop()
-            .map_err(|_| "Hardware encoder cleanup failed")
-    } else {
-        Ok(())
-    };
-    let transport_closed = publisher
-        .close()
-        .await
-        .map_err(|_| "Encrypted publication cleanup failed");
-    encoder_stopped?;
-    transport_closed?;
-    work?;
-
-    Ok(pipeline.report)
-}
-
-fn capture_active(reader: &CaptureReader) -> Result<bool, &'static str> {
-    match reader.status().map_err(|_| "Capture status unavailable")? {
-        CaptureStatus::Capturing => Ok(true),
-        CaptureStatus::SourceClosed | CaptureStatus::Stopped => Ok(false),
-        CaptureStatus::Failed(_) => Err("Native capture failed; no fallback source was selected"),
-    }
 }

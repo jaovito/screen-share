@@ -1,6 +1,9 @@
 //! Explicitly enabled M1 transport experiment, not a complete publisher or hardware proof.
 
+mod adaptation;
+mod audio;
 mod config;
+mod renewal;
 mod supervisor;
 
 pub use config::{MediaKey, PublisherGrant};
@@ -43,6 +46,7 @@ pub enum NativeTransportError {
     Disconnected,
     ReconnectRequired,
     Stopped,
+    Paused,
     CloseFailed,
 }
 
@@ -56,9 +60,17 @@ pub struct EncoderFeedback {
 /// No media queue is introduced here. The caller owns a bounded encoder pipeline.
 /// Credential/key/source handles deliberately have no Debug/Serialize implementation.
 pub struct NativePublisher {
+    binding: config::GrantBinding,
+    media_key: Vec<u8>,
+    max_bitrate_bps: u32,
+    track: LocalVideoTrack,
+    paused: bool,
+    audio: Option<audio::AudioPublication>,
+    audio_allowed: bool,
     room: Arc<Room>,
     source: NativeVideoSource,
     profile: VideoProfile,
+    profile_ceiling: VideoProfile,
     deadline: Instant,
     gate: Gate,
     wake: Arc<Notify>,
@@ -87,7 +99,8 @@ impl NativePublisher {
             return Err(NativeTransportError::Expired);
         }
 
-        let key_provider = KeyProvider::with_shared_key(KeyProviderOptions::default(), media_key.0);
+        let key_provider =
+            KeyProvider::with_shared_key(KeyProviderOptions::default(), media_key.0.clone());
         let mut options = RoomOptions::default();
         options.auto_subscribe = false;
         options.adaptive_stream = false;
@@ -121,7 +134,7 @@ impl NativePublisher {
 
         let accepted = room.name() == grant.room
             && room.local_participant().identity().to_string() == grant.identity
-            && permission_matches(&room)
+            && permission_matches(&room, grant.audio_allowed)
             && room.e2ee_manager().enabled()
             && room.e2ee_manager().encryption_type() == EncryptionType::Gcm;
         if !accepted {
@@ -152,7 +165,7 @@ impl NativePublisher {
         let publication = timeout(
             Duration::from_secs(10),
             room.local_participant()
-                .publish_track(LocalTrack::Video(track), publish_options),
+                .publish_track(LocalTrack::Video(track.clone()), publish_options),
         )
         .await;
         let published = match publication {
@@ -167,9 +180,17 @@ impl NativePublisher {
         }
 
         let publisher = Self {
+            binding: grant.binding(),
+            media_key: media_key.0,
+            max_bitrate_bps,
+            track,
+            paused: false,
+            audio: None,
+            audio_allowed: grant.audio_allowed,
             room,
             source,
             profile,
+            profile_ceiling: profile,
             deadline: grant.deadline,
             gate,
             wake,
@@ -198,6 +219,9 @@ impl NativePublisher {
         unit: &EncodedAccessUnit,
     ) -> Result<EncoderFeedback, NativeTransportError> {
         self.ensure_live()?;
+        if self.paused {
+            return Err(NativeTransportError::Paused);
+        }
         if unit.profile() != self.profile
             || self
                 .last_timestamp
@@ -278,7 +302,7 @@ impl NativePublisher {
             Some(NativeTransportError::Expired)
         } else if self.room.connection_state() != ConnectionState::Connected {
             Some(NativeTransportError::Disconnected)
-        } else if !permission_matches(&self.room) {
+        } else if !permission_matches(&self.room, self.audio_allowed) {
             Some(NativeTransportError::PermissionDenied)
         } else if !self.room.e2ee_manager().enabled() {
             Some(NativeTransportError::EncryptionUnavailable)
@@ -299,7 +323,7 @@ impl Drop for NativePublisher {
     }
 }
 
-fn permission_matches(room: &Room) -> bool {
+fn permission_matches(room: &Room, audio_allowed: bool) -> bool {
     room.local_participant()
         .permission()
         .is_some_and(|permission| {
@@ -307,13 +331,32 @@ fn permission_matches(room: &Room) -> bool {
             permission.can_publish
                 && !permission.can_subscribe
                 && !permission.can_publish_data
-                && permission.can_publish_sources.as_slice() == [3]
+                && publication_sources_match(&permission.can_publish_sources, audio_allowed)
         })
+}
+
+fn publication_sources_match(sources: &[i32], audio_allowed: bool) -> bool {
+    if audio_allowed {
+        sources.len() == 2 && sources.contains(&3) && sources.contains(&4)
+    } else {
+        sources == [3]
+    }
 }
 
 #[cfg(test)]
 mod bitrate_tests {
     use super::*;
+
+    #[test]
+    fn acknowledged_source_scope_is_an_exact_set_independent_of_order() {
+        assert!(publication_sources_match(&[3, 4], true));
+        assert!(publication_sources_match(&[4, 3], true));
+        assert!(publication_sources_match(&[3], false));
+        for sources in [&[][..], &[3][..], &[3, 3][..], &[3, 4, 2][..], &[1, 4][..]] {
+            assert!(!publication_sources_match(sources, true));
+        }
+        assert!(!publication_sources_match(&[3, 4], false));
+    }
 
     #[tokio::test(flavor = "current_thread")]
     async fn rejects_invalid_operator_bitrate_before_sdk_connection() {
@@ -326,6 +369,7 @@ mod bitrate_tests {
                 server_url: "ws://127.0.0.1:1".into(),
                 access_token: "not-a-usable-token".into(),
                 deadline: Instant::now() + Duration::from_secs(60),
+                audio_allowed: false,
             };
             let key =
                 MediaKey::from_encoded_secret(&"a".repeat(43)).expect("synthetic independent key");

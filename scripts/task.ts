@@ -1,4 +1,5 @@
 import { bootstrap } from './bootstrap';
+import { buildSidecar, desktopEnvironment } from './build-sidecar';
 import { doctor } from './doctor';
 import { buildWorkspaces, compose, loadEnv, run, start, typecheckWorkspaces } from './lib';
 import { runTestSuites } from './test-suites';
@@ -66,7 +67,28 @@ async function desktop(build: boolean) {
     );
 
   await contracts();
-  await run('bun', ['run', '--filter', '@screen-share/desktop', 'tauri', build ? 'build' : 'dev']);
+  await buildSidecar();
+  await run(
+    'bun',
+    [
+      'run',
+      '--filter',
+      '@screen-share/desktop',
+      'tauri',
+      build ? 'build' : 'dev',
+      ...(process.env.SCREEN_SHARE_RELEASE_CONFIG
+        ? ['--config', process.env.SCREEN_SHARE_RELEASE_CONFIG]
+        : []),
+    ],
+    {
+      env: {
+        ...desktopEnvironment(),
+        SCREEN_SHARE_API_URL:
+          process.env.SCREEN_SHARE_API_URL ?? process.env.VITE_API_URL ?? 'http://127.0.0.1:3000',
+        CARGO_BUILD_JOBS: '2',
+      },
+    },
+  );
 }
 
 async function main() {
@@ -147,11 +169,11 @@ async function main() {
       await import('./persistence');
       break;
     default:
-      throw new Error(`Comando desconhecido: ${command}`);
+      throw new Error(`Unknown command: ${command}`);
   }
 }
 
 main().catch((error) => {
-  console.error(error instanceof Error ? error.message : 'Falha no comando');
+  console.error(error instanceof Error ? error.message : 'Command failed');
   process.exitCode = 1;
 });

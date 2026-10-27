@@ -45,12 +45,25 @@ impl<T> LatestFrameQueue<T> {
 
     /// Takes ownership even on rejection, releasing a rejected frame immediately.
     pub fn push(&self, frame: T) -> Result<(), FrameQueueError> {
+        self.push_if(frame, || true).map(|_| ())
+    }
+
+    /// Evaluate a cheap gate under the same slot lock used by clear/close.
+    /// Rejected native buffers are released after the slot lock is dropped.
+    pub fn push_if(
+        &self,
+        frame: T,
+        accept: impl FnOnce() -> bool,
+    ) -> Result<bool, FrameQueueError> {
         let discarded = {
             let mut slot = self.slot.lock().map_err(|_| FrameQueueError::Poisoned)?;
             if slot.closed {
                 return Err(FrameQueueError::Closed);
             }
 
+            if !accept() {
+                return Ok(false);
+            }
             let discarded = slot.frame.replace(frame);
             slot.counters.accepted = slot.counters.accepted.saturating_add(1);
             if discarded.is_some() {
@@ -60,6 +73,18 @@ impl<T> LatestFrameQueue<T> {
         };
         drop(discarded);
 
+        Ok(true)
+    }
+
+    /// Discard pending data without closing the original source's queue.
+    pub fn clear(&self) -> Result<(), FrameQueueError> {
+        let discarded = self
+            .slot
+            .lock()
+            .map_err(|_| FrameQueueError::Poisoned)?
+            .frame
+            .take();
+        drop(discarded);
         Ok(())
     }
 
@@ -106,6 +131,19 @@ mod tests {
         fn drop(&mut self) {
             self.0.fetch_add(1, Ordering::SeqCst);
         }
+    }
+
+    #[test]
+    fn pause_gate_and_clear_discard_frames_without_changing_queue_identity() {
+        let queue = LatestFrameQueue::new();
+        assert_eq!(queue.push_if(1, || false), Ok(false));
+        assert_eq!(queue.take(), Ok(None));
+        queue.push(2).expect("accepted before pause");
+        queue.clear().expect("pause clears pending data");
+        assert_eq!(queue.take(), Ok(None));
+        assert_eq!(queue.push_if(3, || true), Ok(true));
+        assert_eq!(queue.take(), Ok(Some(3)));
+        assert_eq!(queue.counters().expect("counters").accepted, 2);
     }
 
     #[test]

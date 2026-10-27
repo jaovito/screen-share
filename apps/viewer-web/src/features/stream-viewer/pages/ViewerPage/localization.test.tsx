@@ -1,7 +1,8 @@
 import { expect, it, mock, spyOn } from 'bun:test';
-import { App } from '@app/App';
-import { localeStorageKey } from '@screen-share/i18n';
+import { LocaleProvider, localeStorageKey } from '@screen-share/i18n';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { viewerTranslations } from '../../locales';
+import { ViewerPage } from './index';
 
 function unavailableApi() {
   spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 503 }));
@@ -63,3 +64,11 @@ it('translates a pending request and its eventual response without changing the 
   );
   expect(fetcher).toHaveBeenCalledTimes(2);
 });
+
+function App() {
+  return (
+    <LocaleProvider translations={viewerTranslations} titleKey="documentTitle">
+      <ViewerPage />
+    </LocaleProvider>
+  );
+}

@@ -50,6 +50,7 @@ struct Shared {
     frames: LatestFrameQueue<NativeFrame>,
     status: Mutex<CaptureStatus>,
     stopped: AtomicBool,
+    paused: AtomicBool,
 }
 
 impl Shared {
@@ -79,7 +80,8 @@ impl CaptureReader {
     }
 
     pub fn take_frame(&self) -> Result<Option<NativeFrame>, CaptureError> {
-        if self.shared.stopped.load(Ordering::Acquire) {
+        if self.shared.stopped.load(Ordering::Acquire) || self.shared.paused.load(Ordering::Acquire)
+        {
             return Ok(None);
         }
         let frame = self
@@ -87,7 +89,8 @@ impl CaptureReader {
             .frames
             .take()
             .map_err(|_| CaptureError::QueueFailed)?;
-        if self.shared.stopped.load(Ordering::Acquire) {
+        if self.shared.stopped.load(Ordering::Acquire) || self.shared.paused.load(Ordering::Acquire)
+        {
             return Ok(None);
         }
         Ok(frame)
@@ -143,6 +146,7 @@ impl NativeCapture {
             frames: LatestFrameQueue::new(),
             status: Mutex::new(CaptureStatus::Capturing),
             stopped: AtomicBool::new(false),
+            paused: AtomicBool::new(false),
         });
         let processor = Arc::new(Mutex::new(FrameProcessor {
             device,
@@ -191,6 +195,25 @@ impl NativeCapture {
 
     pub fn queue_counters(&self) -> Result<FrameQueueCounters, CaptureError> {
         self.reader().queue_counters()
+    }
+
+    /// Stop producing owned textures while preserving the exact consent item.
+    /// WGC notifications are drained without conversion/copy while paused.
+    pub fn set_output_paused(&self, paused: bool) -> Result<(), CaptureError> {
+        if paused {
+            self.shared.paused.store(true, Ordering::Release);
+            self.shared
+                .frames
+                .clear()
+                .map_err(|_| CaptureError::QueueFailed)?;
+        } else {
+            self.shared
+                .frames
+                .clear()
+                .map_err(|_| CaptureError::QueueFailed)?;
+            self.shared.paused.store(false, Ordering::Release);
+        }
+        Ok(())
     }
 
     /// Disconnect callbacks, close capture/pool and release the pending texture.
@@ -246,13 +269,25 @@ impl NativeCapture {
                                 shared.end(CaptureStatus::Failed(CaptureError::FrameFailed));
                                 return Ok(());
                             };
+                            if shared.paused.load(Ordering::Acquire) {
+                                if let Ok(frame) = pool.TryGetNextFrame() {
+                                    let _ = frame.Close();
+                                }
+                                return Ok(());
+                            }
                             let result = processor
                                 .lock()
                                 .map_err(|_| CaptureError::FrameFailed)
                                 .and_then(|mut processor| processor.next(pool));
                             match result {
                                 Ok(Some(frame)) if !shared.stopped.load(Ordering::Acquire) => {
-                                    if shared.frames.push(frame).is_err()
+                                    if shared
+                                        .frames
+                                        .push_if(frame, || {
+                                            !shared.paused.load(Ordering::Acquire)
+                                                && !shared.stopped.load(Ordering::Acquire)
+                                        })
+                                        .is_err()
                                         && !shared.stopped.load(Ordering::Acquire)
                                     {
                                         shared

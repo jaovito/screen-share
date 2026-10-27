@@ -5,7 +5,9 @@
   "type": "module",
   "exports": {
     "./styles.css": "./src/styles.css",
-    "./theme.css": "./src/theme.css"
+    "./theme.css": "./src/theme.css",
+    "./product": "./src/product/index.ts",
+    "./product/styles.css": "./src/product/styles.css"
   },
   "sideEffects": [
     "**/*.css"
@@ -17,5 +19,18 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/jaovito/screen-share.git"
+  },
+  "dependencies": {
+    "@screen-share/contracts": "workspace:*",
+    "@screen-share/i18n": "workspace:*",
+    "react": "19.3.1",
+    "zod": "4.6.7",
+    "@screen-share/diagnostics": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0"
+  },
+  "scripts": {
+    "typecheck": "bun --bun ../../node_modules/typescript/bin/tsc -p tsconfig.json && bun --bun ../../node_modules/typescript/bin/tsc -p tsconfig.test.json"
   }
 }

@@ -1,4 +1,9 @@
-import { mediaProofGrantSchema } from '@screen-share/contracts';
+import { mediaProofGrantSchema, productMediaGrantSchema } from '@screen-share/contracts';
+import {
+  type ReceiverBaseline,
+  type ReceiverMetrics,
+  receiverSample,
+} from '@screen-share/diagnostics/receiver';
 import {
   ExternalE2EEKeyProvider,
   isE2EESupported,
@@ -10,6 +15,7 @@ import {
   setLogLevel,
   Track,
 } from 'livekit-client';
+import { createEncryptedAudio } from './encrypted-audio';
 
 export type ReceptionState =
   | 'idle'
@@ -26,17 +32,21 @@ type ReceptionInput = {
   grant: unknown;
   mediaKey: string;
   video: HTMLVideoElement;
+  audio?: HTMLAudioElement;
   onState: (state: ReceptionState) => void;
+  onMetrics?: (metrics: ReceiverMetrics) => void;
 };
 
-/** An explicitly started, receive-only M1 experiment; never acquires local media. */
+/** Explicit receive-only encrypted playback; never acquires local media. */
 export function receiveEncryptedSession({
   grant: rawGrant,
   mediaKey,
   video,
+  audio: audioElement,
   onState,
+  onMetrics,
 }: ReceptionInput) {
-  const parsed = mediaProofGrantSchema.safeParse(rawGrant);
+  const parsed = mediaProofGrantSchema.or(productMediaGrantSchema).safeParse(rawGrant);
   const noop = { stop() {} };
 
   if (!parsed.success || parsed.data.role !== 'viewer') {
@@ -45,6 +55,8 @@ export function receiveEncryptedSession({
   }
 
   const grant = parsed.data;
+  const productSession = grant.rtcRoom.startsWith('ss-');
+  const audio = createEncryptedAudio(audioElement, grant.publisherId, productSession);
   const { publisherId, rtcRoom, participantId, serverUrl } = grant;
   let accessToken = grant.accessToken;
   const remainingMs = grant.expiresAt * 1000 - Date.now();
@@ -91,6 +103,9 @@ export function receiveEncryptedSession({
   let attached: RemoteTrack | undefined;
   let connectionTimer: ReturnType<typeof setTimeout> | undefined;
   let expiryTimer: ReturnType<typeof setTimeout> | undefined;
+  let metricsTimer: ReturnType<typeof setInterval> | undefined;
+  let statsGeneration = 0;
+  let baseline: ReceiverBaseline | undefined;
 
   function bestEffort(action: () => unknown) {
     try {
@@ -106,6 +121,20 @@ export function receiveEncryptedSession({
     });
   }
 
+  function releaseTrack() {
+    audio.stop();
+    statsGeneration++;
+    clearInterval(metricsTimer);
+    baseline = undefined;
+    bestEffort(() => attached?.detach(video));
+    bestEffort(() => attached?.stop());
+    attached = undefined;
+    selectedSid = undefined;
+    bestEffort(() => {
+      video.srcObject = null;
+    });
+  }
+
   function stop() {
     if (stopped) return;
     stopped = true;
@@ -113,12 +142,10 @@ export function receiveEncryptedSession({
     accessToken = '';
     clearTimeout(connectionTimer);
     clearTimeout(expiryTimer);
+    clearInterval(metricsTimer);
+    baseline = undefined;
     bestEffort(() => room.removeAllListeners());
-    bestEffort(() => attached?.detach(video));
-    bestEffort(() => attached?.stop());
-    bestEffort(() => {
-      video.srcObject = null;
-    });
+    releaseTrack();
     disconnect();
     bestEffort(() => worker?.terminate());
   }
@@ -141,6 +168,14 @@ export function receiveEncryptedSession({
 
   function subscribe(publication: RemoteTrackPublication, participant: RemoteParticipant) {
     if (stopped || !verified) return;
+    if (publication.kind === Track.Kind.Audio) {
+      try {
+        if (!audio.subscribe(publication, participant)) fail();
+      } catch {
+        fail();
+      }
+      return;
+    }
     if (!accepts(publication, participant)) {
       fail();
       return;
@@ -159,6 +194,17 @@ export function receiveEncryptedSession({
       bestEffort(() => track.stop());
       return;
     }
+    if (publication.kind === Track.Kind.Audio) {
+      try {
+        if (!verified || !audio.attach(track, publication, participant)) {
+          bestEffort(() => track.stop());
+          fail();
+        }
+      } catch {
+        fail();
+      }
+      return;
+    }
     if (
       !verified ||
       selectedSid !== publication.trackSid ||
@@ -174,19 +220,88 @@ export function receiveEncryptedSession({
     attached = track;
     try {
       track.attach(video);
+      if (onMetrics) {
+        let statsPending = false;
+        const sampleGeneration = ++statsGeneration;
+        metricsTimer = setInterval(() => {
+          if (stopped || statsPending) return;
+          statsPending = true;
+          void Promise.resolve()
+            .then(() => track.getRTCStatsReport())
+            .then((report) => {
+              if (stopped || sampleGeneration !== statsGeneration || !report) return;
+              const previous = baseline;
+              const sample = receiverSample(report.values(), previous);
+              const next = sample.baseline;
+              baseline = next;
+              const reset =
+                !sample.metrics ||
+                (previous &&
+                  next &&
+                  (
+                    ['frames', 'bytes', 'dropped', 'decodeSeconds', 'packets', 'lost'] as const
+                  ).some((key) => {
+                    const before = previous[key];
+                    const after = next[key];
+                    return before !== null && after !== null && after < before;
+                  }));
+              onMetrics(
+                reset || !sample.metrics
+                  ? {
+                      intervalMs: 0,
+                      decodedFps: null,
+                      inboundBitrateBps: null,
+                      droppedFrames: null,
+                      averageDecodeMs: null,
+                      packetLossRatio: null,
+                      jitterMs: null,
+                      transportRttMs: null,
+                      width: null,
+                      height: null,
+                    }
+                  : sample.metrics,
+              );
+            })
+            .catch(() => {
+              baseline = undefined;
+            })
+            .finally(() => {
+              statsPending = false;
+            });
+        }, 1000);
+      }
       onState('subscribed');
     } catch {
       fail();
     }
   });
-  room.on(RoomEvent.TrackUnsubscribed, () => fail());
+  room.on(RoomEvent.TrackUnsubscribed, (_track, publication, participant) => {
+    if (stopped) return;
+    if (!productSession || participant?.identity !== publisherId) {
+      fail();
+      return;
+    }
+    if (publication?.kind === Track.Kind.Audio) {
+      audio.stop(publication.trackSid);
+      return;
+    }
+    if (selectedSid !== publication?.trackSid) return;
+    releaseTrack();
+    onState('waiting');
+  });
   room.on(RoomEvent.TrackSubscriptionFailed, () => fail());
   room.on(RoomEvent.EncryptionError, () => fail());
   room.on(RoomEvent.Reconnecting, () => fail());
   room.on(RoomEvent.SignalReconnecting, () => fail());
   room.on(RoomEvent.Disconnected, () => fail());
   room.on(RoomEvent.ParticipantDisconnected, (participant) => {
-    if (participant.identity === publisherId) fail();
+    if (participant.identity !== publisherId || stopped) return;
+    if (!productSession) {
+      fail();
+      return;
+    }
+    releaseTrack();
+    onState('waiting');
   });
   room.on(RoomEvent.ParticipantEncryptionStatusChanged, (encrypted, participant) => {
     if (participant?.identity === publisherId && !encrypted) fail();

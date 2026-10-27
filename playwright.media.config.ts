@@ -22,6 +22,15 @@ export default defineConfig({
     screenshot: 'off',
   },
   webServer: [
+    ...(process.env.MEDIA_PROOF_PRODUCT === 'true'
+      ? [
+          {
+            command: 'bun run --filter @screen-share/control-api start',
+            url: `${process.env.MEDIA_PROOF_CONTROL_URL}/readyz`,
+            reuseExistingServer: false,
+          },
+        ]
+      : []),
     {
       command: `bun run --filter @screen-share/viewer-web preview --port ${process.env.MEDIA_PROOF_VIEWER_PORT} --strictPort`,
       url: `http://127.0.0.1:${process.env.MEDIA_PROOF_VIEWER_PORT}`,

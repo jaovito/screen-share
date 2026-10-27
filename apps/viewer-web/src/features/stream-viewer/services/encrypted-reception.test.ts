@@ -384,4 +384,112 @@ describe('encrypted M1 reception', () => {
     await flush();
     expect(settings.onState).toHaveBeenLastCalledWith('failed');
   });
+
+  it('accepts authenticated product session envelopes without relaxing the designated publisher', async () => {
+    const productRoom = rtcRoom.replace('m1-', 'ss-');
+    const settings = input({ grant: { ...grant(), rtcRoom: productRoom } });
+    const handle = receiveEncryptedSession(settings);
+    room().name = productRoom;
+    await flush();
+    expect(settings.onState).toHaveBeenLastCalledWith('waiting');
+    room().emit('trackPublished', publication(), { identity: participantId });
+    expect(settings.onState).toHaveBeenLastCalledWith('failed');
+    handle.stop();
+  });
+
+  it('samples actual per-track counters serially and discards late statistics after stop', async () => {
+    jest.useFakeTimers();
+    const onMetrics = mock((_value: unknown) => {});
+    const settings = input({ onMetrics });
+    const handle = receiveEncryptedSession(settings);
+    await flush();
+    let timestamp = 1000;
+    let resetCounters = false;
+    const getRTCStatsReport = mock(
+      async () =>
+        new Map([
+          [
+            'stream',
+            {
+              id: 'stream',
+              timestamp,
+              type: 'inbound-rtp',
+              kind: 'video',
+              framesDecoded: resetCounters ? 0 : timestamp / 100,
+              bytesReceived: timestamp * 10,
+            },
+          ],
+        ]),
+    );
+    const videoTrack = { ...track(), getRTCStatsReport };
+    const pub = publication();
+    room().emit('trackPublished', pub, { identity: publisherId });
+    room().emit('trackSubscribed', videoTrack, pub, { identity: publisherId });
+    jest.advanceTimersByTime(1000);
+    await flush();
+    expect(onMetrics).toHaveBeenLastCalledWith(
+      expect.objectContaining({ intervalMs: 0, decodedFps: null }),
+    );
+    timestamp = 2000;
+    jest.advanceTimersByTime(1000);
+    await flush();
+    expect(onMetrics).toHaveBeenCalledWith(
+      expect.objectContaining({ decodedFps: 10, inboundBitrateBps: 80000, transportRttMs: null }),
+    );
+    resetCounters = true;
+    timestamp = 3000;
+    jest.advanceTimersByTime(1000);
+    await flush();
+    expect(onMetrics).toHaveBeenLastCalledWith(
+      expect.objectContaining({ intervalMs: 0, decodedFps: null }),
+    );
+    getRTCStatsReport.mockImplementationOnce(async () => {
+      throw new Error('stats unavailable');
+    });
+    jest.advanceTimersByTime(1000);
+    await flush();
+    let resolve: (() => void) | undefined;
+    const pending = new Promise<void>((done) => {
+      resolve = done;
+    });
+    getRTCStatsReport.mockImplementationOnce(async () => {
+      await pending;
+      return new Map();
+    });
+    jest.advanceTimersByTime(1000);
+    await flush();
+    jest.advanceTimersByTime(1000);
+    await flush();
+    expect(getRTCStatsReport).toHaveBeenCalledTimes(5);
+    handle.stop();
+    resolve?.();
+    await flush();
+    expect(onMetrics).toHaveBeenCalledTimes(3);
+  });
+
+  it('keeps only authenticated product playback waiting across signed publisher renewal', async () => {
+    const productRoom = rtcRoom.replace('m1-', 'ss-');
+    const settings = input({ grant: { ...grant(), rtcRoom: productRoom } });
+    const handle = receiveEncryptedSession(settings);
+    room().name = productRoom;
+    await flush();
+    const first = track();
+    const firstPublication = publication();
+    room().emit('trackPublished', firstPublication, { identity: publisherId });
+    room().emit('trackSubscribed', first, firstPublication, { identity: publisherId });
+    room().emit('trackUnsubscribed', first, firstPublication, { identity: publisherId });
+    expect(first.stop).toHaveBeenCalledTimes(1);
+    expect(settings.onState).toHaveBeenLastCalledWith('waiting');
+    expect(room().disconnect).not.toHaveBeenCalled();
+    room().emit('participantDisconnected', { identity: publisherId });
+    const nextPublication = publication({ trackSid: 'renewed-track' });
+    const next = track();
+    room().emit('trackPublished', nextPublication, { identity: publisherId });
+    room().emit('trackSubscribed', next, nextPublication, { identity: publisherId });
+    expect(settings.onState).toHaveBeenLastCalledWith('subscribed');
+    room().emit('trackUnsubscribed', first, firstPublication, { identity: publisherId });
+    expect(next.stop).not.toHaveBeenCalled();
+    handle.stop();
+    expect(next.stop).toHaveBeenCalledTimes(1);
+  });
 });

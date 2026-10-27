@@ -9,17 +9,19 @@
     "typecheck": "bun --bun ../../node_modules/typescript/bin/tsc -p tsconfig.check.json",
     "migrate": "bun src/index.ts migrate",
     "smoke": "bun src/index.ts smoke",
-    "test:integration": "bun test --isolate --timeout 15000 ./test/database.integration.test.ts",
+    "test:integration": "bun ../../scripts/task.ts test:integration",
     "db:generate": "bun --bun node_modules/drizzle-kit/bin.cjs generate",
     "start": "bun src/index.ts"
   },
   "dependencies": {
+    "@better-auth/drizzle-adapter": "1.7.14",
     "@screen-share/contracts": "workspace:*",
-    "hono": "4.13.14",
+    "better-auth": "1.7.14",
     "drizzle-orm": "0.45.4",
+    "hono": "4.13.14",
+    "livekit-server-sdk": "2.19.2",
     "pg": "8.23.1",
-    "zod": "4.6.7",
-    "livekit-server-sdk": "2.19.2"
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@types/pg": "8.23.1",

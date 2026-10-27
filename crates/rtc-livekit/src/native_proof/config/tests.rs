@@ -186,3 +186,22 @@ fn preserves_subsecond_expiry_and_rejects_expired_or_overlong_lifetimes() {
         Err(NativeTransportError::InvalidGrant)
     );
 }
+
+#[test]
+fn accepts_explicit_screen_audio_scope_but_never_microphone_or_camera() {
+    let mut candidate = envelope();
+    candidate["rtcRoom"] = json!("ss-6cfb37ba-b89c-4406-8880-caa4973752d4");
+    let expires = candidate["expiresAt"].as_u64().unwrap();
+    let mut body = claims(expires);
+    body["video"]["room"] = candidate["rtcRoom"].clone();
+    body["video"]["canPublishSources"] = json!(["screen_share", "screen_share_audio"]);
+    candidate["accessToken"] = json!(token(json!({"alg":"HS256"}), body));
+    let allowed = PublisherGrant::from_json(&candidate.to_string())
+        .expect("explicit system audio authorization");
+    assert!(allowed.audio_allowed());
+    assert!(
+        !PublisherGrant::from_json(&envelope().to_string())
+            .unwrap()
+            .audio_allowed()
+    );
+}

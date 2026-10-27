@@ -53,7 +53,7 @@ test('the actual worker receives encrypted synthetic H264 and a wrong key cannot
       grant: MediaProofGrant,
       mediaKey: string,
     ) => {
-      await page.goto(`http://127.0.0.1:${process.env.MEDIA_PROOF_VIEWER_PORT}`);
+      await page.goto(`http://127.0.0.1:${process.env.MEDIA_PROOF_VIEWER_PORT}/?mode=experiment`);
       await page.getByRole('combobox').selectOption('en');
       await page.locator('summary').click();
       await page.getByLabel('Viewer grant JSON', { exact: true }).fill(JSON.stringify(grant));

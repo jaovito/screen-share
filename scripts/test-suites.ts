@@ -12,8 +12,10 @@ function testsIn(directory: string) {
 }
 
 export function testSuites(database = false): TestSuite[] {
+  const packageTests = testsIn('packages');
+  const packageDom = packageTests.filter((file) => file.startsWith('./packages/ui/'));
   const nodeFiles = [
-    ...testsIn('packages'),
+    ...packageTests.filter((file) => !packageDom.includes(file)),
     ...testsIn('tooling'),
     ...testsIn('apps/control-api/test'),
   ].filter((name) => database || !name.endsWith('.integration.test.ts'));
@@ -22,7 +24,7 @@ export function testSuites(database = false): TestSuite[] {
     { name: 'server', files: nodeFiles },
     {
       name: 'frontend',
-      files: [...testsIn('apps/viewer-web/src'), ...testsIn('apps/desktop/src')],
+      files: [...testsIn('apps/viewer-web/src'), ...testsIn('apps/desktop/src'), ...packageDom],
       preload: './tooling/tests/setup-dom',
     },
   ];

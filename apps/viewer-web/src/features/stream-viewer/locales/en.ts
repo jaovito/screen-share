@@ -1,4 +1,5 @@
 export default {
+  proofAudio: 'Encrypted experiment audio',
   documentTitle: 'Screen Share — Viewer',
   badge: 'M0 · Project foundation',
   eyebrow: 'A place to watch together',

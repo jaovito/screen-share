@@ -7,7 +7,7 @@ declare global {
     mediaTest: {
       start: (grant: MediaProofGrant) => Promise<string>;
       stop: () => Promise<void>;
-      exportSyntheticPackets: () => Promise<void>;
+      exportSyntheticPackets: (height?: 480 | 720) => Promise<void>;
     };
   }
 }
@@ -97,11 +97,12 @@ window.mediaTest = {
       throw new Error(`Synthetic publication failed during ${stage}.`);
     }
   },
-  async exportSyntheticPackets() {
+  async exportSyntheticPackets(height = 480) {
+    const width = height === 720 ? 1280 : 854;
     if (!('VideoEncoder' in globalThis)) throw new Error('WebCodecs unavailable.');
     const canvas = document.createElement('canvas');
-    canvas.width = 854;
-    canvas.height = 480;
+    canvas.width = width;
+    canvas.height = height;
     const context = canvas.getContext('2d');
     if (!context) throw new Error('Synthetic canvas unavailable.');
     const parts: BlobPart[] = [];
@@ -126,9 +127,9 @@ window.mediaTest = {
     });
     try {
       encoder.configure({
-        codec: 'avc1.42001e',
-        width: 854,
-        height: 480,
+        codec: height === 720 ? 'avc1.42001f' : 'avc1.42001e',
+        width,
+        height,
         framerate: 5,
         bitrate: 200_000,
         latencyMode: 'realtime',
@@ -136,7 +137,7 @@ window.mediaTest = {
       });
       for (let i = 0; i < 20; i++) {
         context.fillStyle = i % 2 ? '#2b47de' : '#df4860';
-        context.fillRect(0, 0, 854, 480);
+        context.fillRect(0, 0, width, height);
         context.fillStyle = '#ffffff';
         context.fillRect((i * 25) % 800, 100, 50, 50);
         const frame = new VideoFrame(canvas, { timestamp: i * 200_000 });
@@ -155,7 +156,7 @@ window.mediaTest = {
       link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } finally {
-      encoder.close();
+      if (encoder.state !== 'closed') encoder.close();
     }
   },
   stop,

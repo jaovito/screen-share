@@ -73,7 +73,7 @@ The encoder diagnostic keeps consent/acquisition on STA and hardware processing 
 
 ## Remaining M1 gate
 
-Execute and validate the implemented hardware converter/encoder and native encrypted transport composition on Windows, then complete the PLAN.md two-PC/hardware protocol and integrate the regular product shell without weakening permissions. Required evidence includes the same selected window after resize/Alt+Tab/minimization/recovery, source closure without fallback, key mismatch rejection across Rust/JS, applied bitrate/keyframe feedback, bounded resource growth, and measured encoding/game/network/playback behavior. Until then, M2–M5 are pending rather than implicitly delivered.
+Execute and validate the implemented hardware converter/encoder and native encrypted transport composition on Windows, then complete the PLAN.md two-PC/hardware protocol and integrate the regular product shell without weakening permissions. Required evidence includes the same selected window after resize/Alt+Tab/minimization/recovery, source closure without fallback, key mismatch rejection across Rust/JS, applied bitrate/keyframe feedback, bounded resource growth, and measured encoding/game/network/playback behavior. M2–M5 product code is now implemented separately; these physical acceptance gates remain unexecuted until recorded with actual equipment. See [architecture.md](architecture.md) for the current product and [validation.md](validation.md) for dated evidence.
 
 
 ## Rust-to-browser transport regression

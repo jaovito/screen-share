@@ -1,6 +1,8 @@
 import { describe, expect, it, jest, mock, spyOn } from 'bun:test';
-import { App } from '@app/App';
+import { LocaleProvider } from '@screen-share/i18n';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { viewerTranslations } from '../../locales';
+import { ViewerPage } from './index';
 
 const profiles = [480, 720, 1080, 1440].flatMap((height) =>
   [30, 60].map((fps) => ({
@@ -116,3 +118,11 @@ describe('viewer control connection', () => {
     }
   });
 });
+
+function App() {
+  return (
+    <LocaleProvider translations={viewerTranslations} titleKey="documentTitle">
+      <ViewerPage />
+    </LocaleProvider>
+  );
+}

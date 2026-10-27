@@ -9,6 +9,7 @@ function ReceptionForm() {
   const [consent, setConsent] = useState(false);
   const [state, setState] = useState<ReceptionState>('idle');
   const video = useRef<HTMLVideoElement>(null);
+  const audio = useRef<HTMLAudioElement>(null);
   const reception = useRef<{ stop(): void } | null>(null);
   const generation = useRef(0);
   const pending = useRef(false);
@@ -53,6 +54,7 @@ function ReceptionForm() {
         grant,
         mediaKey: keyMaterial,
         video: mediaElement,
+        ...(audio.current ? { audio: audio.current } : {}),
         onState: (next) => {
           if (generation.current !== attempt) return;
           pending.current = ['connecting', 'waiting', 'subscribed'].includes(next);
@@ -128,6 +130,7 @@ function ReceptionForm() {
       <p role="status" aria-live="polite" className="status">
         {t(`proofState_${state}`)}
       </p>
+      <audio ref={audio} autoPlay controls muted aria-label={t('proofAudio')} />
       <video
         ref={video}
         aria-label={t('proofVideo')}

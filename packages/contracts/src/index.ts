@@ -38,7 +38,15 @@ export const appInfoSchema = z.object({
 export type AppInfoDto = z.infer<typeof appInfoSchema>;
 
 export {
+  type AudioSource,
+  type AudioSourcesResponse,
+  audioSourceSchema,
+  audioSourcesResponseSchema,
+} from './audio-sources';
+export {
   type MediaProofGrant,
   mediaProofGrantSchema,
   mediaProofServerSchema,
 } from './media-proof';
+export * from './product';
+export * from './receiver-reports';

@@ -1,0 +1,5 @@
+{
+  "bundle": {
+    "externalBin": ["binaries/ss-media-proof"]
+  }
+}

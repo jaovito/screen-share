@@ -13,8 +13,14 @@ mock.module('@modules/system/adapters/postgres', () => ({
   }),
   retryDatabase: (check: () => Promise<void>) => retry(check),
 }));
+mock.module('@modules/private-rooms', () => ({
+  createProductRuntime: () => ({ mount() {}, start() {}, async stop() {} }),
+}));
 const { startServer } = await import('@runtime/server');
 const config: Config = {
+  AUTH_SECRET: 'synthetic-test-secret-at-least-32-characters',
+  AUTH_BASE_URL: 'http://127.0.0.1:3000',
+  LIVEKIT_PUBLIC_URL: 'ws://127.0.0.1:7880',
   DATABASE_URL: 'postgres://example',
   HOST: '127.0.0.1',
   PORT: 3000,

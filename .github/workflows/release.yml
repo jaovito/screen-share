@@ -1,0 +1,72 @@
+name: Prepare signed Windows release
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Reviewed existing tag pointing to main (vMAJOR.MINOR.PATCH)
+        required: true
+        type: string
+      api_url:
+        description: Public HTTPS API origin compiled into this installation
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: signed-windows-release
+  cancel-in-progress: false
+jobs:
+  build:
+    if: github.ref == 'refs/heads/main'
+    runs-on: windows-2025
+    timeout-minutes: 60
+    environment: signed-release
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: 1.4.3
+      - run: rustup toolchain install 1.99.1 --profile minimal --component rustfmt --component clippy
+      - run: bun install --frozen-lockfile
+      - name: Build signed artifacts without loading development secrets
+        run: bun --no-env-file scripts/build-release.ts
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+          SCREEN_SHARE_API_URL: ${{ inputs.api_url }}
+          SCREEN_SHARE_UPDATE_PUBLIC_KEY: ${{ vars.SCREEN_SHARE_UPDATE_PUBLIC_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          CARGO_BUILD_JOBS: 2
+          CMAKE_BUILD_PARALLEL_LEVEL: 2
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: signed-windows-release
+          path: target/signed-release/${{ inputs.tag }}/
+          if-no-files-found: error
+          retention-days: 7
+  draft:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: signed-release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: signed-windows-release
+          path: release-assets
+      - name: Create a reviewable draft without publishing the updater channel
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          cd release-assets
+          sha256sum --check SHA256SUMS
+          gh release create "$RELEASE_TAG" ./*.exe ./*.sig ./latest.json ./SHA256SUMS --repo "$GITHUB_REPOSITORY" --verify-tag --draft --title "Screen Share $RELEASE_TAG" --notes-file release-notes.md
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}

@@ -1,0 +1,287 @@
+@layer components {
+  .product-workspace {
+    max-width: 1320px;
+  }
+  .product-workspace input,
+  .product-workspace select {
+    width: 100%;
+    min-width: 0;
+    background: var(--background);
+    color: var(--foreground);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font: inherit;
+    padding: 11px 12px;
+  }
+  .product-workspace input:focus-visible,
+  .product-workspace select:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 3px;
+  }
+  .workspace-intro {
+    max-width: 750px;
+    margin-bottom: 36px;
+  }
+  .workspace-intro .eyebrow {
+    margin-top: 32px;
+  }
+  .workspace-grid {
+    display: grid;
+    grid-template-columns: 285px minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+  }
+  .product-form {
+    display: grid;
+    gap: 16px;
+  }
+  .product-form label,
+  .secret-value label {
+    display: grid;
+    gap: 7px;
+    font-size: 13px;
+    color: var(--copy);
+  }
+  .product-form .notice {
+    margin-top: 0;
+  }
+  .auth-panel {
+    max-width: 480px;
+    padding: 30px;
+  }
+  .segmented {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+  }
+  .room-navigation h2 {
+    margin-top: 0;
+  }
+  .room-navigation nav {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+  .room-link {
+    display: grid;
+    gap: 5px;
+    width: 100%;
+    text-align: left;
+    background: var(--background);
+    border: 1px solid var(--border);
+    color: var(--foreground);
+    padding: 12px;
+  }
+  .room-link.selected {
+    border-color: var(--primary);
+    background: var(--player-from);
+  }
+  .room-link strong {
+    overflow-wrap: anywhere;
+  }
+  .room-link span {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--copy);
+  }
+  .invite-request {
+    border-top: 1px solid var(--border);
+    margin-top: 24px;
+    padding-top: 24px;
+  }
+  .room-content {
+    min-width: 0;
+    display: grid;
+    gap: 20px;
+  }
+  .room-title {
+    margin: 0;
+    font-size: 26px;
+    overflow-wrap: anywhere;
+  }
+  .panel-heading {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .panel-heading h2 {
+    margin: 0;
+  }
+  .product-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    margin-top: 16px;
+  }
+  .product-actions button {
+    max-width: 100%;
+  }
+  .private-callout {
+    padding: 18px;
+    margin-top: 20px;
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .secret-value {
+    display: grid;
+    gap: 8px;
+  }
+  .secret-value button {
+    justify-self: start;
+  }
+  .secret-value input {
+    font-family: ui-monospace, monospace;
+  }
+  .product-form label.product-check,
+  .product-check {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-block: 18px;
+    font-size: 13px;
+    color: var(--copy);
+  }
+  .product-check input {
+    width: auto;
+    margin-top: 4px;
+    flex: 0 0 auto;
+  }
+  .private-callout > button {
+    margin-top: 16px;
+  }
+  .people-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .people-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .empty-player > span {
+    font-size: 48px;
+    color: var(--screen);
+  }
+  .people-list li > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .people-list small {
+    display: block;
+    font-size: 12px;
+    color: var(--copy);
+  }
+  .people-list .product-actions {
+    margin: 0;
+  }
+  button.danger {
+    color: var(--destructive);
+  }
+  .invite-controls {
+    grid-template-columns: 1fr 1fr;
+    margin-top: 24px;
+  }
+  .invite-controls button {
+    grid-column: 1 / -1;
+  }
+  .profile-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .publisher-panel .product-form {
+    margin-top: 16px;
+  }
+  .diagnostics {
+    margin-top: 24px;
+    border-top: 1px solid var(--border);
+    padding-top: 18px;
+    font-size: 13px;
+  }
+  .diagnostics summary {
+    cursor: pointer;
+  }
+  .diagnostics dl {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+  }
+  .diagnostics dd {
+    margin: 0;
+    color: var(--primary);
+  }
+  .receive-panel video {
+    width: 100%;
+    max-height: 65vh;
+    background: #000;
+    border-radius: 10px;
+  }
+  .receive-panel video[hidden] {
+    display: none;
+  }
+  .empty-player {
+    display: grid;
+    place-content: center;
+    min-height: 190px;
+    text-align: center;
+  }
+  .receive-panel .empty-player {
+    color: var(--screen);
+    font-size: 48px;
+  }
+  .error-banner {
+    color: var(--destructive);
+    margin-block: 20px;
+  }
+  .error-banner p {
+    color: inherit;
+  }
+  @media (max-width: 850px) {
+    .workspace-grid {
+      grid-template-columns: 1fr;
+    }
+    .room-navigation nav {
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+    .room-navigation .product-form {
+      max-width: 520px;
+    }
+    .auth-panel {
+      max-width: none;
+    }
+  }
+  @media (max-width: 480px) {
+    .profile-controls {
+      grid-template-columns: 1fr;
+    }
+    .product-workspace .header-controls {
+      gap: 8px;
+    }
+    .product-workspace header {
+      gap: 12px;
+    }
+    .product-workspace .panel {
+      padding: 20px;
+    }
+    .product-workspace .brand {
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    .product-workspace .mark {
+      width: 30px;
+      height: 30px;
+    }
+    .product-workspace .header-controls > .badge {
+      display: none;
+    }
+  }
+}

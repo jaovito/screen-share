@@ -1,3 +1,4 @@
+import { createProductRuntime } from '@modules/private-rooms';
 import { createDatabase, retryDatabase } from '@modules/system/adapters/postgres';
 import { createApp } from '../app';
 import type { Config } from '../config';
@@ -7,7 +8,10 @@ type HttpServer = Pick<Bun.Server<undefined>, 'stop' | 'port'>;
 type HttpOptions = {
   hostname: string;
   port: number;
-  fetch: (request: Request) => Response | Promise<Response>;
+  fetch: (
+    request: Request,
+    peer?: Pick<Bun.Server<undefined>, 'requestIP'>,
+  ) => Response | Promise<Response>;
 };
 
 export function startServer(
@@ -16,10 +20,23 @@ export function startServer(
   listen: (options: HttpOptions) => HttpServer = (options) => Bun.serve(options),
 ) {
   const database = createDatabase(config.DATABASE_URL);
+  const product = createProductRuntime(database.pool, config);
+  const app = createApp(database.readiness, config.CORS_ORIGINS, product);
   let server: HttpServer;
   try {
     server = listen({
-      fetch: createApp(database.readiness, config.CORS_ORIGINS).fetch,
+      fetch: (request, peer) => {
+        const headers = new Headers(request.headers);
+        for (const name of [
+          'x-forwarded-for',
+          'x-real-ip',
+          'cf-connecting-ip',
+          'x-internal-client-ip',
+        ])
+          headers.delete(name);
+        headers.set('x-internal-client-ip', peer?.requestIP(request)?.address ?? '127.0.0.1');
+        return app.fetch(new Request(request, { headers }));
+      },
       hostname: config.HOST,
       port: config.PORT,
     });
@@ -27,6 +44,7 @@ export function startServer(
     void database.close().catch(() => log('database_close_failed'));
     throw new Error('HTTP server startup failed');
   }
+  product.start();
   log('listening', { port: config.PORT });
 
   // Liveness stays available during database recovery; readiness checks current state.
@@ -59,6 +77,7 @@ export function startServer(
 
     void server
       .stop()
+      .then(() => product.stop())
       .then(() => database.close())
       .then(() => finish(0))
       .catch(() => {

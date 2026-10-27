@@ -87,6 +87,19 @@ impl EncodedAccessUnit {
         })
     }
 
+    /// Preserve one publication clock across native encoder restarts without
+    /// copying the encoded payload or replacing its capture-derived cadence.
+    pub fn offset_timestamp_us(mut self, offset_us: i64) -> Result<Self, EncodedVideoError> {
+        if offset_us < 0 {
+            return Err(EncodedVideoError::InvalidTimestamp);
+        }
+        self.timestamp_us = self
+            .timestamp_us
+            .checked_add(offset_us)
+            .ok_or(EncodedVideoError::InvalidTimestamp)?;
+        Ok(self)
+    }
+
     pub fn payload(&self) -> &[u8] {
         &self.payload
     }
@@ -135,6 +148,28 @@ mod tests {
             !EncodedAccessUnit::h264(vec![0, 0, 1, 0x41, 42], profile(), 101)
                 .expect("delta picture")
                 .is_keyframe()
+        );
+    }
+
+    #[test]
+    fn publication_timestamp_offset_preserves_payload_and_rejects_overflow() {
+        let unit = EncodedAccessUnit::h264(keyframe(), profile(), 100)
+            .expect("valid unit")
+            .offset_timestamp_us(500)
+            .expect("monotonic offset");
+        assert_eq!(unit.timestamp_us(), 600);
+        assert_eq!(unit.payload(), keyframe());
+        assert!(
+            EncodedAccessUnit::h264(keyframe(), profile(), 100)
+                .expect("valid unit")
+                .offset_timestamp_us(-1)
+                .is_err()
+        );
+        assert!(
+            EncodedAccessUnit::h264(keyframe(), profile(), 100)
+                .expect("valid unit")
+                .offset_timestamp_us(i64::MAX)
+                .is_err()
         );
     }
 

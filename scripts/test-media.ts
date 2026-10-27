@@ -5,9 +5,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { run } from './lib';
 import { freePort } from './ports';
+import { withTestDatabase } from './test-database';
 
 const native = process.argv.includes('--native');
-if (process.argv.slice(2).some((arg) => arg !== '--native'))
+const product = process.argv.includes('--product');
+if (product && !native)
+  throw new Error('Product interoperability currently requires the native fixture.');
+if (process.argv.slice(2).some((arg) => !['--native', '--product'].includes(arg)))
   throw new Error('Unknown media test argument.');
 if (native && !['darwin', 'win32'].includes(process.platform))
   throw new Error('Native SDK proof requires a supported Windows/macOS host.');
@@ -107,6 +111,7 @@ try {
     ...process.env,
     MEDIA_PROOF_DISPOSABLE: 'true',
     MEDIA_PROOF_NATIVE: native ? 'true' : 'false',
+    MEDIA_PROOF_PRODUCT: product ? 'true' : 'false',
     MEDIA_PROOF_PUBLISHER_BUILD: join(directory, 'publisher'),
     MEDIA_PROOF_VIEWER_PORT: viewer,
     MEDIA_PROOF_PUBLISHER_PORT: publisher,
@@ -147,17 +152,40 @@ try {
     ],
     { env },
   );
-  await run(
-    'bun',
-    [
-      '--bun',
-      'node_modules/@playwright/test/cli.js',
-      'test',
-      '--config',
-      'playwright.media.config.ts',
-    ],
-    { env },
-  );
+  const runBrowser = (testEnv: NodeJS.ProcessEnv) =>
+    run(
+      'bun',
+      [
+        '--bun',
+        'node_modules/@playwright/test/cli.js',
+        'test',
+        '--config',
+        'playwright.media.config.ts',
+      ],
+      { env: testEnv },
+    );
+  if (product) {
+    await withTestDatabase(async (database) => {
+      const api = await freePort();
+      const controlUrl = `http://127.0.0.1:${api}`;
+      const productEnv = {
+        ...env,
+        DATABASE_URL: database.DATABASE_URL,
+        INTEGRATION_DATABASE: database.INTEGRATION_DATABASE,
+        AUTH_SECRET: database.AUTH_SECRET,
+        AUTH_BASE_URL: controlUrl,
+        HOST: '127.0.0.1',
+        PORT: api,
+        CORS_ORIGINS: `http://127.0.0.1:${viewer}`,
+        LIVEKIT_URL: `http://127.0.0.1:${signaling}`,
+        MEDIA_PROOF_CONTROL_URL: controlUrl,
+      };
+      await run('bun', ['run', '--filter', '@screen-share/control-api', 'migrate'], {
+        env: productEnv,
+      });
+      await runBrowser(productEnv);
+    });
+  } else await runBrowser(env);
 } finally {
   try {
     await run('docker', ['rm', '-f', name], { stdio: 'ignore' });

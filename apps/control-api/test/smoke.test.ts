@@ -13,6 +13,9 @@ mock.module('livekit-server-sdk', () => ({
 const { checkControlPlane } = await import('@runtime/smoke');
 
 const config: Config = {
+  AUTH_SECRET: 'synthetic-test-secret-at-least-32-characters',
+  AUTH_BASE_URL: 'http://127.0.0.1:3000',
+  LIVEKIT_PUBLIC_URL: 'ws://127.0.0.1:7880',
   DATABASE_URL: 'postgres://unused',
   HOST: '127.0.0.1',
   PORT: 3000,

@@ -8,6 +8,13 @@
       "when": 1793044702891,
       "tag": "0000_sudden_cerise",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793094135666,
+      "tag": "0001_legal_romulus",
+      "breakpoints": true
     }
   ]
 }

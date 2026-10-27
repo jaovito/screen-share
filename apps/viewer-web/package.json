@@ -15,7 +15,8 @@
     "@screen-share/ui": "workspace:*",
     "livekit-client": "2.23.0",
     "react": "19.3.1",
-    "react-dom": "19.3.1"
+    "react-dom": "19.3.1",
+    "@screen-share/diagnostics": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "19.3.0",

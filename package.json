@@ -39,7 +39,8 @@
     "media:grants": "bun scripts/media-proof.ts",
     "test:media": "bun scripts/test-media.ts",
     "test:media:native": "bun scripts/test-media.ts --native",
-    "media:publish": "bun scripts/publish-media.ts"
+    "media:publish": "bun scripts/publish-media.ts",
+    "test:media:product": "bun scripts/test-media.ts --native --product"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.3",

@@ -1,9 +1,9 @@
 # Technical plan: private screen sharing
 
-- **Version:** 1.1 — initial planning/setup contract.
-- **Review date:** 2026-10-26.
-- **Status:** M0 implemented with portable local validation and passing provider CI (including Windows build/IPC). M1 implementation has started; its Windows hardware/two-PC gate and M2–M5 remain pending.
-- **Current development scope:** M1 media proof and its explicit advancement gates; M0 remains the executable foundation.
+- **Version:** 1.2 — private product implementation and acceptance contract.
+- **Review date:** 2026-10-27.
+- **Status:** M0–M5 product code is implemented, with integration and acceptance validation in progress. Physical Windows/GPU capture, two-PC interoperability, prolonged measurements and a configured signed production release remain acceptance gates; implementation does not establish those results.
+- **Current development scope:** implement M1–M5 product behavior in parallel, explicitly authorized by the user on 2026-10-27. Hardware, two-PC and prolonged-test gates remain acceptance/release criteria, not blockers to implementing subsequent milestones. Never report an unexecuted gate as passed.
 - **Product scope:** private streaming among friends, low computer overhead, quality diagnostics.
 
 > Commands, paths, endpoints, and checks below are implementation requirements. Their presence does not mean they exist or have run. Bitrates, resource budgets, latency, and schedules are hypotheses to validate.
@@ -314,7 +314,7 @@ Choose providers by quota, overage, throughput, latency, CPU/RAM. These calculat
 | M4 — Diagnostics      | Reports/recommendations                                  | Distinguished bottlenecks, stable adaptation     |
 | M5 — Distributed beta | Revocation, migration, installer, updates                | Session security, prolonged tests                |
 
-M0 prepares work; M1 establishes viability before broader product implementation. Security cannot wait until sharing with friends: authorization/E2EE are beta requirements.
+M0 prepares work. The original sequence used M1 viability as a prerequisite to broader implementation; the user explicitly authorized implementing all remaining milestones on 2026-10-27 while retaining the hardware evidence as an acceptance/release gate. Security cannot wait until sharing with friends: authorization/E2EE are beta requirements.
 
 Initial beta estimate: 12–20 weeks with two developers, one experienced in Windows/media. A solo developer learning these areas may need 4–8 months or more. M1 may change budget; never turn estimates into bootstrap delivery promises.
 
@@ -391,3 +391,9 @@ At the user's request, the control API now runs TypeScript directly on Bun witho
 ## M1 implementation progress — 2026-10-26
 
 The first implementation slice adds offline allowlisted proof grants, an opt-in encrypted browser receiver, a disposable synthetic encrypted transport test, portable authorization/clock/source/queue/access-unit invariants, and a target-specific WGC/D3D11 acquisition primitive. See [media-proof.md](docs/media-proof.md) and ADR 0011. The desktop publisher is still disabled. GPU conversion/hardware H.264 and native LiveKit publication/feedback are implemented in the optional proof utility. Native-to-browser interoperability passes a real local synthetic test. Windows runtime/hardware and two-PC measurements remain required before M1 completion or M2 advancement. Browser synthetic decoding is separate evidence and never a native performance claim.
+
+## Private product implementation — 2026-10-27
+
+The user authorized completing M1–M5 code while retaining physical acceptance gates. The normal application now uses real cookie authentication, pending/approved membership, bounded/revocable invitations, epoch/revision transactions, durable RTC cleanup and sixty-second role-scoped grants. The Windows desktop launches its bundled native publisher through private pipes, renews authorization from Rust, preserves the selected source, supports all eight profiles, pause/resume, explicit system/application audio and conservative adaptation. The browser consumes designated encrypted video/audio and reports bounded advisory observations. Production topology, a signed-update client and a manually gated draft-release workflow are implemented. See [architecture.md](docs/architecture.md), [deployment.md](docs/deployment.md), [releases.md](docs/releases.md) and [validation.md](docs/validation.md).
+
+Implementation is not completion of the physical acceptance column: Windows 11/GPU capture, game/background behavior, two physical PCs, restrictive-network TURN, prolonged measurements and installation/update with operator signing credentials must be exercised on the exact release candidate. The earlier dated bootstrap/proof sections describe their historical scope, not today's product entry point.
