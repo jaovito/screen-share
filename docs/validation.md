@@ -328,3 +328,21 @@ preservation, cleanup continuation and failure propagation. Local TypeScript che
 and database-backed coverage passed (84 runtime files inventoried, all per-file
 gates passed). Actual Windows probe/playback remains pending the corrected provider
 run; no encryption/CSP assertion or acceptance gate was removed.
+
+
+[Run 40550399468](https://github.com/jaovito/screen-share/actions/runs/40550399468)
+confirmed the preliminary Windows SFU/H264/Opus probe, all native checks and NSIS
+packaging. Cleanup completed without masking the original error. The full fixture
+failed while waiting for the application's WebView2 CDP endpoint, before playback.
+Pinned Tauri 2.12.3 runtime source displays a blocking release-build dialog when
+WebView2 Runtime is unavailable; the runner's Edge browser does not establish that
+prerequisite. The fixture now explicitly detects/provisions the official signed
+Evergreen runtime and records its version. Runtime connection/playback must still
+pass the next provider run. The saved Rust cache avoids rebuilding unchanged native
+dependencies for that retry.
+
+Additional local checks passed: all eight E2E cases (38.9 seconds), actual owned
+process shutdown/repeated stop/temp-directory removal, and synthetic browser probes
+confirming that video.load resets the decoded-frame counter and the audio analyser
+processes its source. These probes falsified two possible assertion defects; they
+do not establish WebView2 behavior.

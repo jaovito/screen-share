@@ -12,6 +12,7 @@ import {
   removeOwnedDirectory,
   waitFor,
 } from '../tests/desktop-receiver/resources';
+import { ensureWebViewRuntime } from '../tests/desktop-receiver/webview-runtime';
 import { finalizeFixture } from '../tooling/desktop-receiver/cleanup';
 import { root, run } from './lib';
 import { freePort } from './ports';
@@ -46,6 +47,11 @@ function progress(next: string) {
 }
 
 try {
+  if (!publisherOnly) {
+    progress('verify Windows WebView2 runtime prerequisite');
+    await ensureWebViewRuntime(directory);
+    progress('download verified SFU');
+  }
   const executable = await downloadSfu(directory);
   const config = join(directory, 'livekit.yaml');
   await writeFile(
@@ -139,6 +145,7 @@ try {
       void application?.stop().catch(() => {});
       void sfu?.stop().catch(() => {});
     }, 240_000);
+    progress('connect WebView2 automation');
     await waitFor(`http://127.0.0.1:${debug}/json/version`, application.alive);
     webview = await chromium.connectOverCDP(`http://127.0.0.1:${debug}`);
     page = webview.contexts()[0]?.pages()[0];

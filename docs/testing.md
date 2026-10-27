@@ -128,3 +128,11 @@ the Windows SFU and synthetic H264/Opus transport before the expensive native bu
 This preliminary probe does not replace the actual WebView2 playback assertions.
 The ordinary NSIS artifact and bounded Rust build cache are saved before the full
 runtime test, so a runtime failure remains visible without discarding build evidence.
+
+The full Windows application fixture explicitly checks the Microsoft-documented
+WebView2 Runtime registry keys. When absent on the disposable host, it downloads
+the official Evergreen bootstrapper, verifies its Authenticode Microsoft publisher
+signature, installs it under a bounded deadline, and records the resulting runtime
+version. Edge Stable is not a substitute for WebView2 Runtime. This setup is confined
+to the authorized Windows test host and does not alter application CSP/E2EE. See
+[Microsoft runtime distribution guidance](https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/distribution).
