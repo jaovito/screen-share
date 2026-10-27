@@ -14,7 +14,7 @@ Build software that shares a selected window/monitor with authorized friends at 
 
 Initial beta targets Windows 11 x64 publishers, rooms of 2–8 people, and one active stream per room. Here, 2K means **QHD/1440p, 2560 × 1440**; show dimensions to avoid ambiguity.
 
-Publisher is a desktop application; viewers initially use a private web player. Capture stays native while reception uses browser WebRTC. Integrated player, voice, multiple streams, macOS/Linux are later work.
+Publisher is a Windows desktop application; viewers use either the integrated Windows player or a private web player. The integrated player was authorized on 2026-10-27 (ADR 0013). Capture stays native while both receivers use the same browser WebRTC/E2EE adapter. Voice, multiple streams and macOS/Linux desktop support remain later work.
 
 Streaming starts only after explicit source selection and valid authorization. Recovery must never select another window or replace application capture with full-monitor capture.
 

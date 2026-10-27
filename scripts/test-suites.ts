@@ -13,7 +13,7 @@ function testsIn(directory: string) {
 
 export function testSuites(database = false): TestSuite[] {
   const packageTests = testsIn('packages');
-  const packageDom = packageTests.filter((file) => file.startsWith('./packages/ui/'));
+  const packageDom = packageTests.filter((file) => /^\.\/packages\/(ui|rtc-browser)\//.test(file));
   const nodeFiles = [
     ...packageTests.filter((file) => !packageDom.includes(file)),
     ...testsIn('tooling'),

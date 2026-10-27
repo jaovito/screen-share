@@ -146,4 +146,9 @@ it('permits only explicitly exported workspace subpaths and protects shared brow
   expect(
     analyzeSource('packages/ui/src/product/services.ts', "import 'node:fs';", exports),
   ).toContain('Browser cannot import server/runtime adapters.');
+  for (const adapter of ['node:fs', 'pg', 'hono', 'livekit-server-sdk']) {
+    expect(
+      analyzeSource('packages/rtc-browser/src/receiver.ts', `import '${adapter}';`, exports),
+    ).toContain('Browser cannot import server/runtime adapters.');
+  }
 });

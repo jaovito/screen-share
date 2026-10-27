@@ -93,3 +93,64 @@ The Windows job prepares the fixed sidecar before strict parent Clippy, IPC test
 Portable timing tests cover the external encoder's two-input bound, matched monotonic output timestamps, finite rolling observations and reset behavior. Pure recovery tests cover immutable source identity, three session-total attempts/backoff, pause/revocation/cancel gates, clock regression and strict recoverable DXGI HRESULTs. Windows-gated metadata tests exercise stale-generation, terminal source closure and the synchronized publication gate. Cross-target Clippy validates these Windows APIs but does not execute graphics recovery.
 
 The visible publisher advisor and DOM tests cover continuous evidence windows, processing latency versus GPU/codec attribution, transport pressure, missing source activity, pause/generation/gap resets, allowlisted native stop reasons and safe active-session key-loss recovery. Browser screenshots use an explicitly synthetic component fixture for visual inspection; these displayed values are not hardware measurements. Actual Windows device-loss/recovery and prolonged timing observations remain hardware acceptance.
+
+
+## Actual Windows application reception
+
+`bun scripts/test-desktop-receiver.ts` requires Windows and the already-built desktop
+UI/sidecar. CI runs it after producing the ordinary NSIS artifact. It rebuilds only
+the standalone parent with owned loopback API/RTC origins and Tauri's custom-protocol
+feature; the previously packaged installer retains its normal configuration.
+
+The harness verifies the SHA-256 of the official pinned LiveKit Windows archive,
+starts its own SFU, uses a unique WebView2 profile and test-only remote-debugging
+port, and drives the actual application through Playwright CDP. Synthetic canvas
+H264 and oscillator Opus feed the real E2EE worker. Assertions cover secure context,
+CSP rejection of an unrelated origin, decoded frames/audio, wrong-key rejection and
+detached sinks after stopping. Loopback ICE and autoplay flags apply only to these
+owned test processes; no source capture, microphone or user media is accessed.
+
+The metadata API is an explicitly controlled fixture with an HttpOnly cookie. It
+verifies native IPC/cookie routing, not production authentication or SQL, which are
+covered separately by the real product E2E suite. The test owns and cleans up its
+process trees, files and ports. It does not establish physical capture, restrictive
+network/TURN, two-PC connectivity or prolonged playback acceptance. See
+[validation.md](validation.md) for actual execution evidence.
+
+The Windows receiver fixture awaits owned process termination before removing its
+temporary directory. Cleanup attempts every release and preserves the original
+failure when cleanup also fails. Windows uses a bounded native removal fallback
+for archive attributes/filesystem locks. Failed runs retain only a static stage
+label and a screenshot of the synthetic WebView fixture, with no request trace.
+
+CI first runs `bun scripts/test-desktop-receiver.ts --publisher-only` to validate
+the Windows SFU and synthetic H264/Opus transport before the expensive native build.
+This preliminary probe does not replace the actual WebView2 playback assertions.
+The ordinary NSIS artifact and bounded Rust build cache are saved before the full
+runtime test, so a runtime failure remains visible without discarding build evidence.
+
+The full Windows application fixture explicitly checks the Microsoft-documented
+WebView2 Runtime registry keys. When absent on the disposable host, it downloads
+the official Evergreen bootstrapper, verifies its Authenticode Microsoft publisher
+signature, installs it under a bounded deadline, and records the resulting runtime
+version. Edge Stable is not a substitute for WebView2 Runtime. This setup is confined
+to the authorized Windows test host and does not alter application CSP/E2EE. See
+[Microsoft runtime distribution guidance](https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/distribution).
+
+The Windows application fixture explicitly forces SFU ICE/TCP. HTTP/signaling stay
+on loopback. On GitHub-hosted Windows, media advertises only an RFC1918 IPv4 actually
+enumerated on that same runner, filtered to its exact /32; it never targets a LAN
+peer or external SFU. Local operator runs retain loopback. This avoids rewriting a
+non-loopback ICE interface to 127.0.0.1. Address-selection regressions reject public,
+malformed and absent interfaces. These checks do not substitute for production UDP,
+TCP fallback or restrictive-network TURN acceptance.
+
+The standalone fixture passes CDP/autoplay arguments through Tauri's
+`additionalBrowserArgs` configuration and isolates app data through
+`appDirectoriesOverride`. Both are supplied with `TAURI_CONFIG` only during the
+fixture parent compilation. The original secure window configuration is retained;
+CSP, bundling and updater settings are not overridden. WebView2 150 and later ignore
+`WEBVIEW2_*` environment variables for elevated hosts, including hosted Windows CI;
+the API configuration avoids that documented restriction without changing machine
+policy or enabling debugging in the previously packaged installer. See
+[Microsoft's explanation](https://github.com/MicrosoftEdge/WebView2Feedback/issues/5645#issuecomment-4934355430).

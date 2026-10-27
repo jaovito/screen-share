@@ -58,6 +58,24 @@ if (
 ) {
   throw new Error('SCREEN_SHARE_API_URL must be an explicit public HTTPS origin');
 }
+const rtcValue = process.env.SCREEN_SHARE_RTC_URL ?? '';
+const rtc = new URL(rtcValue);
+if (
+  rtcValue.length > 2048 ||
+  /[\s\p{Cc}]/u.test(rtcValue) ||
+  rtc.protocol !== 'wss:' ||
+  rtc.username ||
+  rtc.password ||
+  rtc.search ||
+  rtc.hash ||
+  rtc.pathname !== '/' ||
+  isIP(rtc.hostname.replace(/^\[|\]$/g, '')) !== 0 ||
+  !/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(rtc.hostname) ||
+  /(?:^|\.)(?:localhost|local|test|invalid|example)$/.test(rtc.hostname) ||
+  /(?:^|\.)example\.(?:com|net|org)$/.test(rtc.hostname)
+) {
+  throw new Error('SCREEN_SHARE_RTC_URL must be an explicit public WSS origin');
+}
 const publicKey = process.env.SCREEN_SHARE_UPDATE_PUBLIC_KEY?.trim();
 if (!publicKey || publicKey.length > 2048 || !/^[A-Za-z0-9+/]+={0,2}$/.test(publicKey))
   throw new Error('A Tauri-generated updater public key is required');
@@ -135,6 +153,7 @@ if (checkOnly) {
         ...environment,
         SCREEN_SHARE_RELEASE_CONFIG: config,
         SCREEN_SHARE_API_URL: api.origin,
+        SCREEN_SHARE_RTC_URL: rtc.origin,
         VITE_API_URL: api.origin,
         SCREEN_SHARE_UPDATE_PUBLIC_KEY: publicKey,
         SCREEN_SHARE_UPDATE_ENDPOINT: endpoint,

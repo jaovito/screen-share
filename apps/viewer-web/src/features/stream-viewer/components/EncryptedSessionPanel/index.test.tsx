@@ -1,8 +1,8 @@
 import { beforeEach, expect, it, mock } from 'bun:test';
 import { LocaleProvider } from '@screen-share/i18n';
+import type { ReceptionState } from '@screen-share/rtc-browser';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { viewerTranslations } from '../../locales';
-import type { ReceptionState } from '../../services/encrypted-reception';
 
 const stop = mock(() => {});
 const receive = mock(
@@ -17,7 +17,7 @@ const receive = mock(
   },
 );
 
-mock.module('../../services/encrypted-reception', () => ({ receiveEncryptedSession: receive }));
+mock.module('@screen-share/rtc-browser', () => ({ receiveEncryptedSession: receive }));
 
 const { EncryptedSessionPanel } = await import('./index');
 

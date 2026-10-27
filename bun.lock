@@ -46,6 +46,7 @@
       "dependencies": {
         "@screen-share/contracts": "workspace:*",
         "@screen-share/i18n": "workspace:*",
+        "@screen-share/rtc-browser": "workspace:*",
         "@screen-share/ui": "workspace:*",
         "@tauri-apps/api": "2.12.4",
         "react": "19.3.1",
@@ -66,10 +67,9 @@
       "version": "0.1.0",
       "dependencies": {
         "@screen-share/contracts": "workspace:*",
-        "@screen-share/diagnostics": "workspace:*",
         "@screen-share/i18n": "workspace:*",
+        "@screen-share/rtc-browser": "workspace:*",
         "@screen-share/ui": "workspace:*",
-        "livekit-client": "2.23.0",
         "react": "19.3.1",
         "react-dom": "19.3.1",
       },
@@ -105,6 +105,15 @@
       },
       "peerDependencies": {
         "react": "19.3.1",
+      },
+    },
+    "packages/rtc-browser": {
+      "name": "@screen-share/rtc-browser",
+      "version": "0.1.0",
+      "dependencies": {
+        "@screen-share/contracts": "workspace:*",
+        "@screen-share/diagnostics": "workspace:*",
+        "livekit-client": "2.23.0",
       },
     },
     "packages/ui": {
@@ -339,6 +348,8 @@
     "@screen-share/diagnostics": ["@screen-share/diagnostics@workspace:packages/diagnostics"],
 
     "@screen-share/i18n": ["@screen-share/i18n@workspace:packages/i18n"],
+
+    "@screen-share/rtc-browser": ["@screen-share/rtc-browser@workspace:packages/rtc-browser"],
 
     "@screen-share/ui": ["@screen-share/ui@workspace:packages/ui"],
 

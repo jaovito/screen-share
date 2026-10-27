@@ -14,7 +14,7 @@ const receive = mock((input: { onState(state: string): void }) => {
   input.onState('subscribed');
   return { stop };
 });
-mock.module('../../services/encrypted-reception', () => ({ receiveEncryptedSession: receive }));
+mock.module('@screen-share/rtc-browser', () => ({ receiveEncryptedSession: receive }));
 afterEach(() => {
   Reflect.deleteProperty(window.location, 'search');
 });

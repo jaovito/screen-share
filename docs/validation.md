@@ -287,3 +287,93 @@ The first provider check of the new Windows-only recovery pipeline (`e1dca45`, r
 The downloaded Actions artifact SHA-256 matched GitHub's recorded digest (`1ff4ac20deb074933819a78e56a41bee0b241ab201a81a04a8b4b2308b81af27`). An official SHA-256-verified temporary 7-Zip inspector checked the NSIS CRC without executing Windows binaries. The installer contains both `screen-share-desktop.exe` (13,734,912 bytes) and `ss-media-proof.exe` (30,685,184 bytes). Both are PE32+ AMD64; the bundled publisher contains the private `--desktop-control` entrypoint. Import-table inspection found no external VCRUNTIME/MSVCP, WebView2Loader or WebRTC DLL dependency. This is artifact-content evidence, not a clean-machine installation or Authenticode claim.
 
 Final UI cleanup removes the prototype title from the helper window and hides the auxiliary picker owner after selection in the regular desktop flow, while retaining its STA message pump, selected item and lifetime. The standalone operator tool keeps its visible stop window. Windows-target strict Clippy passed; an additional Windows-only test creates the helper, hides it, verifies message-pump liveness and checks destruction. Its execution and the updated installer require the follow-up provider run. No browser/API behavior, authorization, source recovery or content key changes accompany this cleanup.
+
+
+## 2026-10-27 — Integrated Windows receiver
+
+Implemented ADR 0013: the desktop and web viewer load one public browser-safe E2EE
+receiver package. Desktop account/grant requests retain native IPC/cookie transport.
+The exact configured RTC origin and secure WebView scheme replace the previous
+publication-only renderer policy. See [security review](security-review-desktop-receiver.md).
+
+Local validation passed: `bun run check:ts` (strict types, architecture, unit/DOM,
+production builds), `bun run test:coverage` (84 runtime files inventoried; 99.24%
+lines, 96.95% functions overall, all per-file gates passed), all eight desktop/mobile
+`bun run test:e2e` cases (39.3 seconds), and `bun run test:media` (real E2EE worker,
+synthetic H264 decoding and wrong-key rejection; 5.0-second test). Native macOS
+validation passed 15 desktop library tests, strict desktop Clippy and workspace
+formatting with two Cargo jobs. Twelve synthetic release RTC-input cases passed.
+Independent static security review found no confirmed actionable issue in scope.
+
+Actual Windows WebView2 regression is configured with owned synthetic metadata,
+H264/Opus and a pinned real SFU. Its provider result remains pending at this entry;
+local browser playback and Mac compilation do not establish Windows execution.
+Physical GPU/capture, two-PC/TURN, prolonged operation and signed-install/update
+acceptance remain unexecuted gates.
+
+
+### Windows receiver CI failure investigation
+
+[Run 40524158081](https://github.com/jaovito/screen-share/actions/runs/40524158081)
+passed TypeScript/PostgreSQL, portable Rust, both images and owner policy on
+`205889f`. Windows native checks and NSIS packaging succeeded; the actual receiver
+fixture failed with `EPERM` while removing its owned temporary directory. Because
+cleanup threw from `finally`, the earlier fixture error was hidden. This run does
+not establish working WebView2 playback.
+
+The correction awaits process closure, attempts every cleanup independently and
+preserves the original failure. A bounded native Windows remover handles the
+filesystem fallback. Four regressions cover ordered async release, original-error
+preservation, cleanup continuation and failure propagation. Local TypeScript checks
+and database-backed coverage passed (84 runtime files inventoried, all per-file
+gates passed). Actual Windows probe/playback remains pending the corrected provider
+run; no encryption/CSP assertion or acceptance gate was removed.
+
+
+[Run 40550399468](https://github.com/jaovito/screen-share/actions/runs/40550399468)
+confirmed the preliminary Windows SFU/H264/Opus probe, all native checks and NSIS
+packaging. Cleanup completed without masking the original error. The full fixture
+failed while waiting for the application's WebView2 CDP endpoint, before playback.
+Pinned Tauri 2.12.3 runtime source displays a blocking release-build dialog when
+WebView2 Runtime is unavailable; the runner's Edge browser does not establish that
+prerequisite. The fixture now explicitly detects/provisions the official signed
+Evergreen runtime and records its version. Runtime connection/playback must still
+pass the next provider run. The saved Rust cache avoids rebuilding unchanged native
+dependencies for that retry.
+
+Additional local checks passed: all eight E2E cases (38.9 seconds), actual owned
+process shutdown/repeated stop/temp-directory removal, and synthetic browser probes
+confirming that video.load resets the decoded-frame counter and the audio analyser
+processes its source. These probes falsified two possible assertion defects; they
+do not establish WebView2 behavior.
+
+
+Run 40564069076 stopped early in the preliminary publisher with `could not establish
+pc connection`; the same loopback fixture had succeeded on the preceding provider
+run. To isolate WebView playback, this owned synthetic fixture now explicitly forces
+the pinned SFU's ICE/TCP test mode. Encryption, codec, decoded-media and wrong-key
+assertions remain mandatory. UDP/TURN and real-network acceptance remain separate
+and unexecuted by this fixture.
+
+
+Run 40564818047 demonstrated that forcing TCP alone did not repair the hosted
+loopback ICE negotiation. The next fixture revision advertises only the hosted
+runner's own enumerated RFC1918 IPv4 with an exact /32 filter, while HTTP/signaling
+remain loopback. It does not contact LAN peers or external infrastructure. Three
+address-selection regressions passed, including rejection of public/malformed/absent
+interfaces. Runtime detection/installation now happens in the preliminary probe so
+missing prerequisites fail before native compilation. No application security or
+media assertion was relaxed.
+
+
+Run [40565514989](https://github.com/jaovito/screen-share/actions/runs/40565514989)
+confirmed the owned-interface Windows H264/Opus publisher probe, native checks and
+NSIS packaging. WebView2 Runtime 155.0.4283.62 was already installed, disproving the
+missing-runtime hypothesis above. The full application still timed out waiting for
+CDP, before playback. Microsoft documents that WebView2 150+ ignores `WEBVIEW2_*`
+environment configuration in elevated hosts; the test previously relied on those
+variables. The fixture now supplies browser arguments and an isolated app-data path
+through Tauri's compiled API configuration, preserving the original HTTPS window.
+Two regression tests cover preserved settings, invalid inputs and local-only
+loopback flags. Local TypeScript checks and database-backed coverage passed; the
+actual Windows playback result remains pending the provider retry.

@@ -47,7 +47,7 @@ export function analyzeSource(
 ): string[] {
   const path = filename.replaceAll('\\', '/');
   const issues: string[] = [];
-  const browser = /^(apps\/(viewer-web|desktop)|packages\/(ui|i18n))\/src\//.test(path);
+  const browser = /^(apps\/(viewer-web|desktop)|packages\/(ui|i18n|rtc-browser))\/src\//.test(path);
   const feature = path.match(/^(apps\/[^/]+\/src)\/features\/([^/]+)\//);
 
   for (const specifier of importsOf(path, code)) {

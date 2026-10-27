@@ -1,6 +1,6 @@
+import type { ReceptionState } from '@screen-share/rtc-browser';
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { useViewerMessages } from '../../locales';
-import type { ReceptionState } from '../../services/encrypted-reception';
 
 function ReceptionForm() {
   const t = useViewerMessages();
@@ -48,7 +48,7 @@ function ReceptionForm() {
     reception.current = null;
 
     try {
-      const { receiveEncryptedSession } = await import('../../services/encrypted-reception');
+      const { receiveEncryptedSession } = await import('@screen-share/rtc-browser');
       if (generation.current !== attempt) return;
       reception.current = receiveEncryptedSession({
         grant,

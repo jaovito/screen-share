@@ -57,6 +57,7 @@ export async function buildWorkspaces(
 export async function typecheckWorkspaces() {
   await run('bun', ['run', '--filter', '@screen-share/ui', 'typecheck']);
   await run('bun', ['run', '--filter', '@screen-share/contracts', 'typecheck']);
+  await run('bun', ['run', '--filter', '@screen-share/rtc-browser', 'typecheck']);
   await Promise.all(
     workspaceApps.map((name) =>
       run('bun', ['run', '--filter', `@screen-share/${name}`, 'typecheck']),
