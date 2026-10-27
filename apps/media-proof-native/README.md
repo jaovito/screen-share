@@ -6,7 +6,7 @@ An explicitly launched Windows 11 diagnostic application composing the selected 
 
 Use the pinned Bun/Rust versions, Windows 11 x64, MSVC C++ tools/Windows SDK, a current GPU driver, and an explicitly authorized reachable LiveKit instance. Signaling must use WSS; WS is permitted only on loopback. Do not expose the M0 Compose stack or database to a LAN to make the experiment work.
 
-Obtain a current publisher JSON grant using the trusted [operator workflow](../../docs/media-proof.md). Every run needs a fresh experiment room and independently generated media key. Arrange an authenticated encrypted channel to distribute the key separately to the allowed viewers. This program has no public token endpoint and never receives the SFU signing secret.
+Complete the first dependency build/native checks before issuing the five-minute grants; a cold SDK build can exceed their lifetime. Then obtain a current publisher JSON grant using the trusted [operator workflow](../../docs/media-proof.md). Every run needs a fresh experiment room and independently generated media key. Arrange an authenticated encrypted channel to distribute the key separately to the allowed viewers. This program has no public token endpoint and never receives the SFU signing secret.
 
 ## Run explicitly
 
