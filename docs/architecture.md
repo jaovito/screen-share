@@ -47,3 +47,15 @@ The fixed updater is unavailable until a real public key and HTTPS release endpo
 ## Evidence and operation
 
 See [validation.md](validation.md), [security-review-product.md](security-review-product.md), [deployment.md](deployment.md), [releases.md](releases.md), and ADRs 0011–0013. Synthetic local interoperability, compilation and automated filesystem/authorization tests do not establish physical Windows GPU compatibility, prolonged stability, real game recovery or a production deployment.
+
+Native status optionally carries a closed failure record after publication has
+started: an enum stage/code, allowlisted API operation and numeric HRESULT. This
+additive field remains absent for older/healthy packets. Encoder failure metadata
+is retained before teardown; cleanup runs independently and does not replace the
+original media result. The renderer displays this record even when the status IPC
+request succeeds. Arbitrary vendor/SDK descriptions are not diagnostic fields.
+
+The native hardware encoder explicitly requests H.264 Baseline and mandatory
+low-latency mode. Baseline excludes B slices, so startup does not depend on the
+optional vendor B-picture-count property. SPS headers and in-band parameter updates
+must remain Baseline before encoded bytes are submitted for publication.

@@ -88,6 +88,8 @@ export const es = {
   status_expired: 'La autorización ha caducado. Solicita una sesión nueva.',
   status_invalidGrant: 'La autorización de sesión no es válida',
   status_invalidKey: 'El formato de la clave no es válido',
+  sharingFailureDetail:
+    'Código del fallo: {{code}}. Copia este código al informar del problema. No incluye claves ni tokens.',
   diagnostics: 'Diagnóstico local',
   framesCaptured: 'Fotogramas consumidos',
   framesEncoded: 'Fotogramas codificados',

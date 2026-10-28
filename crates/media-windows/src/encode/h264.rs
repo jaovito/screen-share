@@ -120,6 +120,13 @@ impl H264Normalizer {
 }
 
 fn extract_parameters(nals: &[&[u8]]) -> Result<Vec<u8>, EncodedVideoError> {
+    // The selected H.264 Baseline profile excludes B slices independently of
+    // optional vendor CodecAPI controls. Reject ignored/mutated profile requests.
+    for nal in nals.iter().filter(|nal| nal[0] & 31 == 7) {
+        if nal.len() < 4 || nal[1] != 66 {
+            return Err(EncodedVideoError::InvalidAnnexB);
+        }
+    }
     let has_sps = nals.iter().any(|nal| nal[0] & 31 == 7);
     let has_pps = nals.iter().any(|nal| nal[0] & 31 == 8);
     // Never replace a complete pair with one half of a changed configuration.
@@ -206,7 +213,7 @@ mod tests {
     #[test]
     fn annex_b_header_is_repeated_for_idr_and_preserves_delta_samples() {
         let mut normalizer =
-            H264Normalizer::new(&[0, 0, 1, 0x67, 42, 0, 0, 1, 0x68, 42]).expect("SPS/PPS");
+            H264Normalizer::new(&[0, 0, 1, 0x67, 66, 0, 30, 0, 0, 1, 0x68, 42]).expect("SPS/PPS");
         let bytes = normalizer
             .normalize(&[0, 0, 1, 0x65, 42])
             .expect("IDR normalized");
@@ -224,7 +231,9 @@ mod tests {
 
     #[test]
     fn avcc_header_and_length_prefixed_sample_are_converted() {
-        let header = [1, 66, 0, 30, 255, 225, 0, 2, 0x67, 42, 1, 0, 2, 0x68, 42];
+        let header = [
+            1, 66, 0, 30, 255, 225, 0, 4, 0x67, 66, 0, 30, 1, 0, 2, 0x68, 42,
+        ];
         let mut normalizer = H264Normalizer::new(&header).expect("valid AVC configuration");
         let bytes = normalizer
             .normalize(&[0, 0, 0, 2, 0x65, 42])
@@ -244,7 +253,9 @@ mod tests {
             Err(EncodedVideoError::MissingParameterSets)
         ));
         let mut reads = 0;
-        let header = [1, 66, 0, 30, 255, 225, 0, 2, 0x67, 42, 1, 0, 2, 0x68, 42];
+        let header = [
+            1, 66, 0, 30, 255, 225, 0, 4, 0x67, 66, 0, 30, 1, 0, 2, 0x68, 42,
+        ];
         normalizer
             .refresh_missing_header(|| {
                 reads += 1;
@@ -276,7 +287,9 @@ mod tests {
             .refresh_missing_header(|| H264Normalizer::new(&[]))
             .expect("metadata still absent");
         assert!(!normalizer.has_parameter_sets());
-        let sample = [0, 0, 1, 0x67, 42, 0, 0, 1, 0x68, 42, 0, 0, 1, 0x65, 42];
+        let sample = [
+            0, 0, 1, 0x67, 66, 0, 30, 0, 0, 1, 0x68, 42, 0, 0, 1, 0x65, 42,
+        ];
         normalizer.normalize(&sample).expect("in-band SPS/PPS/IDR");
         assert!(normalizer.has_parameter_sets());
         normalizer
@@ -302,5 +315,22 @@ mod tests {
                 .normalize(&vec![0; MAX_ACCESS_UNIT_BYTES + 1])
                 .is_err()
         );
+    }
+
+    #[test]
+    fn rejects_non_baseline_or_truncated_parameter_sets_at_startup_and_during_streaming() {
+        for profile in [77, 88, 100, 110, 122, 244] {
+            let header = [0, 0, 1, 0x67, profile, 0, 30, 0, 0, 1, 0x68, 42];
+            assert!(H264Normalizer::new(&header).is_err());
+            let mut baseline =
+                H264Normalizer::new(&[0, 0, 1, 0x67, 66, 0, 30, 0, 0, 1, 0x68, 42]).unwrap();
+            assert!(baseline.normalize(&header).is_err());
+        }
+        for header in [
+            vec![0, 0, 1, 0x67, 0, 0, 1, 0x68, 42],
+            vec![0, 0, 1, 0x67, 66, 0, 0, 1, 0x68, 42],
+        ] {
+            assert!(H264Normalizer::new(&header).is_err());
+        }
     }
 }

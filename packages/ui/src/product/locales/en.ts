@@ -86,6 +86,8 @@ export const en = {
   status_expired: 'Authorization expired. Request a fresh session.',
   status_invalidGrant: 'Session authorization is invalid',
   status_invalidKey: 'The content key format is invalid',
+  sharingFailureDetail:
+    'Failure code: {{code}}. Copy this code when reporting the problem. No keys or tokens are included.',
   diagnostics: 'Local diagnostics',
   framesCaptured: 'Frames consumed',
   framesEncoded: 'Encoded frames',

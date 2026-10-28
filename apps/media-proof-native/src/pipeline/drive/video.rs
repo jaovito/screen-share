@@ -17,7 +17,7 @@ impl Pipeline {
         {
             return Ok(());
         }
-        self.feedback(publisher)?;
+        self.feedback(publisher, signals)?;
         for _ in 0..8 {
             if signals.stop.load(Ordering::Acquire)
                 || signals.paused.load(Ordering::Acquire)
@@ -25,7 +25,7 @@ impl Pipeline {
             {
                 return Ok(());
             }
-            self.feedback(publisher)?;
+            self.feedback(publisher, signals)?;
             let Some(encoder) = self.encoder.as_mut() else {
                 break;
             };
@@ -36,10 +36,17 @@ impl Pipeline {
                     self.pause_for_recovery(publisher)?;
                     return Ok(());
                 }
-                Err(_) => return Err("Asynchronous hardware encoding failed"),
+                Err(error) => {
+                    super::super::failure::encoder(
+                        signals,
+                        ss_media_proof::protocol::FailureStage::EncoderOutput,
+                        error,
+                    );
+                    return Err("Asynchronous hardware encoding failed");
+                }
             };
             tokio::task::yield_now().await;
-            self.feedback(publisher)?;
+            self.feedback(publisher, signals)?;
             match event {
                 EncoderPoll::Pending => break,
                 EncoderPoll::NeedInput => {}
@@ -49,7 +56,7 @@ impl Pipeline {
                         .map_err(|_| "Publication clock overflowed")?;
                     self.report.access_units = self.report.access_units.saturating_add(1);
                     tokio::task::yield_now().await;
-                    self.feedback(publisher)?;
+                    self.feedback(publisher, signals)?;
                     if signals.stop.load(Ordering::Acquire)
                         || signals.paused.load(Ordering::Acquire)
                         || !capture_active(reader, generation)?
@@ -80,7 +87,7 @@ impl Pipeline {
                 }
             }
         }
-        self.feedback(publisher)?;
+        self.feedback(publisher, signals)?;
         if signals.stop.load(Ordering::Acquire)
             || signals.paused.load(Ordering::Acquire)
             || !capture_active(reader, generation)?
@@ -100,7 +107,14 @@ impl Pipeline {
                     self.pause_for_recovery(publisher)?;
                     return Ok(());
                 }
-                Err(_) => return Err("GPU conversion or hardware encoder input failed"),
+                Err(error) => {
+                    super::super::failure::encoder(
+                        signals,
+                        ss_media_proof::protocol::FailureStage::EncoderInput,
+                        error,
+                    );
+                    return Err("GPU conversion or hardware encoder input failed");
+                }
             };
             match submitted {
                 SubmitOutcome::Accepted => {

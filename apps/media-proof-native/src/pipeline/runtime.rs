@@ -71,9 +71,9 @@ async fn run(
         if signals.stop.load(Ordering::Acquire) {
             return Err("Publication stopped before capture");
         }
-        pipeline.feedback(&mut publisher)?;
+        pipeline.feedback(&mut publisher, signals)?;
         pipeline.start_audio(&mut publisher).await?;
-        pipeline.feedback(&mut publisher)?;
+        pipeline.feedback(&mut publisher, signals)?;
         ready
             .send(Ok(()))
             .map_err(|_| "Capture owner closed before publication was ready")?;
@@ -83,7 +83,7 @@ async fn run(
             if signals.stop.load(Ordering::Acquire) {
                 return Err("Publication stopped before capture");
             }
-            pipeline.feedback(&mut publisher)?;
+            pipeline.feedback(&mut publisher, signals)?;
             match input.frames.try_recv() {
                 Ok(reader) => break reader,
                 Err(TryRecvError::Disconnected) => return Err("Capture owner disconnected"),
@@ -99,6 +99,13 @@ async fn run(
             .await
     }
     .await;
+    if let Err(message) = work.as_ref()
+        && let Ok(mut snapshot) = signals.snapshot.lock()
+    {
+        snapshot
+            .failure
+            .get_or_insert_with(|| ss_media_proof::protocol::NativeFailure::worker(message));
+    }
     signals.stop.store(true, Ordering::Release);
     pipeline.publish_snapshot(
         signals,
@@ -113,8 +120,6 @@ async fn run(
         .close()
         .await
         .map_err(|_| "Encrypted publication cleanup failed");
-    encoder_stopped?;
-    transport_closed?;
-    work?;
+    ss_media_proof::protocol::finish_publication(work, &[encoder_stopped, transport_closed])?;
     Ok(pipeline.report)
 }

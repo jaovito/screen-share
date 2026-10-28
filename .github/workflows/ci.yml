@@ -4,6 +4,15 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      api_url:
+        description: Optional public HTTPS API origin for an unsigned Windows installer
+        type: string
+        default: ""
+      rtc_url:
+        description: Matching public WSS LiveKit origin (required with api_url)
+        type: string
+        default: ""
 permissions:
   contents: read
 concurrency:
@@ -125,7 +134,49 @@ jobs:
       - run: cargo test --locked -p screen-share-desktop --lib
         env:
           CARGO_BUILD_JOBS: 2
+      - name: Validate manually configured public endpoints
+        if: github.event_name == 'workflow_dispatch'
+        shell: pwsh
+        env:
+          BUILD_API_URL: ${{ inputs.api_url }}
+          BUILD_RTC_URL: ${{ inputs.rtc_url }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (!$env:BUILD_API_URL -and !$env:BUILD_RTC_URL) { exit 0 }
+          foreach ($entry in @(@($env:BUILD_API_URL, 'https'), @($env:BUILD_RTC_URL, 'wss'))) {
+            $url = $null
+            if (![Uri]::TryCreate($entry[0], [UriKind]::Absolute, [ref]$url) -or
+                $url.Scheme -ne $entry[1] -or $url.UserInfo -or $url.Query -or
+                $url.Fragment -or $url.AbsolutePath -ne '/' -or $url.IsLoopback) {
+              throw 'Both endpoints must be public HTTPS/WSS origins without credentials, paths or query strings.'
+            }
+          }
       - run: bun run build:desktop
+        env:
+          SCREEN_SHARE_API_URL: ${{ inputs.api_url || 'http://127.0.0.1:3000' }}
+          SCREEN_SHARE_RTC_URL: ${{ inputs.rtc_url || 'ws://127.0.0.1:7880' }}
+      - name: Verify and record the configured Windows installation
+        if: github.event_name == 'workflow_dispatch' && inputs.api_url != ''
+        shell: pwsh
+        env:
+          BUILD_API_URL: ${{ inputs.api_url }}
+          BUILD_RTC_URL: ${{ inputs.rtc_url }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $binary = [Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes('target/release/screen-share-desktop.exe'))
+          foreach ($origin in @($env:BUILD_API_URL, $env:BUILD_RTC_URL)) {
+            if (!$binary.Contains($origin)) { throw 'Configured public origin is absent from the application executable.' }
+          }
+          $installers = @(Get-ChildItem target/release/bundle/nsis/*.exe)
+          if ($installers.Count -ne 1) { throw 'Expected exactly one fresh NSIS installer.' }
+          [ordered]@{
+            revision = $env:GITHUB_SHA
+            api_url = $env:BUILD_API_URL
+            rtc_url = $env:BUILD_RTC_URL
+            installer = $installers[0].Name
+            sha256 = (Get-FileHash $installers[0].FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            signed = $false
+          } | ConvertTo-Json | Set-Content target/release/bundle/nsis/build-info.json
       - name: Preserve completed Windows compilation before media runtime testing
         if: steps.windows-cargo-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
@@ -137,8 +188,10 @@ jobs:
           key: windows-cargo-v1-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ github.sha }}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: desktop-windows-development-unsigned
-          path: target/release/bundle/nsis/*.exe
+          name: ${{ github.event_name == 'workflow_dispatch' && inputs.api_url != '' && 'desktop-windows-configured-unsigned' || 'desktop-windows-development-unsigned' }}
+          path: |
+            target/release/bundle/nsis/*.exe
+            target/release/bundle/nsis/build-info.json
           if-no-files-found: error
       - name: Test encrypted reception in the actual Windows application
         run: bun scripts/test-desktop-receiver.ts

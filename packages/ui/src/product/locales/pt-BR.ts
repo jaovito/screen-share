@@ -89,6 +89,8 @@ export const ptBR = {
   status_expired: 'A autorização expirou. Solicite uma nova sessão.',
   status_invalidGrant: 'A autorização da sessão é inválida',
   status_invalidKey: 'O formato da chave do conteúdo é inválido',
+  sharingFailureDetail:
+    'Código da falha: {{code}}. Copie este código ao relatar o problema. Ele não inclui chaves ou tokens.',
   diagnostics: 'Diagnóstico local',
   framesCaptured: 'Quadros consumidos',
   framesEncoded: 'Quadros codificados',

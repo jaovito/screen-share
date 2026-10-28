@@ -1,4 +1,5 @@
 use super::EncoderError;
+use crate::EncoderOperation;
 use ss_domain::VideoProfile;
 use std::{mem::ManuallyDrop, ptr};
 use windows::{
@@ -128,7 +129,7 @@ pub(super) fn select(
             &mut activations.count,
         )
     }
-    .map_err(|_| EncoderError::HardwareEncoderUnavailable)?;
+    .map_err(|error| native(EncoderOperation::Enumerate, error))?;
     if activations.values.is_null() || activations.count == 0 {
         return Err(EncoderError::HardwareEncoderUnavailable);
     }
@@ -155,23 +156,29 @@ fn configure(
 ) -> Result<ConfiguredTransform, EncoderError> {
     let transform = Transform::new(
         unsafe { activation.ActivateObject::<IMFTransform>() }
-            .map_err(|_| EncoderError::HardwareEncoderUnavailable)?,
+            .map_err(|error| native(EncoderOperation::Activate, error))?,
     );
-    let attributes =
-        unsafe { transform.value.GetAttributes() }.map_err(|_| EncoderError::UnsupportedEncoder)?;
-    if unsafe { attributes.GetUINT32(&MF_TRANSFORM_ASYNC) }.unwrap_or(0) != 1
-        || unsafe { attributes.GetUINT32(&MF_SA_D3D11_AWARE) }.unwrap_or(0) != 1
-    {
-        return Err(EncoderError::UnsupportedEncoder);
+    let attributes = unsafe { transform.value.GetAttributes() }
+        .map_err(|error| native(EncoderOperation::Attributes, error))?;
+    if unsafe { attributes.GetUINT32(&MF_TRANSFORM_ASYNC) }.unwrap_or(0) != 1 {
+        return Err(EncoderError::UnsupportedOperation(
+            EncoderOperation::AsyncCapability,
+        ));
+    }
+    if unsafe { attributes.GetUINT32(&MF_SA_D3D11_AWARE) }.unwrap_or(0) != 1 {
+        return Err(EncoderError::UnsupportedOperation(
+            EncoderOperation::D3d11Capability,
+        ));
     }
     unsafe { attributes.SetUINT32(&MF_TRANSFORM_ASYNC_UNLOCK, 1) }
-        .map_err(|_| EncoderError::UnsupportedEncoder)?;
+        .map_err(|error| native(EncoderOperation::AsyncUnlock, error))?;
     let codec: ICodecAPI = transform
         .value
         .cast()
-        .map_err(|_| EncoderError::UnsupportedEncoder)?;
+        .map_err(|error| native(EncoderOperation::CodecInterface, error))?;
     set_bool(&codec, &CODECAPI_AVLowLatencyMode, true)?;
-    set_u32(&codec, &CODECAPI_AVEncMPVDefaultBPictureCount, 0)?;
+    // Baseline excludes B slices. Do not require the optional B-picture CodecAPI
+    // property: some hardware MFTs reject it even for zero. Output SPS is checked.
     set_u32(
         &codec,
         &CODECAPI_AVEncCommonRateControlMode,
@@ -181,16 +188,16 @@ fn configure(
     let mut reset_token = 0;
     let mut manager = None;
     unsafe { MFCreateDXGIDeviceManager(&mut reset_token, &mut manager) }
-        .map_err(|_| EncoderError::DeviceUnavailable)?;
+        .map_err(|error| native(EncoderOperation::DeviceManager, error))?;
     let manager = manager.ok_or(EncoderError::DeviceUnavailable)?;
     unsafe {
         manager
             .ResetDevice(device, reset_token)
-            .map_err(|_| EncoderError::DeviceUnavailable)?;
+            .map_err(|error| native(EncoderOperation::DeviceManager, error))?;
         transform
             .value
             .ProcessMessage(MFT_MESSAGE_SET_D3D_MANAGER, manager.as_raw() as usize)
-            .map_err(|_| EncoderError::UnsupportedEncoder)?;
+            .map_err(|error| native(EncoderOperation::DeviceManager, error))?;
     }
     let (mut input_count, mut output_count) = (0, 0);
     unsafe {
@@ -198,9 +205,11 @@ fn configure(
             .value
             .GetStreamCount(&mut input_count, &mut output_count)
     }
-    .map_err(|_| EncoderError::UnsupportedEncoder)?;
+    .map_err(|error| native(EncoderOperation::StreamCount, error))?;
     if (input_count, output_count) != (1, 1) {
-        return Err(EncoderError::UnsupportedEncoder);
+        return Err(EncoderError::UnsupportedOperation(
+            EncoderOperation::StreamCount,
+        ));
     }
     let (mut input_ids, mut output_ids) = ([0], [0]);
     if let Err(error) = unsafe {
@@ -209,7 +218,7 @@ fn configure(
             .GetStreamIDs(&mut input_ids, &mut output_ids)
     } && error.code().0 as u32 != 0x80004001
     {
-        return Err(EncoderError::UnsupportedEncoder);
+        return Err(native(EncoderOperation::StreamIds, error));
     }
     let output = media_type(profile, MFVideoFormat_H264)?;
     unsafe {
@@ -222,25 +231,25 @@ fn configure(
         transform
             .value
             .SetOutputType(output_ids[0], &output, 0)
-            .map_err(|_| EncoderError::UnsupportedEncoder)?;
+            .map_err(|error| native(EncoderOperation::OutputType, error))?;
         transform
             .value
             .SetInputType(input_ids[0], &media_type(profile, MFVideoFormat_NV12)?, 0)
-            .map_err(|_| EncoderError::UnsupportedEncoder)?;
+            .map_err(|error| native(EncoderOperation::InputType, error))?;
     }
     let events = transform
         .value
         .cast()
-        .map_err(|_| EncoderError::UnsupportedEncoder)?;
+        .map_err(|error| native(EncoderOperation::EventInterface, error))?;
     unsafe {
         transform
             .value
             .ProcessMessage(MFT_MESSAGE_NOTIFY_BEGIN_STREAMING, 0)
-            .map_err(|_| EncoderError::EncoderFailed)?;
+            .map_err(|error| native(EncoderOperation::BeginStreaming, error))?;
         transform
             .value
             .ProcessMessage(MFT_MESSAGE_NOTIFY_START_OF_STREAM, 0)
-            .map_err(|_| EncoderError::EncoderFailed)?;
+            .map_err(|error| native(EncoderOperation::StartStreaming, error))?;
     }
 
     Ok(ConfiguredTransform {
@@ -287,7 +296,18 @@ pub(super) fn set_u32(codec: &ICodecAPI, property: &GUID, value: u32) -> Result<
             }),
         },
     };
-    unsafe { codec.SetValue(property, &variant) }.map_err(|_| EncoderError::UnsupportedEncoder)
+    unsafe { codec.SetValue(property, &variant) }.map_err(|error| {
+        let operation = if *property == CODECAPI_AVEncMPVDefaultBPictureCount {
+            EncoderOperation::BFrames
+        } else if *property == CODECAPI_AVEncCommonRateControlMode {
+            EncoderOperation::RateControl
+        } else if *property == CODECAPI_AVEncVideoForceKeyFrame {
+            EncoderOperation::Keyframe
+        } else {
+            EncoderOperation::Bitrate
+        };
+        native(operation, error)
+    })
 }
 
 fn set_bool(codec: &ICodecAPI, property: &GUID, value: bool) -> Result<(), EncoderError> {
@@ -302,5 +322,13 @@ fn set_bool(codec: &ICodecAPI, property: &GUID, value: bool) -> Result<(), Encod
             }),
         },
     };
-    unsafe { codec.SetValue(property, &variant) }.map_err(|_| EncoderError::UnsupportedEncoder)
+    unsafe { codec.SetValue(property, &variant) }
+        .map_err(|error| native(EncoderOperation::LowLatency, error))
+}
+
+pub(super) fn native(operation: EncoderOperation, error: windows::core::Error) -> EncoderError {
+    EncoderError::Native {
+        operation,
+        hresult: error.code().0,
+    }
 }

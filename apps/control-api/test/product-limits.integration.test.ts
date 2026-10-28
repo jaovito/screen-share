@@ -57,11 +57,16 @@ it('atomically consumes rate limits across concurrent requests and returns a ret
 
 it('enforces persistent authentication throttling without trusting user-supplied account identity', async () => {
   let last: Response | undefined;
-  for (let i = 0; i < 11; i++)
+  // A real minute boundary can divide two ten-request buckets. The suite's
+  // fifteen-second deadline bounds this to at most one boundary.
+  for (let i = 0; i < 21; i++) {
     last = await request('/api/auth/sign-in/email', 'POST', '', {
       email: 'missing@example.test',
       password: 'Synthetic-password-1234',
     });
+    if (last.status === 429) break;
+    expect(last.status).toBe(401);
+  }
   expect(last?.status).toBe(429);
 });
 

@@ -377,3 +377,120 @@ through Tauri's compiled API configuration, preserving the original HTTPS window
 Two regression tests cover preserved settings, invalid inputs and local-only
 loopback flags. Local TypeScript checks and database-backed coverage passed; the
 actual Windows playback result remains pending the provider retry.
+
+
+Provider [run 40571179784](https://github.com/jaovito/screen-share/actions/runs/40571179784)
+passed all five required checks at ef98a24. Actual Windows WebView2 155 decoded
+synthetic encrypted H264 video and Opus audio, rejected the wrong key, enforced
+secure context/exact-origin CSP and released sinks on stop. NSIS packaging passed.
+Its ordinary CI installer uses local development endpoints.
+
+A subsequent operator-requested Railway installer uses manual CI inputs for public
+API/RTC origins, verifies their presence in the compiled parent and records the
+installer SHA-256/revision alongside the artifact. This is an unsigned environment
+build, without release publication or signing. Provider execution and the manifest
+remain the evidence for the resulting artifact; hardware/two-PC gates remain open.
+
+
+[Configured build 40609560315](https://github.com/jaovito/screen-share/actions/runs/40609560315)
+passed Windows compilation, NSIS packaging, compiled-origin verification and actual
+WebView encrypted playback. The downloaded installer SHA-256 matches its manifest;
+the API is `https://screen-shareviewer-web-production.up.railway.app` and RTC is
+`wss://screen-share-jkvwb9d3.livekit.cloud`. The public API readiness endpoint returned
+ready and the anonymous auth session returned null. A separate TypeScript job failed
+only on YAML empty-string quote formatting; that formatting was corrected locally.
+This result does not claim a signed installer or a live user capture/account test.
+
+
+## Publisher startup failure diagnostics (2026-10-27)
+
+A user reported the generic stopped message with no diagnostic reason. Code tracing
+confirmed that command rejection discarded the error and replaced the reason with
+null. The publisher now retains a bounded stage/code for rejected start, renewal,
+status, pause, resume and stop operations. Only exact application-owned native codes,
+allowlisted HTTP statuses and fixed validation/abort/fallback labels are displayed;
+raw rejection strings, validation inputs, tokens and keys are never rendered.
+Status polling preserves the failure until an explicit successful command.
+
+Regression tests cover native failure persistence across actual timer polling,
+successful retry clearing, HTTP 409 before native startup, cleanup and unknown-error
+redaction. Local TypeScript checks and per-file coverage passed (85 runtime sources
+inventoried). The first E2E attempt overlapped the TypeScript build and was invalidated
+by its rewritten local API origin; the serial retry passed all eight desktop/mobile
+E2E cases (37.9 seconds).
+The original Windows capture/publication failure remains unidentified pending the
+new diagnostic code from the user's hardware; this change does not claim to fix it.
+
+## Native post-selection failure preservation (2026-10-28)
+
+An operator reported an RTX 3070: selection succeeded, the app showed connecting,
+then stopped with five captured frames, zero encoded access units and `worker_failed`.
+These are operator observations, not a local GPU measurement. Code tracing confirmed
+that actual capture starts only after the publication worker signals readiness.
+The previous UI fix covered rejected IPC commands; this failure arrived through a
+successful status response after the worker had started.
+
+The native session collapsed all worker result errors into `WorkerFailed`. Worker
+and session cleanup could also replace the original media error. The correction
+preserves the first encoder failure and original media result while still attempting
+all cleanup. Optional closed failure metadata crosses the existing native status
+boundary: stage, enum code, allowlisted operation and signed numeric HRESULT. COM
+error descriptions, frame content, keys, tokens and arbitrary SDK text are excluded.
+Older status packets remain compatible. The shared Rust/TS fixture and rejection
+cases validate the extension, and the UI renders post-startup failure metadata even
+when IPC succeeds. Native MF/GPU calls retain operation/HRESULT instead of erasing
+those values. Encoder settings and selected-source behavior are unchanged.
+
+Local TypeScript checks, portable Rust checks, Windows-target media Clippy, shared
+contract tests and all eight E2E cases (38.4 seconds) passed. The initial portable
+Rust attempt lacked sandbox loopback permission; the authorized retry passed. The
+first database coverage attempt crossed a real minute boundary in the existing
+authentication-throttling test (11 requests split between buckets). Its bounded
+21-request retry now covers either side of one boundary without changing production
+limits. The full coverage retry passed: 86 runtime sources inventoried, 99.26%
+lines and 96.98% functions overall, with every per-file gate satisfied. Actual
+provider Windows evidence remains a separate run; this entry does not claim the
+RTX hardware issue is resolved.
+
+Primary API references checked against this implementation:
+[asynchronous MFT processing](https://learn.microsoft.com/en-us/windows/win32/medfound/asynchronous-mfts),
+[hardware-only enumeration](https://learn.microsoft.com/en-us/windows/win32/api/mfapi/nf-mfapi-mftenumex),
+[encoder low-latency property type](https://learn.microsoft.com/en-us/windows/win32/medfound/codecapi-avlowlatencymode).
+
+Provider [run 40695151122](https://github.com/jaovito/screen-share/actions/runs/40695151122)
+passed all four dispatched jobs at 3263560, including the Windows native failure
+fixture, first-error/HRESULT preservation regression, NSIS packaging, compiled public
+origin verification and actual encrypted WebView2 playback. The downloaded Railway
+installer SHA-256 is `b4ab0846b6f4b1c79e7394077a643c6112a5f39701f6d3a3b995ac6a3694f63e`.
+This validates the failure propagation code and synthetic playback, not the
+operator's RTX 3070 capture/encoding acceptance, which still requires a rerun there.
+
+## RTX 3070 optional B-picture property rejection (2026-10-28)
+
+The operator's new native diagnostic identified the exact startup rejection:
+`encoder_initialization / native_call_failed / mf_b_frames / 0x80070057`.
+The call used the documented UINT32/VT_UI4 zero value, but the hardware MFT rejected
+that optional CodecAPI property. This was a redundant prerequisite: the application
+already explicitly requests H.264 Baseline, whose B-frame count is always zero.
+
+The correction removes the B-picture setter, retains mandatory low-latency mode,
+CBR/bitrate setup and explicit Baseline output selection, and rejects non-Baseline
+or truncated SPS parameter sets before publishing them. The check applies to both
+initial headers and later in-band parameter changes; it does not silently select a
+different source, software encoder or encoding profile. Synthetic framing fixtures
+now contain actual minimal Baseline profile bytes instead of placeholder SPS bytes.
+
+A regression rejecting Main/Extended/High-family SPS at startup and midstream failed
+before the guard and passed afterwards. All 15 portable media tests, full portable
+Rust checks and strict Windows-target media Clippy passed locally. The provider
+Windows installer and an operator rerun on the RTX remain separate evidence.
+
+References: [B-picture property type/support](https://learn.microsoft.com/en-us/windows/win32/codecapi/avencmpvdefaultbpicturecount-property)
+and [Microsoft H.264 Baseline/B-frame behavior](https://learn.microsoft.com/en-us/windows/win32/medfound/h-264-video-encoder).
+
+Provider [run 40731725109](https://github.com/jaovito/screen-share/actions/runs/40731725109)
+passed all four dispatched jobs at df7bf56: Windows native tests, NSIS packaging,
+compiled Railway/LiveKit origin verification and encrypted WebView2 playback, plus
+portable Rust and TypeScript/database/browser/image gates. The downloaded installer
+matches SHA-256 `e0562ee39b6cd39e309f2fa4770b1149a33ec6e84a45934aca04a4b428d0488a`.
+The specific RTX 3070 startup failure still requires the operator's hardware rerun.

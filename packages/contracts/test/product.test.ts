@@ -106,3 +106,27 @@ it('accepts measured processing metadata while rejecting invalid or unbounded di
     expect(nativeSharingStatusSchema.safeParse({ ...valid, ...patch }).success).toBe(false);
   }
 });
+
+it('accepts the shared native failure fixture and rejects arbitrary text, fields and invalid HRESULTs', async () => {
+  const status = await Bun.file(
+    new URL('../fixtures/native-sharing-status.json', import.meta.url),
+  ).json();
+  const failure = await Bun.file(
+    new URL('../fixtures/native-sharing-failure.json', import.meta.url),
+  ).json();
+  expect(nativeSharingStatusSchema.parse({ ...status, failure }).failure).toEqual(failure);
+  for (const patch of [
+    { stage: 'private input' },
+    { code: 'private token' },
+    { operation: 'arbitrary driver description' },
+    { hresult: 2147483648 },
+    { hresult: -2147483649 },
+    { hresult: 1.5 },
+    { hresult: NaN },
+    { accessToken: 'synthetic secret' },
+  ])
+    expect(
+      nativeSharingStatusSchema.safeParse({ ...status, failure: { ...failure, ...patch } }).success,
+    ).toBe(false);
+  expect(nativeSharingStatusSchema.parse(status).failure).toBeUndefined();
+});

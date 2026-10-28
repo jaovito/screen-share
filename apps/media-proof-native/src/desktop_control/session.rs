@@ -1,3 +1,5 @@
+mod cleanup;
+
 use super::{Guard, emit, profile};
 use crate::pipeline::{self, Renewal, Worker, WorkerPhase};
 use ss_media_proof::protocol::{
@@ -111,9 +113,8 @@ impl Session {
         status.state = SharingState::Connecting;
         let result = session.drive(&window, input, disconnected, guard, status);
         let intentional = status.reason == Some(SharingReason::StoppedByUser);
-        let cleanup = session.cleanup(&window, guard, intentional);
-        cleanup?;
-        result
+        let cleanup = session.cleanup(&window, guard, intentional, status);
+        result.and(cleanup)
     }
 
     fn drive(
@@ -332,50 +333,6 @@ impl Session {
             std::thread::sleep(Duration::from_millis(10));
         }
         Ok(())
-    }
-
-    fn cleanup(
-        &mut self,
-        window: &ProbeWindow,
-        guard: &Guard,
-        intentional: bool,
-    ) -> Result<(), SharingReason> {
-        self.worker.stop.store(true, Ordering::Release);
-        let capture = self.capture.as_mut().map_or(Ok(()), |capture| {
-            capture.stop().map_err(|_| SharingReason::CleanupFailed)
-        });
-        self.capture = None;
-        let deadline = Instant::now() + Duration::from_secs(8);
-        while self
-            .worker
-            .handle
-            .as_ref()
-            .is_some_and(|thread| !thread.is_finished())
-        {
-            guard.touch();
-            let _ = window.pump();
-            if Instant::now() >= deadline {
-                ss_media_windows::terminate_probe();
-            }
-            std::thread::sleep(Duration::from_millis(10));
-        }
-        self.worker
-            .handle
-            .take()
-            .ok_or(SharingReason::WorkerFailed)?
-            .join()
-            .map_err(|_| SharingReason::WorkerFailed)?;
-        let report = self
-            .worker
-            .result
-            .try_recv()
-            .map_err(|_| SharingReason::WorkerFailed)?;
-        capture?;
-        match report {
-            Ok(_) => Ok(()),
-            Err("Publication stopped before capture") if intentional => Ok(()),
-            Err(_) => Err(SharingReason::WorkerFailed),
-        }
     }
 }
 
