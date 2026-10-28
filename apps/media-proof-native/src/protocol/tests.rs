@@ -173,3 +173,67 @@ fn processing_diagnostic_bounds_and_legacy_compatibility_are_explicit() {
     assert_eq!(decoded.diagnostics_generation, 0);
     assert_eq!(decoded.encoder_output_latency_ms, None);
 }
+
+#[test]
+fn native_failure_fixture_is_closed_compatible_and_preserves_original_media_errors() {
+    let failure: NativeFailure = serde_json::from_str(include_str!(
+        "../../../../packages/contracts/fixtures/native-sharing-failure.json"
+    ))
+    .unwrap();
+    assert_eq!(failure.stage, FailureStage::EncoderInitialization);
+    assert_eq!(failure.operation.as_deref(), Some("mf_output_type"));
+    assert_eq!(failure.reason(), SharingReason::EncoderFailed);
+    let mut status = SharingStatus::idle();
+    status.failure = Some(failure.clone());
+    let mut packet = vec![];
+    write_packet(&mut packet, &status).unwrap();
+    assert_eq!(
+        read_status(&mut Cursor::new(packet))
+            .unwrap()
+            .unwrap()
+            .failure,
+        Some(failure)
+    );
+    status.failure.as_mut().unwrap().operation = Some("private error text".into());
+    assert!(status.validate().is_err());
+    assert_eq!(
+        finish_publication::<()>(Err("encoder failed"), &[Err("cleanup failed")]),
+        Err("encoder failed")
+    );
+    assert_eq!(
+        finish_publication(Ok(42), &[Err("cleanup failed")]),
+        Err("cleanup failed")
+    );
+    assert_eq!(finish_publication(Ok(42), &[Ok(())]), Ok(42));
+    for (message, reason) in [
+        (
+            "Hardware encoder initialization failed",
+            SharingReason::EncoderFailed,
+        ),
+        (
+            "GPU conversion or hardware encoder input failed",
+            SharingReason::EncoderFailed,
+        ),
+        (
+            "Encoded publication failed or its lease became invalid",
+            SharingReason::TransportFailed,
+        ),
+        (
+            "Native capture frame unavailable",
+            SharingReason::CaptureFailed,
+        ),
+        (
+            "Selected application audio is unavailable",
+            SharingReason::TransportFailed,
+        ),
+        (
+            "Hardware encoder cleanup failed",
+            SharingReason::CleanupFailed,
+        ),
+        ("unknown arbitrary secret", SharingReason::WorkerFailed),
+    ] {
+        let safe = NativeFailure::worker(message);
+        assert_eq!(safe.reason(), reason);
+        assert!(!serde_json::to_string(&safe).unwrap().contains(message));
+    }
+}

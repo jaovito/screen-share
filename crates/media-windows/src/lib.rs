@@ -8,6 +8,8 @@ mod probe_window;
 pub use probe_window::{ProbeWindow, terminate_probe};
 
 mod encoder_error;
+mod encoder_failure;
+pub use encoder_failure::EncoderOperation;
 #[cfg(any(target_os = "windows", test))]
 mod encoder_timing;
 

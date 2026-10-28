@@ -1,3 +1,5 @@
+mod failure;
+pub use failure::{FailureCode, FailureStage, NativeFailure, finish_publication};
 use serde::{Deserialize, Serialize};
 use std::io::{BufRead, Read, Write};
 use zeroize::{Zeroize, Zeroizing};
@@ -238,6 +240,8 @@ pub struct SharingStatus {
     pub encoded_fps: Option<f64>,
     pub target_fps: Option<f64>,
     pub reason: Option<SharingReason>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub failure: Option<NativeFailure>,
     pub encryption: EncryptionState,
     pub audio_supported: bool,
     pub audio_samples: u64,
@@ -279,6 +283,7 @@ impl SharingStatus {
             encoded_fps: None,
             target_fps: None,
             reason: None,
+            failure: None,
             encryption: EncryptionState::Pending,
             audio_supported: false,
             audio_samples: 0,
@@ -296,6 +301,9 @@ impl SharingStatus {
     }
 
     pub fn validate(&self) -> Result<(), &'static str> {
+        if let Some(failure) = &self.failure {
+            failure.validate()?;
+        }
         if self.capture_recoveries > 3
             || self.diagnostics_generation > 9_007_199_254_740_991
             || self.diagnostics_elapsed_ms > 9_007_199_254_740_991

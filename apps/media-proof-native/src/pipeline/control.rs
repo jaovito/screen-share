@@ -1,6 +1,6 @@
 use super::PipelineReport;
 use ss_domain::{AdaptiveQuality, QualityMode, QualityReason, VideoProfile};
-use ss_media_windows::HardwareEncoder;
+use ss_media_windows::{EncoderError, HardwareEncoder};
 use ss_rtc_livekit::native_proof::EncoderFeedback;
 use std::time::Instant;
 
@@ -141,18 +141,14 @@ impl Control {
         &mut self,
         encoder: &mut HardwareEncoder,
         report: &mut PipelineReport,
-    ) -> Result<(), &'static str> {
+    ) -> Result<(), EncoderError> {
         if self.applied_bitrate != self.target_bitrate {
-            encoder
-                .set_bitrate(self.target_bitrate)
-                .map_err(|_| "Hardware bitrate feedback failed")?;
+            encoder.set_bitrate(self.target_bitrate)?;
             self.applied_bitrate = self.target_bitrate;
             report.rate_updates = report.rate_updates.saturating_add(1);
         }
         if self.needs_keyframe && !self.keyframe_requested {
-            encoder
-                .request_keyframe()
-                .map_err(|_| "Hardware keyframe request failed")?;
+            encoder.request_keyframe()?;
             self.keyframe_requested = true;
             report.keyframe_requests = report.keyframe_requests.saturating_add(1);
         }

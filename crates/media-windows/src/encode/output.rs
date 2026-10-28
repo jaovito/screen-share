@@ -1,4 +1,5 @@
 use super::{EncoderError, h264::H264Normalizer, setup::ConfiguredTransform};
+use crate::EncoderOperation;
 use ss_domain::{MAX_ACCESS_UNIT_BYTES, VideoProfile};
 use std::{mem::ManuallyDrop, ptr};
 use windows::Win32::Media::MediaFoundation::*;
@@ -33,7 +34,7 @@ pub(super) fn header(configured: &ConfiguredTransform) -> Result<H264Normalizer,
             .value
             .GetOutputCurrentType(configured.output_id)
     }
-    .map_err(|_| EncoderError::InvalidOutput)?;
+    .map_err(|error| super::setup::native(EncoderOperation::Header, error))?;
     let size = unsafe { media_type.GetBlobSize(&MF_MT_MPEG_SEQUENCE_HEADER) }.unwrap_or(0) as usize;
     if size > 64 * 1024 {
         return Err(EncoderError::InvalidOutput);
@@ -105,7 +106,7 @@ pub(super) fn receive(
                 *normalizer = header(configured)?;
                 continue;
             }
-            return Err(EncoderError::EncoderFailed);
+            return Err(super::setup::native(EncoderOperation::Output, error));
         }
         let sample = output.take_sample().ok_or(EncoderError::InvalidOutput)?;
         let timestamp_100ns =

@@ -11,4 +11,9 @@ pub enum EncoderError {
     EncoderFailed,
     InvalidOutput,
     Closed,
+    UnsupportedOperation(crate::EncoderOperation),
+    Native {
+        operation: crate::EncoderOperation,
+        hresult: i32,
+    },
 }

@@ -115,7 +115,11 @@ impl Pipeline {
         audio
     }
 
-    pub fn feedback(&mut self, publisher: &mut NativePublisher) -> Result<(), &'static str> {
+    pub fn feedback(
+        &mut self,
+        publisher: &mut NativePublisher,
+        signals: &Signals,
+    ) -> Result<(), &'static str> {
         let feedback = publisher
             .feedback()
             .map_err(|_| "Publication authorization or transport became unavailable")?;
@@ -124,7 +128,12 @@ impl Pipeline {
             && let Err(error) = self.control.apply(encoder, &mut self.report)
             && !encoder.device_lost()
         {
-            return Err(error);
+            super::failure::encoder(
+                signals,
+                ss_media_proof::protocol::FailureStage::EncoderControl,
+                error,
+            );
+            return Err("Hardware encoder feedback failed");
         }
         Ok(())
     }
@@ -252,7 +261,7 @@ impl Pipeline {
         signals: &Signals,
     ) -> Result<(), &'static str> {
         while !signals.stop.load(Ordering::Acquire) {
-            self.feedback(publisher)?;
+            self.feedback(publisher, signals)?;
             let generation = reader.generation();
             if self
                 .encoder
@@ -354,7 +363,7 @@ impl Pipeline {
                     .map_err(|_| "System audio device became unavailable")?
             {
                 // One bounded native PCM packet; no audio crosses IPC or JSON.
-                self.feedback(publisher)?;
+                self.feedback(publisher, signals)?;
                 publisher
                     .push_audio(&packet.samples)
                     .await
@@ -392,10 +401,13 @@ impl Pipeline {
                         self.pause_for_recovery(publisher)?;
                         continue;
                     }
-                    Err(_) => {
-                        return Err(
-                            "Hardware encoder initialization failed or capabilities are unsupported",
+                    Err(error) => {
+                        super::failure::encoder(
+                            signals,
+                            ss_media_proof::protocol::FailureStage::EncoderInitialization,
+                            error,
                         );
+                        return Err("Hardware encoder initialization failed");
                     }
                 }
                 self.control.initialized();

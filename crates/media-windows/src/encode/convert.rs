@@ -1,5 +1,5 @@
 use super::EncoderError;
-use crate::NativeFrame;
+use crate::{EncoderOperation, NativeFrame};
 use ss_domain::VideoProfile;
 use std::mem::ManuallyDrop;
 use windows::{
@@ -40,12 +40,12 @@ impl Converter {
             unsafe { frame.texture().GetDevice() }.map_err(|_| EncoderError::DeviceUnavailable)?;
         let video: ID3D11VideoDevice = device
             .cast()
-            .map_err(|_| EncoderError::GpuConversionUnsupported)?;
+            .map_err(|error| super::setup::native(EncoderOperation::GpuProcessor, error))?;
         let immediate =
             unsafe { device.GetImmediateContext() }.map_err(|_| EncoderError::DeviceUnavailable)?;
         let context: ID3D11VideoContext1 = immediate
             .cast()
-            .map_err(|_| EncoderError::GpuConversionUnsupported)?;
+            .map_err(|error| super::setup::native(EncoderOperation::GpuProcessor, error))?;
         let multithread: ID3D11Multithread = immediate
             .cast()
             .map_err(|_| EncoderError::DeviceUnavailable)?;
@@ -91,20 +91,22 @@ impl Converter {
             Usage: D3D11_VIDEO_USAGE_PLAYBACK_NORMAL,
         };
         let enumerator = unsafe { video.CreateVideoProcessorEnumerator(&description) }
-            .map_err(|_| EncoderError::GpuConversionUnsupported)?;
+            .map_err(|error| super::setup::native(EncoderOperation::GpuProcessor, error))?;
         let input_support =
             unsafe { enumerator.CheckVideoProcessorFormat(DXGI_FORMAT_B8G8R8A8_UNORM) }
-                .map_err(|_| EncoderError::GpuConversionUnsupported)?;
+                .map_err(|error| super::setup::native(EncoderOperation::GpuProcessor, error))?;
         let output_support = unsafe { enumerator.CheckVideoProcessorFormat(DXGI_FORMAT_NV12) }
-            .map_err(|_| EncoderError::GpuConversionUnsupported)?;
+            .map_err(|error| super::setup::native(EncoderOperation::GpuProcessor, error))?;
         if input_support & D3D11_VIDEO_PROCESSOR_FORMAT_SUPPORT_INPUT.0 as u32 == 0
             || output_support & D3D11_VIDEO_PROCESSOR_FORMAT_SUPPORT_OUTPUT.0 as u32 == 0
         {
-            return Err(EncoderError::GpuConversionUnsupported);
+            return Err(EncoderError::UnsupportedOperation(
+                EncoderOperation::GpuProcessor,
+            ));
         }
         let extended: ID3D11VideoProcessorEnumerator1 = enumerator
             .cast()
-            .map_err(|_| EncoderError::GpuConversionUnsupported)?;
+            .map_err(|error| super::setup::native(EncoderOperation::GpuProcessor, error))?;
         let supported = unsafe {
             extended.CheckVideoProcessorFormatConversion(
                 DXGI_FORMAT_B8G8R8A8_UNORM,
@@ -113,12 +115,14 @@ impl Converter {
                 DXGI_COLOR_SPACE_YCBCR_STUDIO_G22_LEFT_P709,
             )
         }
-        .map_err(|_| EncoderError::GpuConversionUnsupported)?;
+        .map_err(|error| super::setup::native(EncoderOperation::GpuProcessor, error))?;
         if !supported.as_bool() {
-            return Err(EncoderError::GpuConversionUnsupported);
+            return Err(EncoderError::UnsupportedOperation(
+                EncoderOperation::GpuProcessor,
+            ));
         }
         let processor = unsafe { video.CreateVideoProcessor(&enumerator, 0) }
-            .map_err(|_| EncoderError::GpuConversionUnsupported)?;
+            .map_err(|error| super::setup::native(EncoderOperation::GpuProcessor, error))?;
 
         Ok((enumerator, processor))
     }
@@ -184,7 +188,7 @@ impl Converter {
                     &input_description,
                     Some(&mut input_view),
                 )
-                .map_err(|_| EncoderError::GpuConversionUnsupported)?;
+                .map_err(|error| super::setup::native(EncoderOperation::GpuProcessor, error))?;
             self.video
                 .CreateVideoProcessorOutputView(
                     &output,
@@ -192,7 +196,7 @@ impl Converter {
                     &output_description,
                     Some(&mut output_view),
                 )
-                .map_err(|_| EncoderError::GpuConversionUnsupported)?;
+                .map_err(|error| super::setup::native(EncoderOperation::GpuProcessor, error))?;
         }
         let input_view = input_view.ok_or(EncoderError::GpuConversionUnsupported)?;
         let output_view = output_view.ok_or(EncoderError::GpuConversionUnsupported)?;
@@ -262,7 +266,7 @@ impl Converter {
         };
         // The ABI uses ManuallyDrop; release its owned COM reference on every path.
         unsafe { ManuallyDrop::drop(&mut stream.pInputSurface) };
-        result.map_err(|_| EncoderError::GpuConversionFailed)?;
+        result.map_err(|error| super::setup::native(EncoderOperation::GpuConversion, error))?;
 
         Ok(Nv12Frame {
             texture: output,

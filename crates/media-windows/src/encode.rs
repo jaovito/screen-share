@@ -6,7 +6,9 @@ mod h264;
 mod output;
 mod setup;
 
-use crate::{EncoderDiagnostics, EncoderError, NativeFrame, encoder_timing::EncoderTiming};
+use crate::{
+    EncoderDiagnostics, EncoderError, EncoderOperation, NativeFrame, encoder_timing::EncoderTiming,
+};
 use convert::Converter;
 use h264::H264Normalizer;
 use setup::{ConfiguredTransform, Runtime};
@@ -137,7 +139,7 @@ impl HardwareEncoder {
                 .transform
                 .value
                 .ProcessInput(configured.input_id, &sample, 0)
-                .map_err(|_| EncoderError::EncoderFailed)?;
+                .map_err(|error| setup::native(EncoderOperation::Submit, error))?;
         }
         self.input_credits -= 1;
         self.timing
@@ -157,11 +159,11 @@ impl HardwareEncoder {
             Err(error) if error.code() == MF_E_NO_EVENTS_AVAILABLE => {
                 return Ok(EncoderPoll::Pending);
             }
-            Err(_) => return Err(EncoderError::EncoderFailed),
+            Err(error) => return Err(setup::native(EncoderOperation::Poll, error)),
         };
         unsafe { event.GetStatus() }
             .and_then(|status| status.ok())
-            .map_err(|_| EncoderError::EncoderFailed)?;
+            .map_err(|error| setup::native(EncoderOperation::Poll, error))?;
         let kind = unsafe { event.GetType() }.map_err(|_| EncoderError::EncoderFailed)?;
         if kind == METransformNeedInput.0 as u32 {
             let stream = unsafe { event.GetUINT32(&MF_EVENT_MFT_INPUT_STREAM_ID) }

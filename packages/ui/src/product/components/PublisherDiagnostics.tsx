@@ -49,6 +49,22 @@ export function PublisherDiagnostics({ status }: { status: NativeSharingStatus }
 
   return (
     <>
+      {status.failure && (
+        <p className="notice" role="alert">
+          {t('sharingFailureDetail', {
+            code: [
+              status.failure.stage,
+              status.failure.code,
+              status.failure.operation,
+              status.failure.hresult === null
+                ? null
+                : `0x${(status.failure.hresult >>> 0).toString(16).padStart(8, '0')}`,
+            ]
+              .filter((value) => value !== null)
+              .join(' / '),
+          })}
+        </p>
+      )}
       {reason && (
         <p className="notice" role="status">
           {t(reason)}

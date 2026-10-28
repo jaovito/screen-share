@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { mediaProofServerSchema } from './media-proof';
+import { nativeFailureSchema } from './native-failure';
 
 export const productUserSchema = z.object({
   id: z.uuid(),
@@ -120,6 +121,7 @@ export const nativeSharingStatusSchema = z.object({
   availableSendBitrateBps: z.number().int().min(0).max(1_000_000_000_000).nullable().optional(),
   manualBitrateBps: z.number().int().min(64_000).max(50_000_000).nullable().optional(),
   reason: z.string().nullable(),
+  failure: nativeFailureSchema.nullable().optional(),
   encryption: z.enum(['pending', 'configured']),
 });
 export type NativeSharingStatus = z.infer<typeof nativeSharingStatusSchema>;

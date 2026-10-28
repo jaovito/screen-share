@@ -1,5 +1,6 @@
 mod control;
 mod drive;
+mod failure;
 mod runtime;
 
 use ss_domain::{QualityReason, VideoProfile};
@@ -41,6 +42,7 @@ pub enum WorkerPhase {
 #[derive(Clone)]
 pub struct Snapshot {
     pub phase: WorkerPhase,
+    pub failure: Option<ss_media_proof::protocol::NativeFailure>,
     pub report: PipelineReport,
     pub profile: VideoProfile,
     pub target_fps: f64,
@@ -132,6 +134,7 @@ pub fn spawn_with_audio(
     let paused = Arc::new(AtomicBool::new(false));
     let snapshot = Arc::new(Mutex::new(Snapshot {
         phase: WorkerPhase::Connecting,
+        failure: None,
         report: PipelineReport::default(),
         profile,
         target_fps: f64::from(profile.fps),
@@ -174,6 +177,11 @@ pub fn spawn_with_audio(
             );
             signals.stop.store(true, Ordering::Release);
             if let Ok(mut snapshot) = signals.snapshot.lock() {
+                if let Err(message) = outcome.as_ref() {
+                    snapshot.failure.get_or_insert_with(|| {
+                        ss_media_proof::protocol::NativeFailure::worker(message)
+                    });
+                }
                 snapshot.phase = if outcome.is_ok() {
                     WorkerPhase::Stopped
                 } else {

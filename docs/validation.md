@@ -420,3 +420,39 @@ by its rewritten local API origin; the serial retry passed all eight desktop/mob
 E2E cases (37.9 seconds).
 The original Windows capture/publication failure remains unidentified pending the
 new diagnostic code from the user's hardware; this change does not claim to fix it.
+
+## Native post-selection failure preservation (2026-10-28)
+
+An operator reported an RTX 3070: selection succeeded, the app showed connecting,
+then stopped with five captured frames, zero encoded access units and `worker_failed`.
+These are operator observations, not a local GPU measurement. Code tracing confirmed
+that actual capture starts only after the publication worker signals readiness.
+The previous UI fix covered rejected IPC commands; this failure arrived through a
+successful status response after the worker had started.
+
+The native session collapsed all worker result errors into `WorkerFailed`. Worker
+and session cleanup could also replace the original media error. The correction
+preserves the first encoder failure and original media result while still attempting
+all cleanup. Optional closed failure metadata crosses the existing native status
+boundary: stage, enum code, allowlisted operation and signed numeric HRESULT. COM
+error descriptions, frame content, keys, tokens and arbitrary SDK text are excluded.
+Older status packets remain compatible. The shared Rust/TS fixture and rejection
+cases validate the extension, and the UI renders post-startup failure metadata even
+when IPC succeeds. Native MF/GPU calls retain operation/HRESULT instead of erasing
+those values. Encoder settings and selected-source behavior are unchanged.
+
+Local TypeScript checks, portable Rust checks, Windows-target media Clippy, shared
+contract tests and all eight E2E cases (38.4 seconds) passed. The initial portable
+Rust attempt lacked sandbox loopback permission; the authorized retry passed. The
+first database coverage attempt crossed a real minute boundary in the existing
+authentication-throttling test (11 requests split between buckets). Its bounded
+21-request retry now covers either side of one boundary without changing production
+limits. The full coverage retry passed: 86 runtime sources inventoried, 99.26%
+lines and 96.98% functions overall, with every per-file gate satisfied. Actual
+provider Windows evidence remains a separate run; this entry does not claim the
+RTX hardware issue is resolved.
+
+Primary API references checked against this implementation:
+[asynchronous MFT processing](https://learn.microsoft.com/en-us/windows/win32/medfound/asynchronous-mfts),
+[hardware-only enumeration](https://learn.microsoft.com/en-us/windows/win32/api/mfapi/nf-mfapi-mftenumex),
+[encoder low-latency property type](https://learn.microsoft.com/en-us/windows/win32/medfound/codecapi-avlowlatencymode).

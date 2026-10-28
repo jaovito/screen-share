@@ -102,3 +102,38 @@ it('identifies control authorization rejection before native startup and still r
   expect(publisher.stop).toHaveBeenCalled();
   view.unmount();
 });
+
+it('shows closed native worker failures and signed HRESULTs even when status IPC succeeds', async () => {
+  localStorage.setItem(localeStorageKey, 'pt-BR');
+  const { PublisherDiagnostics } = await import('./PublisherDiagnostics');
+  const current = {
+    ...sharingStatus('failed'),
+    reason: 'encoder_failed',
+    failure: {
+      stage: 'encoder_initialization' as const,
+      code: 'native_call_failed' as const,
+      operation: 'mf_output_type' as const,
+      hresult: -1072875852,
+    },
+  };
+  const view = render(
+    <LocaleProvider translations={productTranslations} titleKey="documentTitle">
+      <PublisherDiagnostics status={current} />
+    </LocaleProvider>,
+  );
+  expect(screen.getByRole('alert').textContent).toContain(
+    'encoder_initialization / native_call_failed / mf_output_type / 0xc00d36b4',
+  );
+  view.rerender(
+    <LocaleProvider translations={productTranslations} titleKey="documentTitle">
+      <PublisherDiagnostics
+        status={{ ...current, failure: { ...current.failure, operation: null, hresult: null } }}
+      />
+    </LocaleProvider>,
+  );
+  expect(screen.getByRole('alert').textContent).toContain(
+    'encoder_initialization / native_call_failed',
+  );
+  expect(screen.getByRole('alert').textContent).not.toContain('0x');
+  view.unmount();
+});

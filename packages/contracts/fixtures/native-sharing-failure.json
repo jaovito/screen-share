@@ -1,0 +1,6 @@
+{
+  "stage": "encoder_initialization",
+  "code": "native_call_failed",
+  "operation": "mf_output_type",
+  "hresult": -1072875852
+}
