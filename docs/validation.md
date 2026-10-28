@@ -487,3 +487,10 @@ Windows installer and an operator rerun on the RTX remain separate evidence.
 
 References: [B-picture property type/support](https://learn.microsoft.com/en-us/windows/win32/codecapi/avencmpvdefaultbpicturecount-property)
 and [Microsoft H.264 Baseline/B-frame behavior](https://learn.microsoft.com/en-us/windows/win32/medfound/h-264-video-encoder).
+
+Provider [run 40731725109](https://github.com/jaovito/screen-share/actions/runs/40731725109)
+passed all four dispatched jobs at df7bf56: Windows native tests, NSIS packaging,
+compiled Railway/LiveKit origin verification and encrypted WebView2 playback, plus
+portable Rust and TypeScript/database/browser/image gates. The downloaded installer
+matches SHA-256 `e0562ee39b6cd39e309f2fa4770b1149a33ec6e84a45934aca04a4b428d0488a`.
+The specific RTX 3070 startup failure still requires the operator's hardware rerun.
