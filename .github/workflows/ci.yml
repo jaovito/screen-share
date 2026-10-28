@@ -8,11 +8,11 @@ on:
       api_url:
         description: Optional public HTTPS API origin for an unsigned Windows installer
         type: string
-        default: ''
+        default: ""
       rtc_url:
         description: Matching public WSS LiveKit origin (required with api_url)
         type: string
-        default: ''
+        default: ""
 permissions:
   contents: read
 concurrency:

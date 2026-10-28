@@ -390,3 +390,13 @@ API/RTC origins, verifies their presence in the compiled parent and records the
 installer SHA-256/revision alongside the artifact. This is an unsigned environment
 build, without release publication or signing. Provider execution and the manifest
 remain the evidence for the resulting artifact; hardware/two-PC gates remain open.
+
+
+[Configured build 40609560315](https://github.com/jaovito/screen-share/actions/runs/40609560315)
+passed Windows compilation, NSIS packaging, compiled-origin verification and actual
+WebView encrypted playback. The downloaded installer SHA-256 matches its manifest;
+the API is `https://screen-shareviewer-web-production.up.railway.app` and RTC is
+`wss://screen-share-jkvwb9d3.livekit.cloud`. The public API readiness endpoint returned
+ready and the anonymous auth session returned null. A separate TypeScript job failed
+only on YAML empty-string quote formatting; that formatting was corrected locally.
+This result does not claim a signed installer or a live user capture/account test.
