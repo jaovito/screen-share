@@ -456,3 +456,11 @@ Primary API references checked against this implementation:
 [asynchronous MFT processing](https://learn.microsoft.com/en-us/windows/win32/medfound/asynchronous-mfts),
 [hardware-only enumeration](https://learn.microsoft.com/en-us/windows/win32/api/mfapi/nf-mfapi-mftenumex),
 [encoder low-latency property type](https://learn.microsoft.com/en-us/windows/win32/medfound/codecapi-avlowlatencymode).
+
+Provider [run 40695151122](https://github.com/jaovito/screen-share/actions/runs/40695151122)
+passed all four dispatched jobs at 3263560, including the Windows native failure
+fixture, first-error/HRESULT preservation regression, NSIS packaging, compiled public
+origin verification and actual encrypted WebView2 playback. The downloaded Railway
+installer SHA-256 is `b4ab0846b6f4b1c79e7394077a643c6112a5f39701f6d3a3b995ac6a3694f63e`.
+This validates the failure propagation code and synthetic playback, not the
+operator's RTX 3070 capture/encoding acceptance, which still requires a rerun there.
