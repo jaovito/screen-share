@@ -54,3 +54,8 @@ additive field remains absent for older/healthy packets. Encoder failure metadat
 is retained before teardown; cleanup runs independently and does not replace the
 original media result. The renderer displays this record even when the status IPC
 request succeeds. Arbitrary vendor/SDK descriptions are not diagnostic fields.
+
+The native hardware encoder explicitly requests H.264 Baseline and mandatory
+low-latency mode. Baseline excludes B slices, so startup does not depend on the
+optional vendor B-picture-count property. SPS headers and in-band parameter updates
+must remain Baseline before encoded bytes are submitted for publication.

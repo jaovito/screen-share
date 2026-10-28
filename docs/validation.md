@@ -464,3 +464,26 @@ origin verification and actual encrypted WebView2 playback. The downloaded Railw
 installer SHA-256 is `b4ab0846b6f4b1c79e7394077a643c6112a5f39701f6d3a3b995ac6a3694f63e`.
 This validates the failure propagation code and synthetic playback, not the
 operator's RTX 3070 capture/encoding acceptance, which still requires a rerun there.
+
+## RTX 3070 optional B-picture property rejection (2026-10-28)
+
+The operator's new native diagnostic identified the exact startup rejection:
+`encoder_initialization / native_call_failed / mf_b_frames / 0x80070057`.
+The call used the documented UINT32/VT_UI4 zero value, but the hardware MFT rejected
+that optional CodecAPI property. This was a redundant prerequisite: the application
+already explicitly requests H.264 Baseline, whose B-frame count is always zero.
+
+The correction removes the B-picture setter, retains mandatory low-latency mode,
+CBR/bitrate setup and explicit Baseline output selection, and rejects non-Baseline
+or truncated SPS parameter sets before publishing them. The check applies to both
+initial headers and later in-band parameter changes; it does not silently select a
+different source, software encoder or encoding profile. Synthetic framing fixtures
+now contain actual minimal Baseline profile bytes instead of placeholder SPS bytes.
+
+A regression rejecting Main/Extended/High-family SPS at startup and midstream failed
+before the guard and passed afterwards. All 15 portable media tests, full portable
+Rust checks and strict Windows-target media Clippy passed locally. The provider
+Windows installer and an operator rerun on the RTX remain separate evidence.
+
+References: [B-picture property type/support](https://learn.microsoft.com/en-us/windows/win32/codecapi/avencmpvdefaultbpicturecount-property)
+and [Microsoft H.264 Baseline/B-frame behavior](https://learn.microsoft.com/en-us/windows/win32/medfound/h-264-video-encoder).

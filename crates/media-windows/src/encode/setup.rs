@@ -177,7 +177,8 @@ fn configure(
         .cast()
         .map_err(|error| native(EncoderOperation::CodecInterface, error))?;
     set_bool(&codec, &CODECAPI_AVLowLatencyMode, true)?;
-    set_u32(&codec, &CODECAPI_AVEncMPVDefaultBPictureCount, 0)?;
+    // Baseline excludes B slices. Do not require the optional B-picture CodecAPI
+    // property: some hardware MFTs reject it even for zero. Output SPS is checked.
     set_u32(
         &codec,
         &CODECAPI_AVEncCommonRateControlMode,
