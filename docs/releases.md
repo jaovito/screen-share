@@ -52,3 +52,21 @@ Before publishing manually:
 - Review private security findings, dependency/license notices and sanitized release notes. Ensure no credentials, personal media or raw support dumps are attached.
 
 A GitHub draft is not served by the public `releases/latest` endpoint. Publishing/promoting it updates that public channel only after the operator decides the candidate is acceptable. There is no automatic downgrade, silent unsigned fallback or changing the trusted key from server-provided data. Treat signing-key compromise as a separate incident requiring reviewed recovery/distribution decisions.
+
+
+## Unsigned installer for a configured environment
+
+The CI workflow also accepts optional `api_url` and `rtc_url` inputs on manual
+dispatch. Supply both public HTTPS/WSS origins to build an unsigned installer for
+that environment without signing credentials, a release tag or publication.
+Ordinary PR builds retain local development endpoints. The configured build checks
+that both origins appear in the parent executable and uploads
+`desktop-windows-configured-unsigned`, including the NSIS installer and a
+`build-info.json` with origins, revision and SHA-256. This artifact is saved before
+the synthetic WebView playback fixture rebuilds the parent with owned local URLs;
+the fixture does not overwrite the packaged installer.
+
+Use the public origin serving your API and authentication routes. A reverse proxy
+may provide those routes on the same origin as the viewer. Never include backend
+API keys or secrets in these public build inputs. The existing CI checks still run;
+a configured build does not establish live account/capture/two-PC acceptance.

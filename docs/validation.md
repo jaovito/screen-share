@@ -377,3 +377,16 @@ through Tauri's compiled API configuration, preserving the original HTTPS window
 Two regression tests cover preserved settings, invalid inputs and local-only
 loopback flags. Local TypeScript checks and database-backed coverage passed; the
 actual Windows playback result remains pending the provider retry.
+
+
+Provider [run 40571179784](https://github.com/jaovito/screen-share/actions/runs/40571179784)
+passed all five required checks at ef98a24. Actual Windows WebView2 155 decoded
+synthetic encrypted H264 video and Opus audio, rejected the wrong key, enforced
+secure context/exact-origin CSP and released sinks on stop. NSIS packaging passed.
+Its ordinary CI installer uses local development endpoints.
+
+A subsequent operator-requested Railway installer uses manual CI inputs for public
+API/RTC origins, verifies their presence in the compiled parent and records the
+installer SHA-256/revision alongside the artifact. This is an unsigned environment
+build, without release publication or signing. Provider execution and the manifest
+remain the evidence for the resulting artifact; hardware/two-PC gates remain open.
