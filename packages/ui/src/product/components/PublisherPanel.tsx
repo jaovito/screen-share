@@ -2,6 +2,7 @@ import type { RoomSnapshot } from '@screen-share/contracts';
 import { useEffect, useRef, useState } from 'react';
 import { type ProductMessage, useProductMessages } from '../locales';
 import type { ProductApi } from '../services/product-api';
+import { publisherFailureCode } from '../services/publisher-failure';
 import type { NativeSharingStatus, PublisherAdapter } from '../types';
 import { AudioControls, type AudioSelection } from './AudioControls';
 import { PeerReportsPanel } from './PeerReportsPanel';
@@ -25,6 +26,7 @@ export function PublisherPanel({
   const [audio, setAudio] = useState<AudioSelection>({ mode: 'off' });
   const [qualityMode, setQualityMode] = useState<'motion' | 'text'>('motion');
   const [mediaError, setMediaError] = useState(false);
+  const [failureDetail, setFailureDetail] = useState<string | null>(null);
   const audioRef = useRef(false);
   audioRef.current = audio.mode !== 'off';
   const [busy, setBusy] = useState(false);
@@ -69,8 +71,9 @@ export function PublisherPanel({
           throw new Error('Unexpected publisher grant');
         const result = await publisher.renew(grant);
         if (!stopped) setStatus(result);
-      } catch {
+      } catch (failure) {
         if (!stopped) {
+          setFailureDetail(`renew: ${publisherFailureCode(failure)}`);
           setMediaError(true);
           await publisher?.stop().catch(() => {});
           setStatus((previous) => (previous ? { ...previous, state: 'failed' } : null));
@@ -89,8 +92,9 @@ export function PublisherPanel({
       try {
         const next = await publisher?.status();
         if (!stopped && version === generation.current && next) setStatus(next);
-      } catch {
+      } catch (failure) {
         if (!stopped) {
+          setFailureDetail(`status: ${publisherFailureCode(failure)}`);
           setMediaError(true);
           await publisher?.stop().catch(() => {});
           setStatus((previous) => (previous ? { ...previous, state: 'failed' } : null));
@@ -118,7 +122,7 @@ export function PublisherPanel({
     };
   }, [publisher, api]);
 
-  async function act(action: () => Promise<NativeSharingStatus>) {
+  async function act(action: () => Promise<NativeSharingStatus>, stage = 'start') {
     if (busy) return;
     const attempt = ++generation.current;
     setBusy(true);
@@ -126,9 +130,11 @@ export function PublisherPanel({
       const next = await action();
       if (mounted.current && generation.current === attempt) {
         setMediaError(false);
+        setFailureDetail(null);
         setStatus(next);
       }
-    } catch {
+    } catch (failure) {
+      setFailureDetail(`${stage}: ${publisherFailureCode(failure)}`);
       setMediaError(true);
       await publisher?.stop().catch(() => {});
       if (mounted.current && generation.current === attempt) {
@@ -274,7 +280,10 @@ export function PublisherPanel({
           disabled={!publisher || !status || !['sharing', 'paused'].includes(status.state) || busy}
           onClick={() => {
             if (publisher)
-              void act(() => (status?.state === 'paused' ? publisher.resume() : publisher.pause()));
+              void act(
+                () => (status?.state === 'paused' ? publisher.resume() : publisher.pause()),
+                status?.state === 'paused' ? 'resume' : 'pause',
+              );
           }}
         >
           {t(status?.state === 'paused' ? 'resume' : 'pause')}
@@ -284,7 +293,7 @@ export function PublisherPanel({
           className="secondary danger"
           disabled={!publisher || !active || busy}
           onClick={() => {
-            if (publisher) void act(() => publisher.stop());
+            if (publisher) void act(() => publisher.stop(), 'stop');
           }}
         >
           {t('stop')}
@@ -293,6 +302,11 @@ export function PublisherPanel({
       <p role="status">
         {t(`status_${mediaError ? 'failed' : (status?.state ?? 'idle')}` as ProductMessage)}
       </p>
+      {failureDetail && (
+        <p className="notice" role="alert">
+          {t('sharingFailureDetail', { code: failureDetail })}
+        </p>
+      )}
       <p className="notice">{t('sourceNotice')}</p>
       <PeerReportsPanel api={api} snapshot={snapshot} publisherStatus={status} />
       {status?.adaptationReason && (

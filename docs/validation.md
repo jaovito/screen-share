@@ -400,3 +400,23 @@ the API is `https://screen-shareviewer-web-production.up.railway.app` and RTC is
 ready and the anonymous auth session returned null. A separate TypeScript job failed
 only on YAML empty-string quote formatting; that formatting was corrected locally.
 This result does not claim a signed installer or a live user capture/account test.
+
+
+## Publisher startup failure diagnostics (2026-10-27)
+
+A user reported the generic stopped message with no diagnostic reason. Code tracing
+confirmed that command rejection discarded the error and replaced the reason with
+null. The publisher now retains a bounded stage/code for rejected start, renewal,
+status, pause, resume and stop operations. Only exact application-owned native codes,
+allowlisted HTTP statuses and fixed validation/abort/fallback labels are displayed;
+raw rejection strings, validation inputs, tokens and keys are never rendered.
+Status polling preserves the failure until an explicit successful command.
+
+Regression tests cover native failure persistence across actual timer polling,
+successful retry clearing, HTTP 409 before native startup, cleanup and unknown-error
+redaction. Local TypeScript checks and per-file coverage passed (85 runtime sources
+inventoried). The first E2E attempt overlapped the TypeScript build and was invalidated
+by its rewritten local API origin; the serial retry passed all eight desktop/mobile
+E2E cases (37.9 seconds).
+The original Windows capture/publication failure remains unidentified pending the
+new diagnostic code from the user's hardware; this change does not claim to fix it.
